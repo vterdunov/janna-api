@@ -17,8 +17,13 @@
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
+    "find",
+    "list",
+    "nfc",
+    "object",
     "property",
     "session",
+    "task",
     "vim25",
     "vim25/debug",
     "vim25/methods",
@@ -34,6 +39,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6f0a6f16e56666dfe308fccf627a646002d5d538a11c0efbafea335f26c367b4"
+  inputs-digest = "88277a3f85a8902bbbd0cce21b016c372b9f19499fe5d8fafce3741d5cc1488d"
   solver-name = "gps-cdcl"
   solver-version = 1
