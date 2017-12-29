@@ -27,7 +27,7 @@ func Router(buildTime, commit, release string) *mux.Router {
 	r.HandleFunc("/test/{name}/info", deleteTest).Methods("DELETE")
 
 	// VM
-	r.HandleFunc("/vm/{name}/info", vm.ReadInfo).Methods("GET")
+	r.HandleFunc("/vm/info", vm.ReadInfo).Methods("GET")
 
 	r.HandleFunc("/vm/{name}/power", vm.ReadPowerState).Methods("GET")
 	r.HandleFunc("/vm/{name}/power", vm.UpdatePowerState).Methods("UPDATE")

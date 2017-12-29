@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"text/tabwriter"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
@@ -15,8 +14,13 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
+type VMInfoData struct {
+	ipAddress string
+	name      string
+}
+
 // VMInfo returns slice of Virtual Machines
-func VMInfo() {
+func VMInfo(vmName string) (*VMInfoData, error) {
 	url := os.Getenv("VMWARE_URI")
 	u, _ := soap.ParseURL(url)
 
@@ -39,9 +43,14 @@ func VMInfo() {
 
 	f.SetDatacenter(dc)
 
-	vms, err := f.VirtualMachineList(ctx, "coreos")
+	vms, err := f.VirtualMachineList(ctx, vmName)
 	if err != nil {
+		if _, ok := err.(*find.NotFoundError); ok {
+			log.Println("Not found errorr.")
+			return nil, err
+		}
 		log.Print(err)
+		return nil, err
 	}
 
 	pc := property.DefaultCollector(c.Client)
@@ -70,14 +79,16 @@ func VMInfo() {
 		log.Fatal(err)
 	}
 
+	vmInf := &VMInfoData{}
 	// Print name per virtual machine
-	tw := tabwriter.NewWriter(os.Stdout, 2, 0, 2, ' ', 0)
 	fmt.Println("Virtual machines found:", len(vmt))
-
 	for _, vm := range vmt {
-		fmt.Fprintf(tw, "%s\n", vm.Guest.IpAddress)
+		fmt.Println(vm.Guest.ToolsVersion)
+		vmInf.ipAddress = vm.Guest.IpAddress
+		vmInf.name = vm.Name
 	}
-	tw.Flush()
+
+	return vmInf, nil
 	// // Create view of VirtualMachine objects
 	// m := view.NewManager(c.Client)
 

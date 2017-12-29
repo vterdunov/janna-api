@@ -17,6 +17,8 @@ func readTest(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["name"]
 
+	testkey := r.FormValue("testkey")
+	fmt.Fprintf(w, "FORM: %s\n", testkey)
 	fmt.Fprintf(w, "GET: %s\n", name)
 }
 

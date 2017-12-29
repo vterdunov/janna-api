@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	vmware "github.com/vterdunov/janna-api/providers/vmware/vm"
 )
 
 func ReadInfo(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	VMname := vars["name"]
-	fmt.Println(VMname)
+	vmName := r.FormValue("vmname")
+	information, _ := vmware.VMInfo(vmName)
 
-	vmware.VMInfo()
-
-	// var vmStr string
-	// for _, vm := range vms {
-	// 	vmStr += fmt.Sprintf("%s: %s\n", vm.Summary.Config.Name, vm.Summary.Config.GuestFullName)
+	// body, err := json.Marshal(information)
+	// if err != nil {
+	// 	log.Printf("Couldn't encode info data: %v", err)
+	// 	http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+	// 	return
 	// }
-	// // vm.
-	// fmt.Fprint(w, vmStr)
+	fmt.Fprint(w, information)
+
+	// w.Header().Set("Content-Type", "application/json")
+	// w.Write(body)
 }
