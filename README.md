@@ -1,5 +1,5 @@
 # janna-api
-Learning Go with implements https://github.com/vterdunov/janna on Go and rbvmomi
+Learning Go with implements https://github.com/vterdunov/janna with Go and [rbvmomi](https://github.com/vmware/rbvmomi)
 
 ## Dependencies
 - Install Golang
