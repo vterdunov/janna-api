@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,19 +11,30 @@ import (
 
 	"github.com/vterdunov/janna-api/handlers"
 	"github.com/vterdunov/janna-api/version"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	log.Println("Starting the service...")
-	log.Printf("Commit: %s, build time: %s, release: %s",
-		version.Commit, version.BuildTime, version.Release,
-	)
-
 	// Load ENV configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Cannot read config: %v", err)
+		log.Fatal().Err(err).Msg("Cannot read config")
 	}
+
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.MessageFieldName = "msg"
+	if cfg.Debug {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	log.Info().
+		Str("commit", version.Commit).
+		Str("build time", version.BuildTime).
+		Str("release", version.Release).
+		Msg("Starting the service...")
 
 	router := handlers.Router(version.BuildTime, version.Commit, version.Release)
 
@@ -37,19 +47,22 @@ func main() {
 	}
 
 	go func() {
-		log.Fatal(srv.ListenAndServe())
+		if err := srv.ListenAndServe(); err != nil {
+			log.Fatal().Err(err).Msg("Startup failed")
+		}
 	}()
-	log.Print("The service is ready to listen and serve.")
+
+	log.Info().Msg("The service is ready to listen and serve.")
 
 	killSignal := <-interrupt
 	switch killSignal {
 	case os.Interrupt:
-		log.Print("Got SIGINT...")
+		log.Info().Msg("Got SIGINT...")
 	case syscall.SIGTERM:
-		log.Print("Got SIGTERM...")
+		log.Info().Msg("Got SIGTERM...")
 	}
 
-	log.Print("The service is shutting down...")
+	log.Info().Msg("The service is shutting down...")
 	srv.Shutdown(context.Background())
-	log.Print("Done")
+	log.Info().Msg("Done")
 }

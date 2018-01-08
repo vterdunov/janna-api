@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Port   string
 	Vmware vmware
+	Debug  bool
 }
 
 type vmware struct {
@@ -19,6 +20,11 @@ type vmware struct {
 // Load configuration
 func Load() (*Config, error) {
 	config := &Config{}
+
+	debug := os.Getenv("DEBUG")
+	if debug == "" || debug == "1" || debug == "true" {
+		config.Debug = true
+	}
 
 	port, ok := os.LookupEnv("PORT")
 	if !ok {
