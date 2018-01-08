@@ -1,2 +1,5 @@
-janna-api
+.vscode/
 vendor/
+
+janna-api
+debug
