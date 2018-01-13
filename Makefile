@@ -25,7 +25,7 @@ dep:
 compile: clean
 	 $(GO_VARS) go build $(GO_LDFLAGS) -o $(PROG_NAME)
 
-run: compile
+start: compile
 	PORT=${PORT} ./${PROG_NAME}
 
 test:
@@ -33,3 +33,10 @@ test:
 
 clean:
 	rm -f ${PROG_NAME}
+
+api-doc:
+	swagger generate spec --scan-models --output=swagger.json
+	swagger validate swagger.json
+
+serve-api-doc:
+	swagger serve swagger.json

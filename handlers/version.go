@@ -6,16 +6,28 @@ import (
 	"net/http"
 )
 
-func version(buildTime, commit, release string) http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		info := struct {
-			BuildTime string `json:"buildTime"`
-			Commit    string `json:"commit"`
-			Release   string `json:"release"`
-		}{
-			buildTime, commit, release,
-		}
+// Application info
+// swagger:response
+type infoResponse struct {
+	// in: body
+	Payload *appInfo
+}
 
+type appInfo struct {
+	BuildTime string `json:"build_time"`
+	Commit    string `json:"commit"`
+	Release   string `json:"release,omitempty"`
+}
+
+// getAppInfo swagger:route GET /info info
+//
+// return the Apllication version, commit and release info
+//
+// Responses:
+//   200: infoResponse
+func getAppInfo(buildTime, commit, release string) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		info := appInfo{buildTime, commit, release}
 		body, err := json.Marshal(info)
 		if err != nil {
 			log.Printf("Couldn't encode info data: %v", err)

@@ -9,6 +9,13 @@ import (
 	vmware "github.com/vterdunov/janna-api/providers/vmware/vm"
 )
 
+// VM info data
+// swagger:response
+type vmInfoResponse struct {
+	// in: body
+	Payload *info
+}
+
 type info struct {
 	Guest     *types.GuestInfo                  `json:"Guest,omitempty"`
 	Heartbeat types.ManagedEntityStatus         `json:"HeartBeat,omitempty"`
@@ -16,7 +23,12 @@ type info struct {
 	Config    types.VirtualMachineConfigSummary `json:"Config,omitempty"`
 }
 
-// ReadInfo get information about VMs
+// ReadInfo swagger:route GET /vm/info vm vmInfo
+//
+// get information about VMs
+//
+// Responses:
+//   200: vmInfoResponse
 func ReadInfo(w http.ResponseWriter, r *http.Request) {
 	vmName := r.FormValue("vmname")
 	inf, err := vmware.VMInfo(vmName)

@@ -10,11 +10,8 @@ import (
 func Router(buildTime, commit, release string) *mux.Router {
 	r := mux.NewRouter()
 
-	// Root
-	r.HandleFunc("/", index).Methods("GET")
-
-	// Version
-	r.HandleFunc("/version", version(buildTime, commit, release)).Methods("GET")
+	// Application info
+	r.HandleFunc("/info", getAppInfo(buildTime, commit, release)).Methods("GET")
 
 	// Health
 	r.HandleFunc("/healthz", health.Healthz).Methods("GET")

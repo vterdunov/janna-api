@@ -1,3 +1,22 @@
+// Janna API docs
+//
+// Janna is a little REST API interface for VMware.
+// Janna can deploy your VM from OVA file or Template.
+// Also Janna can destroy VMs, show information about VMs or change their power state.
+//
+//     Schemes: http
+//     Host: localhost
+//     BasePath: /v2/
+//     Version: 0.0.1
+// 		 License: MIT http://opensource.org/licenses/MIT
+//
+//     Consumes:
+//     	- text/plain; charset=utf-8
+//
+//     Produces:
+//     	- application/json
+//
+// swagger:meta
 package main
 
 import (
