@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/gorilla/mux"
 	"github.com/vterdunov/janna-api/handlers/health"
+	"github.com/vterdunov/janna-api/handlers/version"
 	"github.com/vterdunov/janna-api/handlers/vm"
 )
 
@@ -11,7 +12,7 @@ func Router(buildTime, commit, release string) *mux.Router {
 	r := mux.NewRouter()
 
 	// Application info
-	r.HandleFunc("/info", getAppInfo(buildTime, commit, release)).Methods("GET")
+	r.HandleFunc("/info", version.GetAppInfo(buildTime, commit, release)).Methods("GET")
 
 	// Health
 	r.HandleFunc("/healthz", health.Healthz).Methods("GET")

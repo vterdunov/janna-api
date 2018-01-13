@@ -1,4 +1,4 @@
-package handlers
+package version
 
 import (
 	"encoding/json"
@@ -19,13 +19,13 @@ type appInfo struct {
 	Release   string `json:"release,omitempty"`
 }
 
-// getAppInfo swagger:route GET /info info
+// GetAppInfo swagger:route GET /info info
 //
 // return the Apllication version, commit and release info
 //
 // Responses:
 //   200: infoResponse
-func getAppInfo(buildTime, commit, release string) http.HandlerFunc {
+func GetAppInfo(buildTime, commit, release string) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		info := appInfo{buildTime, commit, release}
 		body, err := json.Marshal(info)
