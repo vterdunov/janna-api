@@ -1,11 +1,14 @@
 language: go
 
 go:
- - 1.9.x
+  - 1.9.x
+
+env:
+  - SWAGGER_VERSION: 0.13.0
 
 before_script:
   - mkdir swagger
-  - curl -Lo ./swagger/swagger https://github.com/go-swagger/go-swagger/releases/download/0.13.0/swagger_linux_amd64
+  - curl -Lo ./swagger/swagger https://github.com/go-swagger/go-swagger/releases/download/${SWAGGER_VERSION}/swagger_linux_amd64
   - chmod +x ./swagger/swagger
   - export PATH=$PATH:$PWD/swagger
 
