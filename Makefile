@@ -11,7 +11,7 @@ GO_LDFLAGS=-v -ldflags="-s -w \
     -X ${PROJECT}/version.Commit=${COMMIT} \
 		-X ${PROJECT}/version.BuildTime=${BUILD_TIME}"
 
-all: dep test compile
+all: dep test compile api-doc
 
 container:
 	docker build -t $(PROG_NAME) .
