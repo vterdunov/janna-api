@@ -1,6 +1,6 @@
 {
   "consumes": [
-    "text/plain; charset=utf-8"
+    "application/json"
   ],
   "produces": [
     "application/json"
@@ -10,7 +10,7 @@
   ],
   "swagger": "2.0",
   "info": {
-    "description": "Janna is a little REST API interface for VMware.\nJanna can deploy your VM from OVA file or Template.\nAlso Janna can destroy VMs, show information about VMs or change their power state.",
+    "description": "Janna is a little REST API interface for VMware.",
     "title": "Janna API docs",
     "license": {
       "name": "MIT",
@@ -19,19 +19,8 @@
     "version": "0.0.1"
   },
   "host": "localhost",
-  "basePath": "/v2/",
+  "basePath": "/v1/",
   "paths": {
-    "/info": {
-      "get": {
-        "description": "return the Apllication version, commit and release info",
-        "operationId": "info",
-        "responses": {
-          "200": {
-            "$ref": "#/responses/infoResponse"
-          }
-        }
-      }
-    },
     "/vm/info": {
       "get": {
         "description": "get information about VMs",
@@ -844,55 +833,13 @@
     "VirtualMachineToolsStatus": {
       "type": "string",
       "x-go-package": "github.com/vterdunov/janna-api/vendor/github.com/vmware/govmomi/vim25/types"
-    },
-    "appInfo": {
-      "type": "object",
-      "properties": {
-        "build_time": {
-          "type": "string",
-          "x-go-name": "BuildTime"
-        },
-        "commit": {
-          "type": "string",
-          "x-go-name": "Commit"
-        },
-        "release": {
-          "type": "string",
-          "x-go-name": "Release"
-        }
-      },
-      "x-go-package": "github.com/vterdunov/janna-api/handlers"
-    },
-    "info": {
-      "type": "object",
-      "properties": {
-        "Config": {
-          "$ref": "#/definitions/VirtualMachineConfigSummary"
-        },
-        "Guest": {
-          "$ref": "#/definitions/GuestInfo"
-        },
-        "HeartBeat": {
-          "$ref": "#/definitions/ManagedEntityStatus"
-        },
-        "Runtime": {
-          "$ref": "#/definitions/VirtualMachineRuntimeInfo"
-        }
-      },
-      "x-go-package": "github.com/vterdunov/janna-api/handlers/vm"
     }
   },
   "responses": {
-    "infoResponse": {
-      "description": "Application info",
-      "schema": {
-        "$ref": "#/definitions/appInfo"
-      }
-    },
     "vmInfoResponse": {
       "description": "VM info data",
       "schema": {
-        "$ref": "#/definitions/info"
+        "$ref": "#/definitions/VirtualMachineConfigSummary"
       }
     }
   }

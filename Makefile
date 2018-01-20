@@ -11,7 +11,7 @@ GO_LDFLAGS=-v -ldflags="-s -w \
     -X ${PROJECT}/version.Commit=${COMMIT} \
 		-X ${PROJECT}/version.BuildTime=${BUILD_TIME}"
 
-all: dep test compile api-doc
+all: dep test cgo-compile api-doc
 
 container:
 	docker build -t $(PROG_NAME) .
@@ -25,7 +25,10 @@ dep:
 compile: clean
 	 $(GO_VARS) go build $(GO_LDFLAGS) -o $(PROG_NAME)
 
-start: compile
+cgo-compile: clean
+	 go build -v -o $(PROG_NAME)
+
+start: cgo-compile
 	PORT=${PORT} ./${PROG_NAME}
 
 test:

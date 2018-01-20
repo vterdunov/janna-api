@@ -1,10 +1,11 @@
-package vmware
+package vm
 
 import (
 	"context"
 	"os"
 
 	"github.com/rs/zerolog/log"
+	jannatypes "github.com/vterdunov/janna-api/types"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
@@ -14,16 +15,15 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-// VMInfo returns slice of Virtual Machines
-func VMInfo(vmName string) ([]mo.VirtualMachine, error) {
+// Info returns summary information about Virtual Machines
+func Info(ctx context.Context, vmName string) (jannatypes.VMSummary, error) {
+	sum := jannatypes.VMSummary{}
+
 	vmWareURI := os.Getenv("VMWARE_URI")
 	u, _ := soap.ParseURL(vmWareURI)
 
 	// TODO: Get from config
 	insecure := true
-
-	ctx := context.Background()
-
 	c, err := govmomi.NewClient(ctx, u, insecure)
 	if err != nil {
 		log.Error().Err(err).Msg("Cannot create govmomi client")
@@ -43,10 +43,10 @@ func VMInfo(vmName string) ([]mo.VirtualMachine, error) {
 	if err != nil {
 		if _, ok := err.(*find.NotFoundError); ok {
 			log.Error().Err(err).Msg("Cannot found VM")
-			return nil, err
+			return sum, err
 		}
 		log.Error().Err(err)
-		return nil, err
+		return sum, err
 	}
 
 	refs := make([]types.ManagedObjectReference, 0, len(vmObjs))
@@ -66,11 +66,17 @@ func VMInfo(vmName string) ([]mo.VirtualMachine, error) {
 		err = pc.Retrieve(ctx, refs, props, &vms)
 		if err != nil {
 			log.Error().Msg("Cannot retreive inforamtion about VM")
-			return nil, err
+			return sum, err
 		}
 	}
 
 	log.Info().Int("count", len(vms)).Msg("Virtual machines found")
 
-	return vms, nil
+	for _, vmInfo := range vms {
+		sum.Guest = vmInfo.Guest
+		sum.Heartbeat = vmInfo.GuestHeartbeatStatus
+		sum.Runtime = vmInfo.Summary.Runtime
+		sum.Config = vmInfo.Summary.Config
+	}
+	return sum, nil
 }

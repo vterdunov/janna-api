@@ -22,7 +22,7 @@ func Load() (*Config, error) {
 	config := &Config{}
 
 	debug := os.Getenv("DEBUG")
-	if debug == "" || debug == "1" || debug == "true" {
+	if debug == "1" || debug == "true" {
 		config.Debug = true
 	}
 
