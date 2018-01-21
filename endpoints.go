@@ -9,15 +9,100 @@ import (
 
 // Endpoints collects all of the endpoints that compose the Service.
 type Endpoints struct {
-	VMInfoEndpoint endpoint.Endpoint
+	InfoEndpoint    endpoint.Endpoint
+	ReadyzEndpoint  endpoint.Endpoint
+	HealthzEndpoint endpoint.Endpoint
+	VMInfoEndpoint  endpoint.Endpoint
 }
 
 // MakeServerEndpoints returns an Endpoints struct where each endpoint invokes
-// the corresponding method on the provided service. Useful in a profilesvc
-// server.
+// the corresponding method on the provided service.
 func MakeServerEndpoints(s Service) Endpoints {
 	return Endpoints{
-		VMInfoEndpoint: MakeVMInfoEndpoint(s),
+		InfoEndpoint:    MakeInfoEndpoint(s),
+		VMInfoEndpoint:  MakeVMInfoEndpoint(s),
+		HealthzEndpoint: MakeHealthzEndpoint(s),
+		ReadyzEndpoint:  MakeReadyzEndpoint(s),
+	}
+}
+
+// MakeInfoEndpoint returns an endpoint via the passed service
+//
+// swagger:route GET /info app appInfo
+//
+// get information about the Service
+//
+// Responses:
+//   200: InfoResponse
+func MakeInfoEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		b, c := s.Info()
+		return InfoResponse{b, c}, nil
+	}
+}
+
+// Service build information
+// swagger:response
+type InfoResponse struct {
+	// in: body
+	BuildTime string `json:"build_time"`
+	// in: body
+	Commit string `json:"commit"`
+}
+
+// MakeHealthzEndpoint returns an endpoint via the passed service
+//
+// swagger:route GET /healthz app appHealth
+//
+// liveness probe
+//
+// Responses:
+//   200: healthzResponse
+func MakeHealthzEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		s.Healthz()
+		return readyzResponse{}, nil
+	}
+}
+
+// Liveness probe
+// swagger:response
+type healthzResponse struct {
+}
+
+// MakeReadyzEndpoint returns an endpoint via the passed service
+//
+// swagger:route GET /readyz app appReady
+//
+// readiness probe
+//
+// Responses:
+//   200: readyzResponse
+func MakeReadyzEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		s.Readyz()
+		return readyzResponse{}, nil
+	}
+}
+
+// Readyness probe
+// swagger:response
+type readyzResponse struct {
+}
+
+// MakeVMInfoEndpoint returns an endpoint via the passed service
+//
+// swagger:route GET /vm/info vm vmInfo
+//
+// get information about VMs
+//
+// Responses:
+//   200: vmInfoResponse
+func MakeVMInfoEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(vmInfoRequest)
+		v, _ := s.VMInfo(ctx, req.Name)
+		return vmInfoResponse{v}, nil
 	}
 }
 
@@ -30,20 +115,4 @@ type vmInfoRequest struct {
 // swagger:response
 type vmInfoResponse struct {
 	types.VMSummary
-}
-
-// MakeVMInfoEndpoint returns an endpoint via the passed service.
-//
-// swagger:route GET /vm/info vm vmInfo
-//
-// get information about VMs
-//
-// Responses:
-//   200: vmInfoResponse
-func MakeVMInfoEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(vmInfoRequest)
-		v, _ := svc.VMInfo(ctx, req.Name)
-		return vmInfoResponse{v}, nil
-	}
 }

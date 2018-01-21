@@ -13,3 +13,11 @@ type VMSummary struct {
 	// in: body
 	Config vmwaretypes.VirtualMachineConfigSummary `json:"Config,omitempty"`
 }
+
+// // AppBuildInfo stores the Service build information
+// type AppBuildInfo struct {
+// 	// in: body
+// 	BuildTime string `json:"build_time"`
+// 	// in: body
+// 	Commit string `json:"commit"`
+// }

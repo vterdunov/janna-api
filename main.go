@@ -18,11 +18,14 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"github.com/go-kit/kit/log"
+
 	"github.com/vterdunov/janna-api/config"
 	"github.com/vterdunov/janna-api/version"
 )
@@ -31,70 +34,53 @@ func main() {
 	// Load ENV configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Cannot read config")
+		// log.Fatal().Err(err).Msg("Cannot read config")
 	}
-
-	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	zerolog.MessageFieldName = "msg"
+	var logger log.Logger
 	if cfg.Debug {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	} else {
+		logger = log.NewJSONLogger(os.Stderr)
 	}
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+	logger = log.With(logger, "caller", log.DefaultCaller)
 
-	log.Info().
-		Str("commit", version.Commit).
-		Str("build time", version.BuildTime).
-		Str("release", version.Release).
-		Msg("Starting the service...")
-
-	// router := handlers.Router(version.BuildTime, version.Commit, version.Release)
-
-	// interrupt := make(chan os.Signal, 1)
-	// signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-	// srv := &http.Server{
-	// 	Addr:    ":" + cfg.Port,
-	// 	Handler: router,
-	// }
-
-	// go func() {
-	// 	if err := srv.ListenAndServe(); err != nil {
-	// 		log.Fatal().Err(err).Msg("Startup failed")
-	// 	}
-	// }()
-
-	// log.Info().Msg("The service is ready to listen and serve.")
-
-	// killSignal := <-interrupt
-	// switch killSignal {
-	// case os.Interrupt:
-	// 	log.Info().Msg("Got SIGINT...")
-	// case syscall.SIGTERM:
-	// 	log.Info().Msg("Got SIGTERM...")
-	// }
-
-	// log.Info().Msg("The service is shutting down...")
-	// srv.Shutdown(context.Background())
-	// log.Info().Msg("Done")
-	// logger := log.NewLogfmtLogger(os.Stdout)
-	// var logger log.Logger
-	// logger = log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
+	ctx := context.Background()
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	var svc Service
-	svc = service{}
-	svc = LoggingMiddleware(logger)(svc)
+	svc = service{
+		logger: logger,
+	}
+	svc = NewLoggingMiddleware(logger)(svc)
 
-	var h http.Handler
-	h = MakeHTTPHandler(svc)
+	h := MakeHTTPHandler(svc, log.With(logger, "component", "http"))
 
-	// vmInfoHandler := httptransport.NewServer(
-	// 	makeVMInfoEndpoint(svc),
-	// 	decodeVMInfoRequest,
-	// 	encodeResponse,
-	// )
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: h,
+	}
 
-	// http.Handle("/vm/info", vmInfoHandler)
+	go func() {
+		logger.Log(
+			"commit", version.Commit,
+			"build_time", version.BuildTime,
+			"msg", "Starting the service",
+		)
+		if err := srv.ListenAndServe(); err != nil {
+			logger.Log("msg", "Startup failed")
+		}
+	}()
 
-	http.ListenAndServe(":8080", h)
+	switch <-interrupt {
+	case syscall.SIGINT:
+		logger.Log("msg", "Got SIGINT")
+	case syscall.SIGTERM:
+		logger.Log("msg", "Got SIGTERM")
+	}
+
+	logger.Log("msg", "The service is shutting down")
+	srv.Shutdown(ctx)
+	logger.Log("msg", "Done")
 }

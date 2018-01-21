@@ -7,7 +7,6 @@ PROJECT?=github.com/vterdunov/${PROG_NAME}
 
 GO_VARS=CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 GO_LDFLAGS=-v -ldflags="-s -w \
-		-X ${PROJECT}/version.Release=${RELEASE} \
     -X ${PROJECT}/version.Commit=${COMMIT} \
 		-X ${PROJECT}/version.BuildTime=${BUILD_TIME}"
 

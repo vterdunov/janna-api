@@ -21,6 +21,48 @@
   "host": "localhost",
   "basePath": "/v1/",
   "paths": {
+    "/healthz": {
+      "get": {
+        "description": "liveness probe",
+        "tags": [
+          "app"
+        ],
+        "operationId": "appHealth",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/healthzResponse"
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "description": "get information about the Service",
+        "tags": [
+          "app"
+        ],
+        "operationId": "appInfo",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/InfoResponse"
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "description": "readiness probe",
+        "tags": [
+          "app"
+        ],
+        "operationId": "appReady",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/readyzResponse"
+          }
+        }
+      }
+    },
     "/vm/info": {
       "get": {
         "description": "get information about VMs",
@@ -836,6 +878,20 @@
     }
   },
   "responses": {
+    "InfoResponse": {
+      "description": "Service build information",
+      "headers": {
+        "commit": {
+          "type": "string"
+        }
+      }
+    },
+    "healthzResponse": {
+      "description": "Liveness probe"
+    },
+    "readyzResponse": {
+      "description": "Readyness probe"
+    },
     "vmInfoResponse": {
       "description": "VM info data",
       "schema": {
