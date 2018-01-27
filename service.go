@@ -25,6 +25,9 @@ type Service interface {
 
 	// VMInfo provide summary information about VM
 	VMInfo(context.Context, string) (types.VMSummary, error)
+
+	// VMDeploy create VM from OVA file
+	VMDeploy(context.Context, string, string, ...string) (int, error)
 }
 
 // service implements our Service
@@ -47,4 +50,8 @@ func (s service) Readyz() bool {
 
 func (s service) VMInfo(ctx context.Context, name string) (types.VMSummary, error) {
 	return vm.Info(ctx, name, s.logger, s.cfg)
+}
+
+func (s service) VMDeploy(ctx context.Context, name string, OVAURL string, opts ...string) (int, error) {
+	return vm.Deploy(ctx, name, OVAURL, s.logger, s.cfg, opts...)
 }

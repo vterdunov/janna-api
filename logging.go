@@ -65,3 +65,13 @@ func (mw loggingMiddleware) VMInfo(ctx context.Context, name string) (_ types.VM
 	}(time.Now())
 	return mw.next.VMInfo(ctx, name)
 }
+
+func (mw loggingMiddleware) VMDeploy(ctx context.Context, name string, OVAURL string, opts ...string) (_ int, err error) {
+	defer func(begin time.Time) {
+		mw.logger.Log(
+			"method", "VMInfo",
+			"took", time.Since(begin),
+		)
+	}(time.Now())
+	return mw.next.VMDeploy(ctx, name, OVAURL, opts...)
+}

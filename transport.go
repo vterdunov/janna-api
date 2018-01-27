@@ -44,13 +44,19 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 		options...,
 	))
 
-	r.Methods("POST").Path("/vm/info").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/vm").Handler(httptransport.NewServer(
 		e.VMInfoEndpoint,
 		decodeVMInfoRequest,
 		encodeResponse,
 		options...,
 	))
 
+	r.Methods("POST").Path("/vm").Handler(httptransport.NewServer(
+		e.VMDeployEndpoint,
+		decodeVMDeployRequest,
+		encodeResponse,
+		options...,
+	))
 	return r
 }
 
@@ -68,6 +74,14 @@ func decodeReadyzRequest(_ context.Context, r *http.Request) (interface{}, error
 
 func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req vmInfoRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func decodeVMDeployRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req vmDeployRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, err
 	}

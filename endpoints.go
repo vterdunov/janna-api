@@ -9,20 +9,22 @@ import (
 
 // Endpoints collects all of the endpoints that compose the Service.
 type Endpoints struct {
-	InfoEndpoint    endpoint.Endpoint
-	ReadyzEndpoint  endpoint.Endpoint
-	HealthzEndpoint endpoint.Endpoint
-	VMInfoEndpoint  endpoint.Endpoint
+	InfoEndpoint     endpoint.Endpoint
+	ReadyzEndpoint   endpoint.Endpoint
+	HealthzEndpoint  endpoint.Endpoint
+	VMInfoEndpoint   endpoint.Endpoint
+	VMDeployEndpoint endpoint.Endpoint
 }
 
 // MakeServerEndpoints returns an Endpoints struct where each endpoint invokes
 // the corresponding method on the provided service.
 func MakeServerEndpoints(s Service) Endpoints {
 	return Endpoints{
-		InfoEndpoint:    MakeInfoEndpoint(s),
-		VMInfoEndpoint:  MakeVMInfoEndpoint(s),
-		HealthzEndpoint: MakeHealthzEndpoint(s),
-		ReadyzEndpoint:  MakeReadyzEndpoint(s),
+		InfoEndpoint:     MakeInfoEndpoint(s),
+		HealthzEndpoint:  MakeHealthzEndpoint(s),
+		ReadyzEndpoint:   MakeReadyzEndpoint(s),
+		VMInfoEndpoint:   MakeVMInfoEndpoint(s),
+		VMDeployEndpoint: MakeVMDeployEndpoint(s),
 	}
 }
 
@@ -92,7 +94,7 @@ type readyzResponse struct {
 
 // MakeVMInfoEndpoint returns an endpoint via the passed service
 //
-// swagger:route POST /vm/info vm vmInfo
+// swagger:route GET /vm vm vmInfo
 //
 // get information about VMs
 //
@@ -121,5 +123,53 @@ type vmInfoResponse struct {
 }
 
 func (r vmInfoResponse) error() error {
+	return r.Err
+}
+
+// MakeVMDeployEndpoint returns an endpoint via the passed service
+//
+// swagger:route POST /vm vm vmInfo
+//
+// Create VM from OVA file
+//
+// Responses:
+//   200: vmDeployResponse
+func MakeVMDeployEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(vmDeployRequest)
+		jid, err := s.VMDeploy(
+			ctx,
+			req.Name,
+			req.OVAURL,
+			req.Network,
+			req.Datastores,
+			req.Cluster,
+			req.VMFolder,
+		)
+
+		return vmDeployResponse{jid, err}, nil
+	}
+}
+
+// swagger:parameters
+type vmDeployRequest struct {
+	Name       string `json:"name"`
+	OVAURL     string `json:"ova_url"`
+	Network    string `json:"network,omitempty"`
+	Datastores string `json:"datastores,omitempty"`
+	Cluster    string `json:"cluster,omitempty"`
+	VMFolder   string `json:"vm_folder,omitempty"`
+}
+
+// VM deploy response fields
+// swagger:response
+type vmDeployResponse struct {
+	// in:body
+	JID int `json:"job_id,omitempty"`
+	// in:body
+	Err error `json:"error,omitempty"`
+}
+
+func (r vmDeployResponse) error() error {
 	return r.Err
 }
