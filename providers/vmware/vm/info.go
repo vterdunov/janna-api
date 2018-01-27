@@ -19,8 +19,6 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	sum := jannatypes.VMSummary{}
 	vmWareURL := cfg.Vmware.URL
 
-	// TODO: user gets empty response. need to return error message.
-	// fix on endpoints and transport side.
 	u, err := soap.ParseURL(vmWareURL)
 	if err != nil {
 		logger.Log("err", "cannot parse VMWare URL")
@@ -29,8 +27,6 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 
 	insecure := cfg.Vmware.Insecure
 
-	// TODO: user gets empty response. need to return error message.
-	// fix on endpoints and transport side.
 	c, err := govmomi.NewClient(ctx, u, insecure)
 	if err != nil {
 		logger.Log("err", err)
@@ -41,8 +37,6 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	f := find.NewFinder(c.Client, true)
 
 	dcName := cfg.Vmware.DC
-	// TODO: user gets empty response. need to return error message.
-	// fix on endpoints and transport side.
 	dc, err := f.DatacenterOrDefault(ctx, dcName)
 	if err != nil {
 		logger.Log("err", err)
@@ -57,7 +51,7 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 			logger.Log("err", err)
 			return sum, err
 		}
-		// log.Error().Err(err)
+		logger.Log("err", err)
 		return sum, err
 	}
 
@@ -77,7 +71,7 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	if len(refs) != 0 {
 		err = pc.Retrieve(ctx, refs, props, &vms)
 		if err != nil {
-			logger.Log("err", "Cannot retreive inforamtion about VM")
+			logger.Log("err", err)
 			return sum, err
 		}
 	}

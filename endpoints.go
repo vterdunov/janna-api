@@ -92,7 +92,7 @@ type readyzResponse struct {
 
 // MakeVMInfoEndpoint returns an endpoint via the passed service
 //
-// swagger:route GET /vm/info vm vmInfo
+// swagger:route POST /vm/info vm vmInfo
 //
 // get information about VMs
 //
@@ -101,8 +101,8 @@ type readyzResponse struct {
 func MakeVMInfoEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(vmInfoRequest)
-		v, _ := s.VMInfo(ctx, req.Name)
-		return vmInfoResponse{v}, nil
+		summary, err := s.VMInfo(ctx, req.Name)
+		return vmInfoResponse{summary, err}, nil
 	}
 }
 
@@ -114,5 +114,10 @@ type vmInfoRequest struct {
 // VM info data
 // swagger:response
 type vmInfoResponse struct {
-	types.VMSummary
+	Summary types.VMSummary `json:"summary,omitempty"`
+	Err     error           `json:"error,omitempty"`
+}
+
+func (r vmInfoResponse) error() error {
+	return r.Err
 }
