@@ -27,11 +27,3 @@
 [[constraint]]
   name = "github.com/vmware/govmomi"
   version = "0.16.0"
-
-[[constraint]]
-  name = "github.com/davecgh/go-spew"
-  version = "1.1.0"
-
-[[constraint]]
-  name = "github.com/rs/zerolog"
-  version = "1.4.0"
