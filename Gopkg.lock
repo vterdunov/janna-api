@@ -42,16 +42,6 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
-  name = "github.com/rs/zerolog"
-  packages = [
-    ".",
-    "internal/json",
-    "log"
-  ]
-  revision = "b53826c57a6a1d8833443ebeacf1cfb62b229c64"
-  version = "v1.4.0"
-
-[[projects]]
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
@@ -77,6 +67,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b74624fc37ce0e6fd9788eb00d3707ba2da2d06fb4107f1bda2c6ac01499fbdc"
+  inputs-digest = "12a59ed81a54b2bc163a5c133acf217475fb88bee3c60fb05cc03bd80d8cec08"
   solver-name = "gps-cdcl"
   solver-version = 1
