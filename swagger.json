@@ -64,7 +64,7 @@
       }
     },
     "/vm/info": {
-      "get": {
+      "post": {
         "description": "get information about VMs",
         "tags": [
           "vm"
@@ -600,6 +600,25 @@
       },
       "x-go-package": "github.com/vterdunov/janna-api/vendor/github.com/vmware/govmomi/vim25/types"
     },
+    "VMSummary": {
+      "description": "VMSummary stores some information about Virtual Machines",
+      "type": "object",
+      "properties": {
+        "Config": {
+          "$ref": "#/definitions/VirtualMachineConfigSummary"
+        },
+        "Guest": {
+          "$ref": "#/definitions/GuestInfo"
+        },
+        "HeartBeat": {
+          "$ref": "#/definitions/ManagedEntityStatus"
+        },
+        "Runtime": {
+          "$ref": "#/definitions/VirtualMachineRuntimeInfo"
+        }
+      },
+      "x-go-package": "github.com/vterdunov/janna-api/types"
+    },
     "VirtualMachineConfigSummary": {
       "type": "object",
       "properties": {
@@ -879,12 +898,7 @@
   },
   "responses": {
     "InfoResponse": {
-      "description": "Service build information",
-      "headers": {
-        "commit": {
-          "type": "string"
-        }
-      }
+      "description": "InfoResponse is the Service build information"
     },
     "healthzResponse": {
       "description": "Liveness probe"
@@ -895,7 +909,7 @@
     "vmInfoResponse": {
       "description": "VM info data",
       "schema": {
-        "$ref": "#/definitions/VirtualMachineConfigSummary"
+        "$ref": "#/definitions/VMSummary"
       }
     }
   }

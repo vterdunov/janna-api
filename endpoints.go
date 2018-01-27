@@ -114,8 +114,10 @@ type vmInfoRequest struct {
 // VM info data
 // swagger:response
 type vmInfoResponse struct {
+	// in:body
 	Summary types.VMSummary `json:"summary,omitempty"`
-	Err     error           `json:"error,omitempty"`
+	// in:body
+	Err error `json:"error,omitempty"`
 }
 
 func (r vmInfoResponse) error() error {
