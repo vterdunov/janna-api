@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/log"
+	"github.com/vterdunov/janna-api/config"
 	"github.com/vterdunov/janna-api/health"
 
 	"github.com/vterdunov/janna-api/providers/vmware/vm"
@@ -29,6 +30,7 @@ type Service interface {
 // service implements our Service
 type service struct {
 	logger log.Logger
+	cfg    *config.Config
 }
 
 func (s service) Info() (string, string) {
@@ -44,5 +46,5 @@ func (s service) Readyz() bool {
 }
 
 func (s service) VMInfo(ctx context.Context, name string) (types.VMSummary, error) {
-	return vm.Info(ctx, name)
+	return vm.Info(ctx, name, s.logger, s.cfg)
 }

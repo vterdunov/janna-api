@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,8 +35,11 @@ func main() {
 	// Load ENV configuration
 	cfg, err := config.Load()
 	if err != nil {
-		// log.Fatal().Err(err).Msg("Cannot read config")
+		fmt.Printf("Cannot read config. Err: %s\n", err)
+		os.Exit(1)
 	}
+
+	// Create logger
 	var logger log.Logger
 	if cfg.Debug {
 		logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
@@ -51,7 +55,8 @@ func main() {
 
 	var svc Service
 	svc = service{
-		logger: logger,
+		logger: log.With(logger, "component", "core"),
+		cfg:    cfg,
 	}
 	svc = NewLoggingMiddleware(logger)(svc)
 

@@ -2,39 +2,51 @@ package vm
 
 import (
 	"context"
-	"os"
 
-	"github.com/rs/zerolog/log"
-	jannatypes "github.com/vterdunov/janna-api/types"
-
+	"github.com/go-kit/kit/log"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
+	"github.com/vterdunov/janna-api/config"
+	jannatypes "github.com/vterdunov/janna-api/types"
 )
 
 // Info returns summary information about Virtual Machines
-func Info(ctx context.Context, vmName string) (jannatypes.VMSummary, error) {
+func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Config) (jannatypes.VMSummary, error) {
 	sum := jannatypes.VMSummary{}
+	vmWareURL := cfg.Vmware.URL
 
-	vmWareURI := os.Getenv("VMWARE_URI")
-	u, _ := soap.ParseURL(vmWareURI)
+	// TODO: user gets empty response. need to return error message.
+	// fix on endpoints and transport side.
+	u, err := soap.ParseURL(vmWareURL)
+	if err != nil {
+		logger.Log("err", "cannot parse VMWare URL")
+		return sum, err
+	}
 
-	// TODO: Get from config
-	insecure := true
+	insecure := cfg.Vmware.Insecure
+
+	// TODO: user gets empty response. need to return error message.
+	// fix on endpoints and transport side.
 	c, err := govmomi.NewClient(ctx, u, insecure)
 	if err != nil {
-		log.Error().Err(err).Msg("Cannot create govmomi client")
+		logger.Log("err", err)
+		return sum, err
 	}
 
 	defer c.Logout(ctx)
 	f := find.NewFinder(c.Client, true)
 
-	dc, err := f.DatacenterOrDefault(ctx, "/DC1")
+	dcName := cfg.Vmware.DC
+	// TODO: user gets empty response. need to return error message.
+	// fix on endpoints and transport side.
+	dc, err := f.DatacenterOrDefault(ctx, dcName)
 	if err != nil {
-		log.Error().Err(err).Msg("Cannot found the Datacenter")
+		logger.Log("err", err)
+		return sum, err
 	}
 
 	f.SetDatacenter(dc)
@@ -42,10 +54,10 @@ func Info(ctx context.Context, vmName string) (jannatypes.VMSummary, error) {
 	vmObjs, err := f.VirtualMachineList(ctx, vmName)
 	if err != nil {
 		if _, ok := err.(*find.NotFoundError); ok {
-			log.Error().Err(err).Msg("Cannot found VM")
+			logger.Log("err", err)
 			return sum, err
 		}
-		log.Error().Err(err)
+		// log.Error().Err(err)
 		return sum, err
 	}
 
@@ -65,12 +77,15 @@ func Info(ctx context.Context, vmName string) (jannatypes.VMSummary, error) {
 	if len(refs) != 0 {
 		err = pc.Retrieve(ctx, refs, props, &vms)
 		if err != nil {
-			log.Error().Msg("Cannot retreive inforamtion about VM")
+			logger.Log("err", "Cannot retreive inforamtion about VM")
 			return sum, err
 		}
 	}
 
-	log.Info().Int("count", len(vms)).Msg("Virtual machines found")
+	logger.Log(
+		"count", len(vms),
+		"msg", "Virtual machines found",
+	)
 
 	for _, vmInfo := range vms {
 		sum.Guest = vmInfo.Guest

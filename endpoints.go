@@ -41,7 +41,7 @@ func MakeInfoEndpoint(s Service) endpoint.Endpoint {
 	}
 }
 
-// Service build information
+// InfoResponse is the Service build information
 // swagger:response
 type InfoResponse struct {
 	// in: body

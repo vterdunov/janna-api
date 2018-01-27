@@ -8,13 +8,14 @@ import (
 // Config provide configuration to the application
 type Config struct {
 	Port   string
-	Vmware vmware
 	Debug  bool
+	Vmware vmware
 }
 
 type vmware struct {
-	URI      string
+	URL      string
 	Insecure bool
+	DC       string
 }
 
 // Load configuration
@@ -32,11 +33,26 @@ func Load() (*Config, error) {
 	}
 	config.Port = port
 
-	vmwareURI, ok := os.LookupEnv("VMWARE_URI")
+	// VMWare URL
+	vmwareURL, ok := os.LookupEnv("VMWARE_URL")
 	if !ok {
-		return nil, errors.New("provide 'VMWARE_URI' environment variable")
+		return nil, errors.New("provide 'VMWARE_URL' environment variable")
 	}
-	config.Vmware.URI = vmwareURI
+	config.Vmware.URL = vmwareURL
+
+	// VMWare insecure
+	vmwareInsecure := os.Getenv("VMWARE_INSECURE")
+	if vmwareInsecure == "1" || vmwareInsecure == "true" {
+		config.Vmware.Insecure = true
+	}
+	config.Vmware.URL = vmwareURL
+
+	// VMWare URL
+	vmwareDC, ok := os.LookupEnv("VMWARE_DC")
+	if !ok {
+		return nil, errors.New("provide 'VMWARE_DC' environment variable")
+	}
+	config.Vmware.DC = vmwareDC
 
 	return config, nil
 }
