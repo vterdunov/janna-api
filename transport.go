@@ -74,9 +74,7 @@ func decodeReadyzRequest(_ context.Context, r *http.Request) (interface{}, error
 
 func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req vmInfoRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
-	}
+	req.Name = r.URL.Query().Get("vmname")
 	return req, nil
 }
 
