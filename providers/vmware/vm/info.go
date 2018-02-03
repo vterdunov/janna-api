@@ -4,37 +4,20 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/log"
-	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/property"
+	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
-	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vterdunov/janna-api/config"
 	jannatypes "github.com/vterdunov/janna-api/types"
 )
 
 // Info returns summary information about Virtual Machines
-func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Config) (jannatypes.VMSummary, error) {
+func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Config, client *vim25.Client) (jannatypes.VMSummary, error) {
 	sum := jannatypes.VMSummary{}
-	vmWareURL := cfg.Vmware.URL
 
-	u, err := soap.ParseURL(vmWareURL)
-	if err != nil {
-		logger.Log("err", "cannot parse VMWare URL")
-		return sum, err
-	}
-
-	insecure := cfg.Vmware.Insecure
-
-	c, err := govmomi.NewClient(ctx, u, insecure)
-	if err != nil {
-		logger.Log("err", err)
-		return sum, err
-	}
-
-	defer c.Logout(ctx)
-	f := find.NewFinder(c.Client, true)
+	f := find.NewFinder(client, true)
 
 	dcName := cfg.Vmware.DC
 	dc, err := f.DatacenterOrDefault(ctx, dcName)
@@ -66,7 +49,7 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	var props []string
 	props = nil
 
-	pc := property.DefaultCollector(c.Client)
+	pc := property.DefaultCollector(client)
 
 	if len(refs) != 0 {
 		err = pc.Retrieve(ctx, refs, props, &vms)

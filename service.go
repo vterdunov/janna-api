@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/log"
+	"github.com/vmware/govmomi/vim25"
 	"github.com/vterdunov/janna-api/config"
 	"github.com/vterdunov/janna-api/health"
 
@@ -34,6 +35,15 @@ type Service interface {
 type service struct {
 	logger log.Logger
 	cfg    *config.Config
+	Client *vim25.Client
+}
+
+func newService(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
+	return service{
+		logger: log.With(logger, "component", "core"),
+		cfg:    cfg,
+		Client: client,
+	}
 }
 
 func (s service) Info() (string, string) {
@@ -49,7 +59,7 @@ func (s service) Readyz() bool {
 }
 
 func (s service) VMInfo(ctx context.Context, name string) (types.VMSummary, error) {
-	return vm.Info(ctx, name, s.logger, s.cfg)
+	return vm.Info(ctx, name, s.logger, s.cfg, s.Client)
 }
 
 func (s service) VMDeploy(ctx context.Context, name string, OVAURL string, opts ...string) (int, error) {

@@ -26,6 +26,8 @@ import (
 	"syscall"
 
 	"github.com/go-kit/kit/log"
+	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/vim25/soap"
 
 	"github.com/vterdunov/janna-api/config"
 	"github.com/vterdunov/janna-api/version"
@@ -53,11 +55,14 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	var svc Service
-	svc = service{
-		logger: log.With(logger, "component", "core"),
-		cfg:    cfg,
+	// TODO: add retries with backoff
+	client, err := newGovmomiClient(ctx, cfg.Vmware.URL, cfg.Vmware.Insecure)
+	if err != nil {
+		logger.Log("err", "cannot create client to connect to VMware", "err_msg", err)
+		os.Exit(1)
 	}
+
+	svc := newService(logger, cfg, client.Client)
 	svc = NewLoggingMiddleware(logger)(svc)
 
 	h := MakeHTTPHandler(svc, log.With(logger, "component", "http"))
@@ -88,4 +93,17 @@ func main() {
 	logger.Log("msg", "The service is shutting down")
 	srv.Shutdown(ctx)
 	logger.Log("msg", "Done")
+}
+
+func newGovmomiClient(ctx context.Context, URL string, insecure bool) (*govmomi.Client, error) {
+	u, err := soap.ParseURL(URL)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := govmomi.NewClient(ctx, u, insecure)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
