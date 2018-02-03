@@ -86,13 +86,11 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	}
 
 	//  f, _, err := t.OpenFile(t.path). Parse and download -> ReadCloser
-	fil, i, err := c.Download(u, &soap.DefaultDownload)
+	fil, _, err := c.Download(u, &soap.DefaultDownload)
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
 	}
-	fmt.Println("Downloaded")
-	fmt.Println(i)
 
 	// func (t *TapeArchive) Open(name string) (io.ReadCloser, int64, error) {
 	// rdr := tar.NewReader(fil)
@@ -101,22 +99,21 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	// file.Close()
 
 	o, err := ioutil.ReadAll(fil)
-	fmt.Println(o)
 	if err != nil {
-		logger.Log("err", err)
-		return jid, err
+		logger.Log("err", "err1")
 	}
 	// end ReadOvf
 	// -----------------------------------------
 
 	// -----------------------------------------
 	// ReadEnvelope
+	fmt.Println("HERE")
 	r := bytes.NewReader(o)
 	e := &ovf.Envelope{}
 	dec := xml.NewDecoder(r)
 	err = dec.Decode(&e)
 	if err != nil {
-		logger.Log("err", err)
+		logger.Log("err", "err")
 	}
 
 	// br := bytes.NewReader(o)
@@ -134,7 +131,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	fmt.Println("++++++")
 	// fmt.Println(e.Annotation)
-	// fmt.Println(e.VirtualSystem.Name)
+	fmt.Println(e.VirtualSystem.Name)
 	fmt.Println("++++++")
 	// +1) create empty struct that represents a deploy object
 
