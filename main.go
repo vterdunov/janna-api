@@ -58,7 +58,7 @@ func main() {
 	// TODO: add retries with backoff
 	client, err := newGovmomiClient(ctx, cfg.Vmware.URL, cfg.Vmware.Insecure)
 	if err != nil {
-		logger.Log("err", "cannot create client to connect to VMware", "err_msg", err)
+		logger.Log("err", err)
 		os.Exit(1)
 	}
 
@@ -90,9 +90,10 @@ func main() {
 		logger.Log("msg", "Got SIGTERM")
 	}
 
-	logger.Log("msg", "The service is shutting down")
+	logger.Log("msg", "The service is going shutting down")
+	client.Logout(ctx)
 	srv.Shutdown(ctx)
-	logger.Log("msg", "Done")
+	logger.Log("msg", "Stopped")
 }
 
 func newGovmomiClient(ctx context.Context, URL string, insecure bool) (*govmomi.Client, error) {

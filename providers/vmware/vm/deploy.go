@@ -1,20 +1,142 @@
 package vm
 
 import (
+	"bytes"
 	"context"
+	"encoding/xml"
+	"fmt"
+	"io/ioutil"
+	"net/url"
+
+	"github.com/vmware/govmomi/ovf"
+	"github.com/vmware/govmomi/vim25/soap"
 
 	"github.com/go-kit/kit/log"
+	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/vim25"
 	"github.com/vterdunov/janna-api/config"
 )
 
+type ovfx struct {
+	Name string
+
+	Client       *vim25.Client
+	Datacenter   *object.Datacenter
+	Datastore    *object.Datastore
+	ResourcePool *object.ResourcePool
+}
+
+type Section struct {
+	Required *bool  `xml:"required,attr"`
+	Info     string `xml:"Info"`
+}
+
+type AnnotationSection struct {
+	Section
+
+	Annotation string `xml:"Annotation"`
+}
+
 // Deploy returns summary information about Virtual Machines
-func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger, cfg *config.Config, opts ...string) (int, error) {
+func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger, cfg *config.Config, c *vim25.Client, opts ...string) (int, error) {
 	// TODO: make up a metod to check deploy progress.
 	// Job ID and endpoint with status?
 	// keep HTTP connection with client and poll it?
 	var jid int
 
-	// 1) create empty struct that represents a deploy object
+	deployment := &ovfx{}
+	deployment.Name = vmName
+	deployment.Client = c
+
+	f := find.NewFinder(c, true)
+
+	dc, err := f.DatacenterOrDefault(ctx, cfg.Vmware.DC)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+	f.SetDatacenter(dc)
+	deployment.Datacenter = dc
+
+	// TODO: try to use DatastoreCLuster instead of Datastore
+	//   user can choose that want to use
+	ds, err := f.DatastoreOrDefault(ctx, cfg.Vmware.DS)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+
+	deployment.Datastore = ds
+
+	rp, err := f.ResourcePoolOrDefault(ctx, cfg.Vmware.RP)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+
+	deployment.ResourcePool = rp
+
+	// -----------------------------------------
+	// ReadOvf
+	u, err := url.Parse(OVAURL)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+
+	//  f, _, err := t.OpenFile(t.path). Parse and download -> ReadCloser
+	fil, i, err := c.Download(u, &soap.DefaultDownload)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+	fmt.Println("Downloaded")
+	fmt.Println(i)
+
+	// func (t *TapeArchive) Open(name string) (io.ReadCloser, int64, error) {
+	// rdr := tar.NewReader(fil)
+	// r := &TapeArchiveEntry{rdr, fil}
+	// fmt.Println(fil)
+	// file.Close()
+
+	o, err := ioutil.ReadAll(fil)
+	fmt.Println(o)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+	// end ReadOvf
+	// -----------------------------------------
+
+	// -----------------------------------------
+	// ReadEnvelope
+	r := bytes.NewReader(o)
+	e := &ovf.Envelope{}
+	dec := xml.NewDecoder(r)
+	err = dec.Decode(&e)
+	if err != nil {
+		logger.Log("err", err)
+	}
+
+	// br := bytes.NewReader(o)
+	// e, err = ovf.Unmarshal(br)
+	// if err != nil {
+	// 	logger.Log("err", err)
+	// 	return jid, err
+	// }
+
+	// e, err := ovf.Unmarshal(re)
+	// if err != nil {
+	// 	logger.Log("err", err)
+	// 	return jid, err
+	// }
+
+	fmt.Println("++++++")
+	// fmt.Println(e.Annotation)
+	// fmt.Println(e.VirtualSystem.Name)
+	fmt.Println("++++++")
+	// +1) create empty struct that represents a deploy object
 
 	// 2) Run a chain of calls:
 	// 3) "Prepare":

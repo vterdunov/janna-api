@@ -63,5 +63,5 @@ func (s service) VMInfo(ctx context.Context, name string) (types.VMSummary, erro
 }
 
 func (s service) VMDeploy(ctx context.Context, name string, OVAURL string, opts ...string) (int, error) {
-	return vm.Deploy(ctx, name, OVAURL, s.logger, s.cfg, opts...)
+	return vm.Deploy(ctx, name, OVAURL, s.logger, s.cfg, s.Client, opts...)
 }

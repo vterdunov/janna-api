@@ -42,13 +42,29 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/kr/pretty"
+  packages = ["."]
+  revision = "cfb55aafdaf3ec08f0db22699ab822c50091b1c4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kr/text"
+  packages = ["."]
+  revision = "7cafcd837844e784b526369c9bce262804aebc60"
+
+[[projects]]
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
     "find",
+    "govc/cli",
+    "govc/flags",
+    "govc/importx",
     "list",
     "nfc",
     "object",
+    "ovf",
     "property",
     "session",
     "task",
@@ -59,7 +75,8 @@
     "vim25/progress",
     "vim25/soap",
     "vim25/types",
-    "vim25/xml"
+    "vim25/xml",
+    "vmdk"
   ]
   revision = "7d879bac14d09f2f2a45a0477c1e45fbf52240f5"
   version = "v0.16.0"
@@ -67,6 +84,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f05e01248b76f310fdcbfdae1d75032523e760dec616509824935debfe706424"
+  inputs-digest = "e0d93ebff79322ce8d4049cec41a32dceefb7a2a0ba454943e54d6b498128c68"
   solver-name = "gps-cdcl"
   solver-version = 1

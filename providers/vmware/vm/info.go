@@ -19,8 +19,7 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 
 	f := find.NewFinder(client, true)
 
-	dcName := cfg.Vmware.DC
-	dc, err := f.DatacenterOrDefault(ctx, dcName)
+	dc, err := f.DatacenterOrDefault(ctx, cfg.Vmware.DC)
 	if err != nil {
 		logger.Log("err", err)
 		return sum, err

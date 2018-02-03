@@ -16,6 +16,8 @@ type vmware struct {
 	URL      string
 	Insecure bool
 	DC       string
+	DS       string
+	RP       string
 }
 
 // Load configuration
@@ -47,12 +49,26 @@ func Load() (*Config, error) {
 	}
 	config.Vmware.URL = vmwareURL
 
-	// VMWare URL
+	// VMWare Datacenter
 	vmwareDC, ok := os.LookupEnv("VMWARE_DC")
 	if !ok {
 		return nil, errors.New("provide 'VMWARE_DC' environment variable")
 	}
 	config.Vmware.DC = vmwareDC
+
+	// VMWare Datastore
+	vmwareDS, ok := os.LookupEnv("VMWARE_DS")
+	if !ok {
+		return nil, errors.New("provide 'VMWARE_DS' environment variable")
+	}
+	config.Vmware.DS = vmwareDS
+
+	// VMWare Resource Pool
+	vmwareRP, ok := os.LookupEnv("VMWARE_RP")
+	if !ok {
+		return nil, errors.New("provide 'VMWARE_RP' environment variable")
+	}
+	config.Vmware.RP = vmwareRP
 
 	return config, nil
 }
