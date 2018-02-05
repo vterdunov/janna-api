@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/go-kit/kit"
   packages = [
     "endpoint",
@@ -42,29 +48,13 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/kr/pretty"
-  packages = ["."]
-  revision = "cfb55aafdaf3ec08f0db22699ab822c50091b1c4"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kr/text"
-  packages = ["."]
-  revision = "7cafcd837844e784b526369c9bce262804aebc60"
-
-[[projects]]
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
     "find",
-    "govc/cli",
-    "govc/flags",
-    "govc/importx",
     "list",
     "nfc",
     "object",
-    "ovf",
     "property",
     "session",
     "task",
@@ -75,8 +65,7 @@
     "vim25/progress",
     "vim25/soap",
     "vim25/types",
-    "vim25/xml",
-    "vmdk"
+    "vim25/xml"
   ]
   revision = "7d879bac14d09f2f2a45a0477c1e45fbf52240f5"
   version = "v0.16.0"
@@ -84,6 +73,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e0d93ebff79322ce8d4049cec41a32dceefb7a2a0ba454943e54d6b498128c68"
+  inputs-digest = "7bda5daaaa68c7a3d1ab0b8a61f540385885e5d9210171d6dbc0637b39a92397"
   solver-name = "gps-cdcl"
   solver-version = 1

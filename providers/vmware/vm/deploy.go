@@ -3,17 +3,16 @@ package vm
 import (
 	"bytes"
 	"context"
-	"encoding/xml"
-	"fmt"
+	"io"
 	"io/ioutil"
-	"net/url"
+	"os"
 
-	"github.com/vmware/govmomi/ovf"
-	"github.com/vmware/govmomi/vim25/soap"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/go-kit/kit/log"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/ovf"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vterdunov/janna-api/config"
 )
@@ -38,6 +37,11 @@ type AnnotationSection struct {
 	Annotation string `xml:"Annotation"`
 }
 
+type TapeArchiveEntry struct {
+	io.Reader
+	f io.Closer
+}
+
 // Deploy returns summary information about Virtual Machines
 func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger, cfg *config.Config, c *vim25.Client, opts ...string) (int, error) {
 	// TODO: make up a metod to check deploy progress.
@@ -49,19 +53,19 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	deployment.Name = vmName
 	deployment.Client = c
 
-	f := find.NewFinder(c, true)
+	finder := find.NewFinder(c, true)
 
-	dc, err := f.DatacenterOrDefault(ctx, cfg.Vmware.DC)
+	dc, err := finder.DatacenterOrDefault(ctx, cfg.Vmware.DC)
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
 	}
-	f.SetDatacenter(dc)
+	finder.SetDatacenter(dc)
 	deployment.Datacenter = dc
 
 	// TODO: try to use DatastoreCLuster instead of Datastore
 	//   user can choose that want to use
-	ds, err := f.DatastoreOrDefault(ctx, cfg.Vmware.DS)
+	ds, err := finder.DatastoreOrDefault(ctx, cfg.Vmware.DS)
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
@@ -69,7 +73,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	deployment.Datastore = ds
 
-	rp, err := f.ResourcePoolOrDefault(ctx, cfg.Vmware.RP)
+	rp, err := finder.ResourcePoolOrDefault(ctx, cfg.Vmware.RP)
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
@@ -77,62 +81,33 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	deployment.ResourcePool = rp
 
-	// -----------------------------------------
-	// ReadOvf
-	u, err := url.Parse(OVAURL)
+	// TODO: OVF is work. Need to try work with OVA
+	f, err := os.Open("Tiny Linux VM.ovf")
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
 	}
 
-	//  f, _, err := t.OpenFile(t.path). Parse and download -> ReadCloser
-	fil, _, err := c.Download(u, &soap.DefaultDownload)
+	readOVF, err := ioutil.ReadAll(f)
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
 	}
+	f.Close()
 
-	// func (t *TapeArchive) Open(name string) (io.ReadCloser, int64, error) {
-	// rdr := tar.NewReader(fil)
-	// r := &TapeArchiveEntry{rdr, fil}
-	// fmt.Println(fil)
-	// file.Close()
+	r := bytes.NewReader(readOVF)
 
-	o, err := ioutil.ReadAll(fil)
-	if err != nil {
-		logger.Log("err", "err1")
+	e, errUNM := ovf.Unmarshal(r)
+	if errUNM != nil {
+		logger.Log("err", errUNM)
+		return jid, err
 	}
+
+	spew.Dump(e.VirtualSystem.Name)
+
 	// end ReadOvf
 	// -----------------------------------------
 
-	// -----------------------------------------
-	// ReadEnvelope
-	fmt.Println("HERE")
-	r := bytes.NewReader(o)
-	e := &ovf.Envelope{}
-	dec := xml.NewDecoder(r)
-	err = dec.Decode(&e)
-	if err != nil {
-		logger.Log("err", "err")
-	}
-
-	// br := bytes.NewReader(o)
-	// e, err = ovf.Unmarshal(br)
-	// if err != nil {
-	// 	logger.Log("err", err)
-	// 	return jid, err
-	// }
-
-	// e, err := ovf.Unmarshal(re)
-	// if err != nil {
-	// 	logger.Log("err", err)
-	// 	return jid, err
-	// }
-
-	fmt.Println("++++++")
-	// fmt.Println(e.Annotation)
-	fmt.Println(e.VirtualSystem.Name)
-	fmt.Println("++++++")
 	// +1) create empty struct that represents a deploy object
 
 	// 2) Run a chain of calls:
