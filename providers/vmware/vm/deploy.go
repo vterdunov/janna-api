@@ -3,17 +3,18 @@ package vm
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
 
 	"github.com/davecgh/go-spew/spew"
-
 	"github.com/go-kit/kit/log"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vterdunov/janna-api/config"
 )
 
@@ -40,6 +41,11 @@ type AnnotationSection struct {
 type TapeArchiveEntry struct {
 	io.Reader
 	f io.Closer
+}
+
+type Network struct {
+	Name    string
+	Network string
 }
 
 // Deploy returns summary information about Virtual Machines
@@ -81,6 +87,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	deployment.ResourcePool = rp
 
+	// ---------------------------------
 	// TODO: OVF is work. Need to try work with OVA
 	f, err := os.Open("Tiny Linux VM.ovf")
 	if err != nil {
@@ -103,8 +110,59 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 		return jid, err
 	}
 
-	spew.Dump(e.VirtualSystem.Name)
+	name := "Govc Virtual Appliance"
+	if e.VirtualSystem != nil {
+		name = e.VirtualSystem.ID
+		if e.VirtualSystem.Name != nil {
+			name = *e.VirtualSystem.Name
+		}
+	}
 
+	var nm []types.OvfNetworkMapping
+	networks := map[string]string{}
+
+	if e.Network != nil {
+		logger.Log("msg", "network is null")
+		for _, net := range e.Network.Networks {
+			networks[net.Name] = net.Name
+		}
+	}
+
+	networks["dv-net-27"] = "dv-net-27"
+
+	net, errN := finder.Network(ctx, "dv-net-27")
+	if errN != nil {
+		logger.Log("errN", errN)
+	}
+	logger.Log("msg", "Found network")
+
+	nm = append(nm, types.OvfNetworkMapping{
+		Name:    "dv-net-27",
+		Network: net.Reference(),
+	})
+
+	spew.Dump(nm)
+
+	cisp := types.OvfCreateImportSpecParams{
+		EntityName:     name,
+		NetworkMapping: nm,
+	}
+
+	m := ovf.NewManager(c)
+	spec, err := m.CreateImportSpec(ctx, string(readOVF), rp, ds, cisp)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+	if spec.Error != nil {
+		logger.Log("err", errors.New(spec.Error[0].LocalizedMessage))
+		return jid, errors.New(spec.Error[0].LocalizedMessage)
+	}
+	if spec.Warning != nil {
+		for _, w := range spec.Warning {
+			logger.Log("Warning", w)
+		}
+	}
 	// end ReadOvf
 	// -----------------------------------------
 
