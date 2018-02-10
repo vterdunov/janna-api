@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-kit/kit/log"
@@ -14,6 +15,7 @@ import (
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vterdunov/janna-api/config"
 )
@@ -89,7 +91,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	// ---------------------------------
 	// TODO: OVF is work. Need to try work with OVA
-	f, err := os.Open("Tiny Linux VM.ovf")
+	f, err := os.Open("vyacheslav.terdunov.test.ovf")
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
@@ -122,27 +124,39 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	networks := map[string]string{}
 
 	if e.Network != nil {
-		logger.Log("msg", "network is null")
+		logger.Log("msg", "network is NOT null")
 		for _, net := range e.Network.Networks {
 			networks[net.Name] = net.Name
 		}
 	}
+	// fmt.Println(networks)
+	// spew.Dump(networks)
+	// networks["dv-net-27"] = "dv-net-27"
 
-	networks["dv-net-27"] = "dv-net-27"
+	// net, errN := finder.Network(ctx, "dv-net-27")
+	// if errN != nil {
+	// 	logger.Log("errN", errN)
+	// }
+	// logger.Log("msg", "Found network")
 
-	net, errN := finder.Network(ctx, "dv-net-27")
-	if errN != nil {
-		logger.Log("errN", errN)
+	// nm = append(nm, types.OvfNetworkMapping{
+	// 	Name:    "dv-net-27",
+	// 	Network: net.Reference(),
+	// })
+
+	// spew.Dump(e.Network.Networks)
+
+	// spew.Dump(nm)
+
+	for src, dst := range networks {
+		if net, errN := finder.Network(ctx, dst); errN == nil {
+			nm = append(nm, types.OvfNetworkMapping{
+				Name:    src,
+				Network: net.Reference(),
+			})
+		}
 	}
-	logger.Log("msg", "Found network")
-
-	nm = append(nm, types.OvfNetworkMapping{
-		Name:    "dv-net-27",
-		Network: net.Reference(),
-	})
-
-	spew.Dump(nm)
-
+	// spew.Dump(nm)
 	cisp := types.OvfCreateImportSpecParams{
 		EntityName:     name,
 		NetworkMapping: nm,
@@ -163,6 +177,62 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 			logger.Log("Warning", w)
 		}
 	}
+
+	host, err := finder.HostSystemOrDefault(ctx, "vi-devops-esx7.lab.vi.local")
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+
+	folder, err := finder.FolderOrDefault(ctx, "vagrant")
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+
+	lease, err := rp.ImportVApp(ctx, spec.ImportSpec, folder, host)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+
+	info, err := lease.Wait(ctx, spec.FileItem)
+	if err != nil {
+		logger.Log("err", err)
+		return jid, err
+	}
+
+	u := lease.StartUpdater(ctx, info)
+	defer u.Done()
+
+	for _, item := range info.Items {
+		file := item.Path
+		f, err := os.Open(file)
+		if err != nil {
+			logger.Log("err", err)
+			return jid, err
+		}
+
+		s, err := f.Stat()
+		if err != nil {
+			logger.Log("err", err)
+			return jid, err
+
+		}
+		logger.Log("msg", "Uploading...")
+		opts := soap.Upload{
+			ContentLength: s.Size(),
+			// Progress:      logger,
+		}
+		lease.Upload(ctx, item, f, opts)
+		time.Sleep(time.Second * 30)
+
+	}
+
+	moref := &info.Entity
+	vm := object.NewVirtualMachine(c, *moref)
+	spew.Dump(vm)
+
 	// end ReadOvf
 	// -----------------------------------------
 

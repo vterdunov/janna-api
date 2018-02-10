@@ -79,7 +79,8 @@ func main() {
 			"msg", "Starting the service",
 		)
 		if err := srv.ListenAndServe(); err != nil {
-			logger.Log("msg", "Startup failed")
+			logger.Log("msg", "Startup failed", "err", err)
+			os.Exit(1)
 		}
 	}()
 
