@@ -3,18 +3,21 @@ package vm
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
+	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-kit/kit/log"
+	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/progress"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vterdunov/janna-api/config"
@@ -50,6 +53,86 @@ type Network struct {
 	Network string
 }
 
+type progressLogger struct {
+	prefix string
+
+	wg sync.WaitGroup
+
+	sink chan chan progress.Report
+	done chan struct{}
+}
+
+func (p *progressLogger) loopA() {
+	var err error
+
+	defer p.wg.Done()
+
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+
+	called := false
+
+	for stop := false; !stop; {
+		select {
+		case ch := <-p.sink:
+			err = p.loopB(tick, ch)
+			stop = true
+			called = true
+		case <-p.done:
+			stop = true
+		case <-tick.C:
+			line := fmt.Sprintf("\r%s", p.prefix)
+			fmt.Println(line)
+		}
+	}
+
+	if err != nil && err != io.EOF {
+		fmt.Println(fmt.Sprintf("\r%sError: %s\n", p.prefix, err))
+	} else if called {
+		fmt.Println(fmt.Sprintf("\r%sOK\n", p.prefix))
+	}
+}
+
+// loopA runs after Sink() has been called.
+func (p *progressLogger) loopB(tick *time.Ticker, ch <-chan progress.Report) error {
+	var r progress.Report
+	var ok bool
+	var err error
+
+	for ok = true; ok; {
+		select {
+		case r, ok = <-ch:
+			if !ok {
+				break
+			}
+			err = r.Error()
+		case <-tick.C:
+			line := fmt.Sprintf("\r%s", p.prefix)
+			if r != nil {
+				line += fmt.Sprintf("(%.0f%%", r.Percentage())
+				detail := r.Detail()
+				if detail != "" {
+					line += fmt.Sprintf(", %s", detail)
+				}
+				line += ")"
+			}
+			fmt.Println(line)
+		}
+	}
+
+	return err
+}
+func (p *progressLogger) Wait() {
+	close(p.done)
+	p.wg.Wait()
+}
+
+func (p *progressLogger) Sink() chan<- progress.Report {
+	ch := make(chan progress.Report)
+	p.sink <- ch
+	return ch
+}
+
 // Deploy returns summary information about Virtual Machines
 func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger, cfg *config.Config, c *vim25.Client, opts ...string) (int, error) {
 	// TODO: make up a metod to check deploy progress.
@@ -65,7 +148,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	dc, err := finder.DatacenterOrDefault(ctx, cfg.Vmware.DC)
 	if err != nil {
-		logger.Log("err", err)
+		logger.Log("err", errors.Wrap(err, "Could not get Datacenter"))
 		return jid, err
 	}
 	finder.SetDatacenter(dc)
@@ -212,6 +295,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 			logger.Log("err", err)
 			return jid, err
 		}
+		defer f.Close()
 
 		s, err := f.Stat()
 		if err != nil {
@@ -219,20 +303,44 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 			return jid, err
 
 		}
-		logger.Log("msg", "Uploading...")
+		st := fmt.Sprintf("Uploading %s... ", path.Base(file))
+		pl := newProgressLogger(st)
+		defer pl.Wait()
+
 		opts := soap.Upload{
 			ContentLength: s.Size(),
-			// Progress:      logger,
+			Progress:      pl,
 		}
 		lease.Upload(ctx, item, f, opts)
-		time.Sleep(time.Second * 30)
 
 	}
+	lease.Complete(ctx)
 
 	moref := &info.Entity
 	vm := object.NewVirtualMachine(c, *moref)
-	spew.Dump(vm)
 
+	// PowerON
+	logger.Log("msg", "Powering on...")
+	task, err := vm.PowerOn(ctx)
+	if err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not power on VM"))
+		return jid, err
+	}
+	if _, err = task.WaitForResult(ctx, nil); err != nil {
+		logger.Log("err", errors.Wrap(err, "Failed to wait powering on task"))
+	}
+
+	// WaitForIP
+	logger.Log("msg", "Waiting for ip")
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer cancel()
+
+	ip, err := vm.WaitForIP(ctx)
+	if err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not get IP address"))
+		return jid, err
+	}
+	logger.Log("msg", "Received IP address", "ip", ip)
 	// end ReadOvf
 	// -----------------------------------------
 
@@ -260,4 +368,19 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 		"ova_url", OVAURL,
 	)
 	return jid, nil
+}
+
+func newProgressLogger(prefix string) *progressLogger {
+	p := &progressLogger{
+		prefix: prefix,
+
+		sink: make(chan chan progress.Report),
+		done: make(chan struct{}),
+	}
+
+	p.wg.Add(1)
+
+	go p.loopA()
+
+	return p
 }

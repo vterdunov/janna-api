@@ -48,6 +48,12 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
@@ -55,6 +61,7 @@
     "list",
     "nfc",
     "object",
+    "ovf",
     "property",
     "session",
     "task",
@@ -73,6 +80,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7bda5daaaa68c7a3d1ab0b8a61f540385885e5d9210171d6dbc0637b39a92397"
+  inputs-digest = "d6a1d4069ee97362327f8bb8c941a92956ed2bb2804c62ed1c61455bc7db3d7d"
   solver-name = "gps-cdcl"
   solver-version = 1
