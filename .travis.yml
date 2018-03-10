@@ -5,7 +5,7 @@ go:
   - 1.10.x
 
 install:
-  - go get -u gopkg.in/alecthomas/gometalinter.v2
+  - go get github.com/alecthomas/gometalinter
   - gometalinter --install
   - go get -u github.com/golang/dep/cmd/dep
 
