@@ -63,8 +63,8 @@
         }
       }
     },
-    "/vm/info": {
-      "post": {
+    "/vm": {
+      "get": {
         "description": "get information about VMs",
         "tags": [
           "vm"
@@ -73,6 +73,18 @@
         "responses": {
           "200": {
             "$ref": "#/responses/vmInfoResponse"
+          }
+        }
+      },
+      "post": {
+        "description": "Create VM from OVA file",
+        "tags": [
+          "vm"
+        ],
+        "operationId": "vmDeploy",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/vmDeployResponse"
           }
         }
       }
@@ -905,6 +917,9 @@
     },
     "readyzResponse": {
       "description": "Readyness probe"
+    },
+    "vmDeployResponse": {
+      "description": "VM deploy response fields"
     },
     "vmInfoResponse": {
       "description": "VM info data",

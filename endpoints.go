@@ -63,7 +63,7 @@ type InfoResponse struct {
 func MakeHealthzEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		s.Healthz()
-		return readyzResponse{}, nil
+		return healthzResponse{}, nil
 	}
 }
 
@@ -128,7 +128,7 @@ func (r vmInfoResponse) error() error {
 
 // MakeVMDeployEndpoint returns an endpoint via the passed service
 //
-// swagger:route POST /vm vm vmInfo
+// swagger:route POST /vm vm vmDeploy
 //
 // Create VM from OVA file
 //
