@@ -72,12 +72,13 @@ func main() {
 		Handler: h,
 	}
 
+	logger.Log(
+		"commit", version.Commit,
+		"build_time", version.BuildTime,
+		"msg", "Listening...",
+		"addr", srv.Addr,
+	)
 	go func() {
-		logger.Log(
-			"commit", version.Commit,
-			"build_time", version.BuildTime,
-			"msg", "Starting the service",
-		)
 		if err := srv.ListenAndServe(); err != nil {
 			logger.Log("msg", "Startup failed", "err", err)
 			os.Exit(1)

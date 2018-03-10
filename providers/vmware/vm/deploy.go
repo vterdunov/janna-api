@@ -32,22 +32,7 @@ type ovfx struct {
 	ResourcePool *object.ResourcePool
 }
 
-type Section struct {
-	Required *bool  `xml:"required,attr"`
-	Info     string `xml:"Info"`
-}
-
-type AnnotationSection struct {
-	Section
-
-	Annotation string `xml:"Annotation"`
-}
-
-type TapeArchiveEntry struct {
-	io.Reader
-	f io.Closer
-}
-
+// Network represents VM network
 type Network struct {
 	Name    string
 	Network string
@@ -290,15 +275,15 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	for _, item := range info.Items {
 		file := item.Path
-		f, err := os.Open(file)
-		if err != nil {
+		f, errOpen := os.Open(file)
+		if errOpen != nil {
 			logger.Log("err", err)
 			return jid, err
 		}
 		defer f.Close()
 
-		s, err := f.Stat()
-		if err != nil {
+		s, errStat := f.Stat()
+		if errStat != nil {
 			logger.Log("err", err)
 			return jid, err
 

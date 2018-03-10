@@ -12,7 +12,7 @@ GO_LDFLAGS += -X ${PROJECT}/version.Commit=${COMMIT}
 GO_LDFLAGS += -X ${PROJECT}/version.BuildTime=${BUILD_TIME}
 GO_LDFLAGS +="
 
-all: dep test compile api-doc
+all: dep check test compile api-doc
 
 .PHONY: container
 container:
@@ -32,7 +32,7 @@ compile: clean
 
 .PHONY: cgo-compile
 cgo-compile: clean
-	 go build -v -race -o $(PROG_NAME)
+	 go build -v -o $(PROG_NAME)
 
 .PHONY: start
 start: cgo-compile
