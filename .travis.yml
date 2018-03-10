@@ -2,6 +2,12 @@ language: go
 
 go:
   - 1.9.x
+  - 1.10.x
+
+install:
+  - go get -u gopkg.in/alecthomas/gometalinter.v2
+  - gometalinter --install
+  - go get -u github.com/golang/dep/cmd/dep
 
 env:
   - SWAGGER_VERSION: 0.13.0
@@ -11,8 +17,6 @@ before_script:
   - curl -Lo ./swagger/swagger https://github.com/go-swagger/go-swagger/releases/download/${SWAGGER_VERSION}/swagger_linux_amd64
   - chmod +x ./swagger/swagger
   - export PATH=$PATH:$PWD/swagger
-  - go get -u gopkg.in/alecthomas/gometalinter.v2
-  - go get -u github.com/golang/dep/cmd/dep
 
 script:
   - make
