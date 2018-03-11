@@ -32,6 +32,45 @@ type ovfx struct {
 	ResourcePool *object.ResourcePool
 }
 
+func (o *ovfx) ChooseDatacenter(ctx context.Context, dcName string) error {
+	finder := find.NewFinder(o.Client, true)
+
+	dc, err := finder.DatacenterOrDefault(ctx, dcName)
+	if err != nil {
+		return err
+	}
+	finder.SetDatacenter(dc)
+	o.Datacenter = dc
+	return nil
+}
+
+func (o *ovfx) ChooseDatastore(ctx context.Context, dsName string) error {
+	finder := find.NewFinder(o.Client, true)
+	// TODO: try to use DatastoreCLuster instead of Datastore
+	//   user can choose that want to use
+	ds, err := finder.DatastoreOrDefault(ctx, dsName)
+	if err != nil {
+		return err
+	}
+	o.Datastore = ds
+	return nil
+}
+
+func (o *ovfx) ChooseResourcePool(ctx context.Context, rpName string) error {
+	finder := find.NewFinder(o.Client, true)
+	rp, err := finder.ResourcePoolOrDefault(ctx, rpName)
+	if err != nil {
+		return err
+	}
+	o.ResourcePool = rp
+	return nil
+}
+
+type params struct {
+	datacenter   string
+	resourcePool string
+}
+
 // Network represents VM network
 type Network struct {
 	Name    string
@@ -125,37 +164,21 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	// keep HTTP connection with client and poll it?
 	var jid int
 
-	deployment := &ovfx{}
-	deployment.Name = vmName
-	deployment.Client = c
+	deployment := newDeployment(c, vmName)
+
+	if err := deployment.ChooseDatacenter(ctx, cfg.Vmware.DC); err != nil {
+		return jid, err
+	}
+
+	if err := deployment.ChooseDatastore(ctx, cfg.Vmware.DS); err != nil {
+		return jid, err
+	}
+
+	if err := deployment.ChooseResourcePool(ctx, cfg.Vmware.RP); err != nil {
+		return jid, err
+	}
 
 	finder := find.NewFinder(c, true)
-
-	dc, err := finder.DatacenterOrDefault(ctx, cfg.Vmware.DC)
-	if err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not get Datacenter"))
-		return jid, err
-	}
-	finder.SetDatacenter(dc)
-	deployment.Datacenter = dc
-
-	// TODO: try to use DatastoreCLuster instead of Datastore
-	//   user can choose that want to use
-	ds, err := finder.DatastoreOrDefault(ctx, cfg.Vmware.DS)
-	if err != nil {
-		logger.Log("err", err)
-		return jid, err
-	}
-
-	deployment.Datastore = ds
-
-	rp, err := finder.ResourcePoolOrDefault(ctx, cfg.Vmware.RP)
-	if err != nil {
-		logger.Log("err", err)
-		return jid, err
-	}
-
-	deployment.ResourcePool = rp
 
 	// ---------------------------------
 	// TODO: OVF is work. Need to try work with OVA
@@ -349,4 +372,11 @@ func newProgressLogger(prefix string) *progressLogger {
 	go p.loopA()
 
 	return p
+}
+
+func newDeployment(c *vim25.Client, vmName string) *ovfx {
+	return &ovfx{
+		Client: c,
+		Name:   vmName,
+	}
 }
