@@ -56,7 +56,7 @@ func main() {
 	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	// TODO: add retries with backoff
-	client, err := newGovmomiClient(ctx, cfg.Vmware.URL, cfg.Vmware.Insecure)
+	client, err := newGovmomiClient(ctx, cfg.VMWare.URL, cfg.VMWare.Insecure)
 	if err != nil {
 		logger.Log("err", err)
 		os.Exit(1)

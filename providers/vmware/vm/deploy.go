@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vmware/govmomi/nfc"
+
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
@@ -23,32 +25,36 @@ import (
 	"github.com/vterdunov/janna-api/config"
 )
 
-type ovfx struct {
-	Name string
+type deployment struct {
+	Client *vim25.Client
+	Finder *find.Finder
+	ovfx
+}
 
-	Client       *vim25.Client
+type ovfx struct {
+	Name         string
 	Datacenter   *object.Datacenter
 	Datastore    *object.Datastore
 	ResourcePool *object.ResourcePool
+	Folder       *object.Folder
+	Cluster      *object.ClusterComputeResource
+	Host         *object.HostSystem
 }
 
-func (o *ovfx) ChooseDatacenter(ctx context.Context, dcName string) error {
-	finder := find.NewFinder(o.Client, true)
-
-	dc, err := finder.DatacenterOrDefault(ctx, dcName)
+func (o *deployment) ChooseDatacenter(ctx context.Context, dcName string) error {
+	dc, err := o.Finder.DatacenterOrDefault(ctx, dcName)
 	if err != nil {
 		return err
 	}
-	finder.SetDatacenter(dc)
+	o.Finder.SetDatacenter(dc)
 	o.Datacenter = dc
 	return nil
 }
 
-func (o *ovfx) ChooseDatastore(ctx context.Context, dsName string) error {
-	finder := find.NewFinder(o.Client, true)
+func (o *deployment) ChooseDatastore(ctx context.Context, dsName string) error {
 	// TODO: try to use DatastoreCLuster instead of Datastore
 	//   user can choose that want to use
-	ds, err := finder.DatastoreOrDefault(ctx, dsName)
+	ds, err := o.Finder.DatastoreOrDefault(ctx, dsName)
 	if err != nil {
 		return err
 	}
@@ -56,9 +62,8 @@ func (o *ovfx) ChooseDatastore(ctx context.Context, dsName string) error {
 	return nil
 }
 
-func (o *ovfx) ChooseResourcePool(ctx context.Context, rpName string) error {
-	finder := find.NewFinder(o.Client, true)
-	rp, err := finder.ResourcePoolOrDefault(ctx, rpName)
+func (o *deployment) ChooseResourcePool(ctx context.Context, rpName string) error {
+	rp, err := o.Finder.ResourcePoolOrDefault(ctx, rpName)
 	if err != nil {
 		return err
 	}
@@ -66,15 +71,79 @@ func (o *ovfx) ChooseResourcePool(ctx context.Context, rpName string) error {
 	return nil
 }
 
-type params struct {
-	datacenter   string
-	resourcePool string
+func (o *deployment) ChooseFolder(ctx context.Context, fName string) error {
+	folder, err := o.Finder.FolderOrDefault(ctx, fName)
+	if err != nil {
+		return err
+	}
+	o.Folder = folder
+	return nil
 }
 
-// Network represents VM network
-type Network struct {
-	Name    string
-	Network string
+func (o *deployment) ChooseHost(ctx context.Context, hName string) error {
+	// Host param is optional. If we use 'nil', then vCenter will choose a host
+	// If you need a specify a cluster then specify a Resource Pool param.
+	if hName == "" {
+		o.Host = nil
+		return nil
+	}
+
+	host, err := o.Finder.HostSystem(ctx, hName)
+	if err != nil {
+		return err
+	}
+	o.Host = host
+	return nil
+}
+
+func (o *deployment) NetworkMap(e *ovf.Envelope) (p []types.OvfNetworkMapping) {
+	ctx := context.TODO()
+	networks := map[string]string{}
+
+	if e.Network != nil {
+		for _, net := range e.Network.Networks {
+			networks[net.Name] = net.Name
+		}
+	}
+
+	// TODO: rewrite networks from params
+
+	for src, dst := range networks {
+		if net, err := o.Finder.Network(ctx, dst); err == nil {
+			p = append(p, types.OvfNetworkMapping{
+				Name:    src,
+				Network: net.Reference(),
+			})
+		}
+	}
+	return
+}
+
+func (o *deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.FileItem) error {
+	file := item.Path
+
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+
+	stat, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	outputStr := fmt.Sprintf("Uploading %s... ", path.Base(file))
+	pl := newProgressLogger(outputStr)
+	defer pl.Wait()
+
+	opts := soap.Upload{
+		ContentLength: stat.Size(),
+		Progress:      pl,
+	}
+
+	return lease.Upload(ctx, item, f, opts)
 }
 
 type progressLogger struct {
@@ -164,46 +233,47 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	// keep HTTP connection with client and poll it?
 	var jid int
 
-	deployment := newDeployment(c, vmName)
+	// -----------------------
+	// TODO: Move to separate method with signature:
+	// func (cmd *deployment) Import(pathToOVF string) (*types.ManagedObjectReference, error) {
+	// call: moref, err := d.Import(pathToOVF)
+	// start Import OVA/OVF.
+	d := newDeployment(c, vmName)
 
-	if err := deployment.ChooseDatacenter(ctx, cfg.Vmware.DC); err != nil {
+	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
 		return jid, err
 	}
 
-	if err := deployment.ChooseDatastore(ctx, cfg.Vmware.DS); err != nil {
+	if err := d.ChooseDatastore(ctx, cfg.VMWare.DS); err != nil {
 		return jid, err
 	}
 
-	if err := deployment.ChooseResourcePool(ctx, cfg.Vmware.RP); err != nil {
+	if err := d.ChooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
 		return jid, err
 	}
 
-	finder := find.NewFinder(c, true)
+	if err := d.ChooseFolder(ctx, cfg.VMWare.Folder); err != nil {
+		return jid, err
+	}
 
-	// ---------------------------------
-	// TODO: OVF is work. Need to try work with OVA
-	f, err := os.Open("vyacheslav.terdunov.test.ovf")
+	if err := d.ChooseHost(ctx, cfg.VMWare.Host); err != nil {
+		return jid, err
+	}
+
+	// TODO: Download OVF. Download OVA
+	o, err := readOVF("vyacheslav.terdunov.test.ovf")
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
 	}
 
-	readOVF, err := ioutil.ReadAll(f)
+	e, err := readEnvelope(o)
 	if err != nil {
 		logger.Log("err", err)
-		return jid, err
-	}
-	f.Close()
-
-	r := bytes.NewReader(readOVF)
-
-	e, errUNM := ovf.Unmarshal(r)
-	if errUNM != nil {
-		logger.Log("err", errUNM)
-		return jid, err
+		return jid, nil
 	}
 
-	name := "Govc Virtual Appliance"
+	name := "Virtual Appliance"
 	if e.VirtualSystem != nil {
 		name = e.VirtualSystem.ID
 		if e.VirtualSystem.Name != nil {
@@ -211,50 +281,26 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 		}
 	}
 
-	var nm []types.OvfNetworkMapping
-	networks := map[string]string{}
-
-	if e.Network != nil {
-		logger.Log("msg", "network is NOT null")
-		for _, net := range e.Network.Networks {
-			networks[net.Name] = net.Name
-		}
+	// Override name from params if specified
+	if d.Name != "" {
+		name = d.Name
 	}
-	// fmt.Println(networks)
-	// spew.Dump(networks)
-	// networks["dv-net-27"] = "dv-net-27"
 
-	// net, errN := finder.Network(ctx, "dv-net-27")
-	// if errN != nil {
-	// 	logger.Log("errN", errN)
-	// }
-	// logger.Log("msg", "Found network")
-
-	// nm = append(nm, types.OvfNetworkMapping{
-	// 	Name:    "dv-net-27",
-	// 	Network: net.Reference(),
-	// })
-
-	// spew.Dump(e.Network.Networks)
-
-	// spew.Dump(nm)
-
-	for src, dst := range networks {
-		if net, errN := finder.Network(ctx, dst); errN == nil {
-			nm = append(nm, types.OvfNetworkMapping{
-				Name:    src,
-				Network: net.Reference(),
-			})
-		}
-	}
-	// spew.Dump(nm)
 	cisp := types.OvfCreateImportSpecParams{
-		EntityName:     name,
-		NetworkMapping: nm,
+		// See https://github.com/vmware/govmomi/blob/v0.16.0/vim25/types/enum.go#L3381-L3395
+		// VMWare can not support some of those disk format types
+		// "preallocated", "thin", "seSparse", "rdm", "rdmp",
+		// "raw", "delta", "sparse2Gb", "thick2Gb", "eagerZeroedThick",
+		// "sparseMonolithic", "flatMonolithic", "thick"
+		DiskProvisioning: "thin",
+		EntityName:       name,
+		NetworkMapping:   d.NetworkMap(e),
 	}
 
 	m := ovf.NewManager(c)
-	spec, err := m.CreateImportSpec(ctx, string(readOVF), rp, ds, cisp)
+	rp := d.ResourcePool
+	ds := d.Datastore
+	spec, err := m.CreateImportSpec(ctx, string(o), rp, ds, cisp)
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
@@ -265,23 +311,22 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	}
 	if spec.Warning != nil {
 		for _, w := range spec.Warning {
-			logger.Log("Warning", w)
+			logger.Log("msg", w)
 		}
 	}
 
-	host, err := finder.HostSystemOrDefault(ctx, "vi-devops-esx7.lab.vi.local")
-	if err != nil {
-		logger.Log("err", err)
-		return jid, err
+	// TODO: get from params
+	anno := "Test annotations"
+	if anno != "" {
+		switch s := spec.ImportSpec.(type) {
+		case *types.VirtualMachineImportSpec:
+			s.ConfigSpec.Annotation = anno
+		case *types.VirtualAppImportSpec:
+			s.VAppConfigSpec.Annotation = anno
+		}
 	}
 
-	folder, err := finder.FolderOrDefault(ctx, "vagrant")
-	if err != nil {
-		logger.Log("err", err)
-		return jid, err
-	}
-
-	lease, err := rp.ImportVApp(ctx, spec.ImportSpec, folder, host)
+	lease, err := rp.ImportVApp(ctx, spec.ImportSpec, d.Folder, d.Host)
 	if err != nil {
 		logger.Log("err", err)
 		return jid, err
@@ -297,36 +342,20 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	defer u.Done()
 
 	for _, item := range info.Items {
-		file := item.Path
-		f, errOpen := os.Open(file)
-		if errOpen != nil {
+		if err = d.Upload(ctx, lease, item); err != nil {
 			logger.Log("err", err)
-			return jid, err
+			return jid, errors.Wrap(err, "Could not upload disks to VMWare")
 		}
-		defer f.Close()
-
-		s, errStat := f.Stat()
-		if errStat != nil {
-			logger.Log("err", err)
-			return jid, err
-
-		}
-		st := fmt.Sprintf("Uploading %s... ", path.Base(file))
-		pl := newProgressLogger(st)
-		defer pl.Wait()
-
-		opts := soap.Upload{
-			ContentLength: s.Size(),
-			Progress:      pl,
-		}
-		lease.Upload(ctx, item, f, opts)
-
 	}
-	lease.Complete(ctx)
 
 	moref := &info.Entity
+	lease.Complete(ctx)
+	// end Import OVA/OVF
+	// -----------------------
+
 	vm := object.NewVirtualMachine(c, *moref)
 
+	// TODO: move to method d.Deploy
 	// PowerON
 	logger.Log("msg", "Powering on...")
 	task, err := vm.PowerOn(ctx)
@@ -374,9 +403,37 @@ func newProgressLogger(prefix string) *progressLogger {
 	return p
 }
 
-func newDeployment(c *vim25.Client, vmName string) *ovfx {
-	return &ovfx{
+func newDeployment(c *vim25.Client, vmName string) *deployment {
+	finder := find.NewFinder(c, true)
+	return &deployment{
 		Client: c,
-		Name:   vmName,
+		Finder: finder,
+		ovfx:   ovfx{Name: vmName},
 	}
+}
+
+func readOVF(fpath string) ([]byte, error) {
+	f, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	r, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func readEnvelope(data []byte) (*ovf.Envelope, error) {
+	r := bytes.NewReader(data)
+
+	e, err := ovf.Unmarshal(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to parse ovf")
+	}
+
+	return e, nil
 }

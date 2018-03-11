@@ -9,15 +9,17 @@ import (
 type Config struct {
 	Port   string
 	Debug  bool
-	Vmware vmware
+	VMWare resources
 }
 
-type vmware struct {
+type resources struct {
 	URL      string
 	Insecure bool
 	DC       string
 	DS       string
 	RP       string
+	Folder   string
+	Host     string
 }
 
 // Load configuration
@@ -29,46 +31,62 @@ func Load() (*Config, error) {
 		config.Debug = true
 	}
 
-	port, ok := os.LookupEnv("PORT")
-	if !ok {
+	port, exist := os.LookupEnv("PORT")
+	if !exist {
 		return nil, errors.New("provide 'PORT' environment variable")
 	}
 	config.Port = port
 
 	// VMWare URL
-	vmwareURL, ok := os.LookupEnv("VMWARE_URL")
-	if !ok {
+	vmwareURL, exist := os.LookupEnv("VMWARE_URL")
+	if !exist {
 		return nil, errors.New("provide 'VMWARE_URL' environment variable")
 	}
-	config.Vmware.URL = vmwareURL
+	config.VMWare.URL = vmwareURL
 
 	// VMWare insecure
 	vmwareInsecure := os.Getenv("VMWARE_INSECURE")
 	if vmwareInsecure == "1" || vmwareInsecure == "true" {
-		config.Vmware.Insecure = true
+		config.VMWare.Insecure = true
 	}
-	config.Vmware.URL = vmwareURL
+	config.VMWare.URL = vmwareURL
 
 	// VMWare Datacenter
 	vmwareDC, ok := os.LookupEnv("VMWARE_DC")
 	if !ok {
 		return nil, errors.New("provide 'VMWARE_DC' environment variable")
 	}
-	config.Vmware.DC = vmwareDC
+	config.VMWare.DC = vmwareDC
 
 	// VMWare Datastore
-	vmwareDS, ok := os.LookupEnv("VMWARE_DS")
-	if !ok {
+	vmwareDS, exist := os.LookupEnv("VMWARE_DS")
+	if !exist {
 		return nil, errors.New("provide 'VMWARE_DS' environment variable")
 	}
-	config.Vmware.DS = vmwareDS
+	config.VMWare.DS = vmwareDS
 
 	// VMWare Resource Pool
-	vmwareRP, ok := os.LookupEnv("VMWARE_RP")
-	if !ok {
+	vmwareRP, exist := os.LookupEnv("VMWARE_RP")
+	if !exist {
 		return nil, errors.New("provide 'VMWARE_RP' environment variable")
 	}
-	config.Vmware.RP = vmwareRP
+	config.VMWare.RP = vmwareRP
+
+	// VMWare VM Folder
+	vmwareFolder, exist := os.LookupEnv("VMWARE_FOLDER")
+	if !exist {
+		config.VMWare.Folder = ""
+	} else {
+		config.VMWare.Folder = vmwareFolder
+	}
+
+	// VMWare ESXi Host
+	vmwareHost, exist := os.LookupEnv("VMWARE_HOST")
+	if !exist {
+		config.VMWare.Host = ""
+	} else {
+		config.VMWare.Host = vmwareHost
+	}
 
 	return config, nil
 }
