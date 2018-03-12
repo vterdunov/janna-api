@@ -1,10 +1,9 @@
-// Janna API docs
-//
-// Janna is a little REST API interface for VMware.
+// Janna provides HTTP endpoints for some operations on VMware.
+// Deploy OVF/OVA, get info about VM, etc.
 //
 //     Schemes: http
 //     Host: localhost
-//     BasePath: /v1/
+//     BasePath: /
 //     Version: 0.0.1
 // 		 License: MIT http://opensource.org/licenses/MIT
 //

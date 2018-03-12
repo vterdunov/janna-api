@@ -232,13 +232,8 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	// keep HTTP connection with client and poll it?
 	var jid int
 
-	// -----------------------
-	// TODO: Move to separate method with signature:
-	// func (cmd *deployment) Import(pathToOVF string) (*types.ManagedObjectReference, error) {
-	// call: moref, err := d.Import(pathToOVF)
-	// start Import OVA/OVF.
+	logger.Log("msg", "Starting deploy VM", "vm", vmName)
 
-	// -----------------------
 	d := newDeployment(c, vmName)
 	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
 		return jid, err
@@ -260,7 +255,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 		return jid, err
 	}
 
-	// TODO: Download OVF. Download OVA
+	// TODO: Download OVF. Download and unpack OVA
 	moref, err := d.Import(ctx, "vyacheslav.terdunov.test.ovf")
 	if err != nil {
 		return jid, err
@@ -268,36 +263,23 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	vm := object.NewVirtualMachine(c, *moref)
 
-	// TODO: move to method d.Deploy
-	// PowerON
-	logger.Log("msg", "Powering on...")
-	task, err := vm.PowerOn(ctx)
-	if err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not power on VM"))
+	logger.Log("msg", "Powering on...", "vm", vmName)
+	if err = powerON(ctx, vm); err != nil {
 		return jid, err
-	}
-	if _, err = task.WaitForResult(ctx, nil); err != nil {
-		logger.Log("err", errors.Wrap(err, "Failed to wait powering on task"))
 	}
 
 	// WaitForIP
-	logger.Log("msg", "Waiting for ip")
+	logger.Log("msg", "Waiting for ip", "vm", vmName)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
-	ip, err := vm.WaitForIP(ctx)
+	ip, err := waitForIP(ctx, vm)
 	if err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not get IP address"))
+		logger.Log("err", errors.Wrap(err, "Could not get IP address"), "vm", vmName)
 		return jid, err
 	}
-	logger.Log("msg", "Received IP address", "ip", ip)
-	// end ReadOvf
+	logger.Log("msg", "Received IP address", "vm", vmName, "ip", ip)
 
-	logger.Log(
-		"msg", "Deploy OVA",
-		"name", vmName,
-		"ova_url", OVAURL,
-	)
 	return jid, nil
 }
 
@@ -308,6 +290,26 @@ func newDeployment(c *vim25.Client, vmName string) *deployment {
 		Finder: finder,
 		ovfx:   ovfx{Name: vmName},
 	}
+}
+
+func powerON(ctx context.Context, vm *object.VirtualMachine) error {
+	task, err := vm.PowerOn(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Could not power on VM")
+	}
+	if _, err := task.WaitForResult(ctx, nil); err != nil {
+		return errors.Wrap(err, "Failed while powering on task")
+	}
+
+	return nil
+}
+
+func waitForIP(ctx context.Context, vm *object.VirtualMachine) (string, error) {
+	ip, err := vm.WaitForIP(ctx)
+	if err != nil {
+		return "", err
+	}
+	return ip, nil
 }
 
 func readOVF(fpath string) ([]byte, error) {
