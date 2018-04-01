@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"sync"
@@ -146,14 +146,23 @@ func (o *deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 	return lease.Upload(ctx, item, f, opts)
 }
 
-func (o *deployment) Import(ctx context.Context, pathToOVF string) (*types.ManagedObjectReference, error) {
+func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
 
-	rovf, err := readOVF(pathToOVF)
+	url, err := url.Parse(OVAURL)
+	if err != nil {
+		return nil, err
+	}
+
+	rovf, _, _ := o.Client.Download(url, &soap.DefaultDownload)
+	var b []byte
+	rovf.Read(b)
+	defer rovf.Close()
+
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not read OVF file")
 	}
 
-	e, err := readEnvelope(rovf)
+	e, err := readEnvelope(b)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not read Envelope")
 	}
@@ -185,7 +194,7 @@ func (o *deployment) Import(ctx context.Context, pathToOVF string) (*types.Manag
 	m := ovf.NewManager(o.Client)
 	rp := o.ResourcePool
 	ds := o.Datastore
-	spec, err := m.CreateImportSpec(ctx, string(rovf), rp, ds, cisp)
+	spec, err := m.CreateImportSpec(ctx, string(b), rp, ds, cisp)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create VM spec")
 	}
@@ -312,20 +321,20 @@ func waitForIP(ctx context.Context, vm *object.VirtualMachine) (string, error) {
 	return ip, nil
 }
 
-func readOVF(fpath string) ([]byte, error) {
-	f, err := os.Open(fpath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
+// func readOVF(fpath string) ([]byte, error) {
+// 	f, err := os.Open(fpath)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer f.Close()
 
-	r, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
+// 	r, err := ioutil.ReadAll(f)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return r, nil
-}
+// 	return r, nil
+// }
 
 func readEnvelope(data []byte) (*ovf.Envelope, error) {
 	r := bytes.NewReader(data)
