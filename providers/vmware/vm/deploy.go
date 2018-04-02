@@ -1,13 +1,16 @@
 package vm
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -153,14 +156,40 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 		return nil, err
 	}
 
-	rovf, _, _ := o.Client.Download(url, &soap.DefaultDownload)
-	var b []byte
-	rovf.Read(b)
-	defer rovf.Close()
-
+	rovf, _, err := o.Client.Download(url, &soap.DefaultDownload)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not read OVF file")
+		return nil, err
 	}
+
+	td, err := ioutil.TempDir("", "janna-")
+	if err != nil {
+		return nil, err
+	}
+
+	defer os.RemoveAll(td)
+
+	if untarErr := Untar(td, rovf); untarErr != nil {
+		return nil, untarErr
+	}
+
+	ovfName, err := checkExt(".ovf", td)
+	if err != nil {
+		return nil, err
+	}
+
+	ovfPath := td + "/" + ovfName
+	fmt.Println(ovfPath)
+	rova, err := os.Open(ovfPath)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := ioutil.ReadAll(rova)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rovf.Close()
 
 	e, err := readEnvelope(b)
 	if err != nil {
@@ -265,7 +294,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	}
 
 	// TODO: Download OVF. Download and unpack OVA
-	moref, err := d.Import(ctx, "vyacheslav.terdunov.test.ovf")
+	moref, err := d.Import(ctx, OVAURL)
 	if err != nil {
 		return jid, err
 	}
@@ -441,4 +470,75 @@ func newProgressLogger(prefix string) *progressLogger {
 	go p.loopA()
 
 	return p
+}
+
+func Untar(dst string, r io.Reader) error {
+	tr := tar.NewReader(r)
+
+	for {
+		header, err := tr.Next()
+
+		switch {
+
+		// if no more files are found return
+		case err == io.EOF:
+			return nil
+
+		// return any other error
+		case err != nil:
+			return err
+
+		// if the header is nil, just skip it (not sure how this happens)
+		case header == nil:
+			continue
+		}
+
+		// the target location where the dir/file should be created
+		target := filepath.Join(dst, header.Name)
+
+		// the following switch could also be done using fi.Mode(), not sure if there
+		// a benefit of using one vs. the other.
+		// fi := header.FileInfo()
+
+		// check the file type
+		switch header.Typeflag {
+
+		// if its a dir and it doesn't exist create it
+		case tar.TypeDir:
+			if _, err := os.Stat(target); err != nil {
+				if err := os.MkdirAll(target, 0755); err != nil {
+					return err
+				}
+			}
+
+		// if it's a file create it
+		case tar.TypeReg:
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			// copy over contents
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func checkExt(ext string, dir string) (string, error) {
+	var file string
+	filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if filepath.Ext(path) == ext {
+			file = f.Name()
+		}
+		return nil
+	})
+
+	return file, nil
 }
