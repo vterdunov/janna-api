@@ -68,12 +68,12 @@
     "vim25/types",
     "vim25/xml"
   ]
-  revision = "7d879bac14d09f2f2a45a0477c1e45fbf52240f5"
-  version = "v0.16.0"
+  revision = "123ed177021588bac57b5c87c1a84270ddf2eca8"
+  version = "v0.17.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b173b40a2d71c6cd50dbd76573f621701f70a4d2e25815afafe077a84e86d900"
+  inputs-digest = "4b718cda4632f725c3b319fc23a1a41aac567a730a23001e2ed82010e8fda4ff"
   solver-name = "gps-cdcl"
   solver-version = 1

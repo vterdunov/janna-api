@@ -32,16 +32,25 @@ type deployment struct {
 	Client *vim25.Client
 	Finder *find.Finder
 	ovfx
+	logger log.Logger
 }
 
 type ovfx struct {
-	Name         string
-	Datacenter   *object.Datacenter
-	Datastore    *object.Datastore
-	ResourcePool *object.ResourcePool
-	Folder       *object.Folder
-	Cluster      *object.ClusterComputeResource
-	Host         *object.HostSystem
+	Name           string
+	Datacenter     *object.Datacenter
+	Datastore      *object.Datastore
+	ResourcePool   *object.ResourcePool
+	Folder         *object.Folder
+	Cluster        *object.ClusterComputeResource
+	Host           *object.HostSystem
+	NetworkMapping []Network
+}
+
+// Network represent mapping between OVF network and ESXi system network.
+// 'OVF-VM-Network-Name' -> 'Yours-ESXi-VM-Network-Name'
+type Network struct {
+	Name    string
+	Network string
 }
 
 func (o *deployment) ChooseDatacenter(ctx context.Context, dcName string) error {
@@ -99,17 +108,20 @@ func (o *deployment) ChooseHost(ctx context.Context, hName string) error {
 	return nil
 }
 
-func (o *deployment) NetworkMap(e *ovf.Envelope) (p []types.OvfNetworkMapping) {
-	ctx := context.TODO()
+func (o *deployment) NetworkMap(ctx context.Context, e *ovf.Envelope) (p []types.OvfNetworkMapping) {
 	networks := map[string]string{}
 
 	if e.Network != nil {
 		for _, net := range e.Network.Networks {
+			o.logger.Log("msg", "found OVF networks mapping", "name", net.Name, "network", net.Name)
 			networks[net.Name] = net.Name
 		}
 	}
 
-	// TODO: rewrite networks from params
+	for _, net := range o.NetworkMapping {
+		o.logger.Log("msg", "found override networks mapping", "name", net.Name, "network", net.Network)
+		networks[net.Name] = net.Network
+	}
 
 	for src, dst := range networks {
 		if net, err := o.Finder.Network(ctx, dst); err == nil {
@@ -117,8 +129,10 @@ func (o *deployment) NetworkMap(e *ovf.Envelope) (p []types.OvfNetworkMapping) {
 				Name:    src,
 				Network: net.Reference(),
 			})
+			o.logger.Log("msg", "networks mapping", "name", src, "network", dst)
 		}
 	}
+
 	return
 }
 
@@ -137,8 +151,8 @@ func (o *deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 
 	defer f.Close()
 
-	outputStr := fmt.Sprintf("Uploading %s... ", path.Base(file))
-	pl := newProgressLogger(outputStr)
+	outputStr := path.Base(file)
+	pl := newProgressLogger(outputStr, o.logger)
 	defer pl.Wait()
 
 	opts := soap.Upload{
@@ -150,35 +164,37 @@ func (o *deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 }
 
 func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
-
 	url, err := url.Parse(OVAURL)
 	if err != nil {
 		return nil, err
 	}
 
-	rovf, _, err := o.Client.Download(url, &soap.DefaultDownload)
+	rovf, _, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
 	if err != nil {
+		o.logger.Log("err", err)
 		return nil, err
 	}
 
 	td, err := ioutil.TempDir("", "janna-")
 	if err != nil {
+		o.logger.Log("err", err)
 		return nil, err
 	}
 
 	defer os.RemoveAll(td)
 
-	if untarErr := Untar(td, rovf); untarErr != nil {
+	if untarErr := untar(td, rovf); untarErr != nil {
+		o.logger.Log("err", untarErr)
 		return nil, untarErr
 	}
 
 	ovfName, err := checkExt(".ovf", td)
 	if err != nil {
+		o.logger.Log("err", err)
 		return nil, err
 	}
 
 	ovfPath := td + "/" + ovfName
-	fmt.Println(ovfPath)
 	rova, err := os.Open(ovfPath)
 	if err != nil {
 		return nil, err
@@ -215,9 +231,10 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 		// "preallocated", "thin", "seSparse", "rdm", "rdmp",
 		// "raw", "delta", "sparse2Gb", "thick2Gb", "eagerZeroedThick",
 		// "sparseMonolithic", "flatMonolithic", "thick"
+		// TODO: get form params
 		DiskProvisioning: "thin",
 		EntityName:       name,
-		NetworkMapping:   o.NetworkMap(e),
+		NetworkMapping:   o.NetworkMap(ctx, e),
 	}
 
 	m := ovf.NewManager(o.Client)
@@ -255,6 +272,7 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 	u := lease.StartUpdater(ctx, info)
 	defer u.Done()
 
+	os.Chdir(td)
 	for _, item := range info.Items {
 		if err = o.Upload(ctx, lease, item); err != nil {
 			return nil, errors.Wrap(err, "Could not upload disks to VMWare")
@@ -272,30 +290,35 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	logger.Log("msg", "Starting deploy VM", "vm", vmName)
 
-	d := newDeployment(c, vmName)
+	d := newDeployment(c, vmName, logger)
 	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not choose datacenter"), "vm", vmName)
 		return jid, err
 	}
 
 	if err := d.ChooseDatastore(ctx, cfg.VMWare.DS); err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not choose datastore"), "vm", vmName)
 		return jid, err
 	}
 
 	if err := d.ChooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not choose resource pool"), "vm", vmName)
 		return jid, err
 	}
 
 	if err := d.ChooseFolder(ctx, cfg.VMWare.Folder); err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not choose folder"), "vm", vmName)
 		return jid, err
 	}
 
 	if err := d.ChooseHost(ctx, cfg.VMWare.Host); err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not choose host"), "vm", vmName)
 		return jid, err
 	}
 
-	// TODO: Download OVF. Download and unpack OVA
 	moref, err := d.Import(ctx, OVAURL)
 	if err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not import deployement"), "vm", vmName)
 		return jid, err
 	}
 
@@ -303,6 +326,7 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 
 	logger.Log("msg", "Powering on...", "vm", vmName)
 	if err = powerON(ctx, vm); err != nil {
+		logger.Log("err", errors.Wrap(err, "Could not power on VM"), "vm", vmName)
 		return jid, err
 	}
 
@@ -321,12 +345,26 @@ func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger
 	return jid, nil
 }
 
-func newDeployment(c *vim25.Client, vmName string) *deployment {
+func newDeployment(c *vim25.Client, vmName string, logger log.Logger) *deployment {
 	finder := find.NewFinder(c, true)
+	var nms []Network
+
+	// TODO: Get from user request
+	nm := Network{
+		Name:    "VM Network",
+		Network: "dv-net-27",
+	}
+
+	nms = append(nms, nm)
+
 	return &deployment{
 		Client: c,
 		Finder: finder,
-		ovfx:   ovfx{Name: vmName},
+		logger: logger,
+		ovfx: ovfx{
+			Name:           vmName,
+			NetworkMapping: nms,
+		},
 	}
 }
 
@@ -381,8 +419,9 @@ type progressLogger struct {
 
 	wg sync.WaitGroup
 
-	sink chan chan progress.Report
-	done chan struct{}
+	sink   chan chan progress.Report
+	done   chan struct{}
+	logger log.Logger
 }
 
 func (p *progressLogger) loopA() {
@@ -390,7 +429,7 @@ func (p *progressLogger) loopA() {
 
 	defer p.wg.Done()
 
-	tick := time.NewTicker(100 * time.Millisecond)
+	tick := time.NewTicker(5 * time.Second)
 	defer tick.Stop()
 
 	called := false
@@ -403,20 +442,18 @@ func (p *progressLogger) loopA() {
 			called = true
 		case <-p.done:
 			stop = true
-		case <-tick.C:
-			line := fmt.Sprintf("\r%s", p.prefix)
-			fmt.Println(line)
 		}
 	}
 
+	// TODO: change to using logger
 	if err != nil && err != io.EOF {
-		fmt.Println(fmt.Sprintf("\r%sError: %s\n", p.prefix, err))
+		p.logger.Log("err", errors.Wrap(err, "Error with disks uploading"), "file", p.prefix)
 	} else if called {
-		fmt.Println(fmt.Sprintf("\r%sOK\n", p.prefix))
+		p.logger.Log("msg", "uploaded", "file", p.prefix)
 	}
 }
 
-// loopA runs after Sink() has been called.
+// loopB runs after Sink() has been called.
 func (p *progressLogger) loopB(tick *time.Ticker, ch <-chan progress.Report) error {
 	var r progress.Report
 	var ok bool
@@ -430,16 +467,10 @@ func (p *progressLogger) loopB(tick *time.Ticker, ch <-chan progress.Report) err
 			}
 			err = r.Error()
 		case <-tick.C:
-			line := fmt.Sprintf("\r%s", p.prefix)
 			if r != nil {
-				line += fmt.Sprintf("(%.0f%%", r.Percentage())
-				detail := r.Detail()
-				if detail != "" {
-					line += fmt.Sprintf(", %s", detail)
-				}
-				line += ")"
+				pc := fmt.Sprintf("%.0f%%", r.Percentage())
+				p.logger.Log("msg", "uploading disks", "file", p.prefix, "progress", pc)
 			}
-			fmt.Println(line)
 		}
 	}
 
@@ -457,12 +488,13 @@ func (p *progressLogger) Sink() chan<- progress.Report {
 	return ch
 }
 
-func newProgressLogger(prefix string) *progressLogger {
+func newProgressLogger(prefix string, logger log.Logger) *progressLogger {
 	p := &progressLogger{
 		prefix: prefix,
 
-		sink: make(chan chan progress.Report),
-		done: make(chan struct{}),
+		sink:   make(chan chan progress.Report),
+		done:   make(chan struct{}),
+		logger: logger,
 	}
 
 	p.wg.Add(1)
@@ -472,7 +504,7 @@ func newProgressLogger(prefix string) *progressLogger {
 	return p
 }
 
-func Untar(dst string, r io.Reader) error {
+func untar(dst string, r io.Reader) error {
 	tr := tar.NewReader(r)
 
 	for {
