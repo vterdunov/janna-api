@@ -28,8 +28,11 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/vim25/soap"
 
-	"github.com/vterdunov/janna-api/config"
-	"github.com/vterdunov/janna-api/version"
+	"github.com/vterdunov/janna-api/pkg/config"
+	"github.com/vterdunov/janna-api/pkg/jannaendpoint"
+	"github.com/vterdunov/janna-api/pkg/jannaservice"
+	"github.com/vterdunov/janna-api/pkg/jannatransport"
+	"github.com/vterdunov/janna-api/pkg/version"
 )
 
 func main() {
@@ -40,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create logger
+	// Create logger, which we'll use and give to other components.
 	var logger log.Logger
 	if cfg.Debug {
 		logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
@@ -51,8 +54,6 @@ func main() {
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
 	ctx := context.Background()
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	// TODO: add retries with backoff
 	client, err := newGovmomiClient(ctx, cfg.VMWare.URL, cfg.VMWare.Insecure)
@@ -60,15 +61,17 @@ func main() {
 		logger.Log("err", err)
 		os.Exit(1)
 	}
+	vimClient := client.Client
 
-	svc := newService(logger, cfg, client.Client)
-	svc = NewLoggingMiddleware(logger)(svc)
-
-	h := MakeHTTPHandler(svc, log.With(logger, "component", "http"))
+	// Build the layers of the service "onion" from the inside out.
+	svc := jannaservice.New(logger, cfg, vimClient)
+	endpoints := jannaendpoint.New(svc, logger)
+	httpHandler := jannatransport.NewHTTPHandler(endpoints, logger)
+	// jsonrpcHandler := jannatransport.NewJSONRPCHandler(endpoints, logger)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: h,
+		Handler: httpHandler,
 	}
 
 	logger.Log(
@@ -83,6 +86,9 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	switch <-interrupt {
 	case syscall.SIGINT:

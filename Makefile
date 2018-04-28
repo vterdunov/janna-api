@@ -28,11 +28,11 @@ dep:
 
 .PHONY: compile
 compile: clean
-	 $(GO_VARS) go build -v -ldflags $(GO_LDFLAGS) -o $(PROG_NAME)
+	 $(GO_VARS) go build -v -ldflags $(GO_LDFLAGS) -o $(PROG_NAME) ./cmd/janna/server.go
 
 .PHONY: cgo-compile
 cgo-compile: clean
-	 go build -v -o $(PROG_NAME)
+	 go build -v -o $(PROG_NAME) ./cmd/janna/server.go
 
 .PHONY: start
 start: cgo-compile

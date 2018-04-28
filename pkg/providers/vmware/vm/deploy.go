@@ -25,7 +25,7 @@ import (
 	"github.com/vmware/govmomi/vim25/progress"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
-	"github.com/vterdunov/janna-api/config"
+	"github.com/vterdunov/janna-api/pkg/config"
 )
 
 type deployment struct {

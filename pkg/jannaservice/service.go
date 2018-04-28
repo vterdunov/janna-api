@@ -1,16 +1,16 @@
-package main
+package jannaservice
 
 import (
 	"context"
 
 	"github.com/go-kit/kit/log"
 	"github.com/vmware/govmomi/vim25"
-	"github.com/vterdunov/janna-api/config"
-	"github.com/vterdunov/janna-api/health"
+	"github.com/vterdunov/janna-api/pkg/config"
+	"github.com/vterdunov/janna-api/pkg/health"
 
-	"github.com/vterdunov/janna-api/providers/vmware/vm"
-	"github.com/vterdunov/janna-api/types"
-	"github.com/vterdunov/janna-api/version"
+	"github.com/vterdunov/janna-api/pkg/providers/vmware/vm"
+	"github.com/vterdunov/janna-api/pkg/types"
+	"github.com/vterdunov/janna-api/pkg/version"
 )
 
 // Service is the interface that represents methods of the business logic
@@ -38,7 +38,7 @@ type service struct {
 	Client *vim25.Client
 }
 
-func newService(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
+func New(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
 	return service{
 		logger: log.With(logger, "component", "core"),
 		cfg:    cfg,

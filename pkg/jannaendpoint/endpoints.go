@@ -1,10 +1,12 @@
-package main
+package jannaendpoint
 
 import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/vterdunov/janna-api/types"
+	"github.com/go-kit/kit/log"
+	"github.com/vterdunov/janna-api/pkg/jannaservice"
+	"github.com/vterdunov/janna-api/pkg/types"
 )
 
 // Endpoints collects all of the endpoints that compose the Service.
@@ -16,15 +18,35 @@ type Endpoints struct {
 	VMDeployEndpoint endpoint.Endpoint
 }
 
-// MakeServerEndpoints returns an Endpoints struct where each endpoint invokes
+// New returns an Endpoints struct where each endpoint invokes
 // the corresponding method on the provided service.
-func MakeServerEndpoints(s Service) Endpoints {
+func New(s jannaservice.Service, logger log.Logger) Endpoints {
+	var infoEndpoint endpoint.Endpoint
+	infoEndpoint = MakeInfoEndpoint(s)
+	infoEndpoint = LoggingMiddleware(log.With(logger, "method", "Info"))(infoEndpoint)
+
+	var healthzEndpoint endpoint.Endpoint
+	healthzEndpoint = MakeHealthzEndpoint(s)
+	healthzEndpoint = LoggingMiddleware(log.With(logger, "method", "Healthz"))(healthzEndpoint)
+
+	var readyzEndpoint endpoint.Endpoint
+	readyzEndpoint = MakeReadyzEndpoint(s)
+	readyzEndpoint = LoggingMiddleware(log.With(logger, "method", "Readyz"))(readyzEndpoint)
+
+	var vmInfoEndpoint endpoint.Endpoint
+	vmInfoEndpoint = MakeVMInfoEndpoint(s)
+	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "method", "VMInfo"))(vmInfoEndpoint)
+
+	var vmDeployEndpoint endpoint.Endpoint
+	vmDeployEndpoint = MakeVMDeployEndpoint(s)
+	vmDeployEndpoint = LoggingMiddleware(log.With(logger, "method", "VMDeploy"))(vmDeployEndpoint)
+
 	return Endpoints{
-		InfoEndpoint:     MakeInfoEndpoint(s),
-		HealthzEndpoint:  MakeHealthzEndpoint(s),
-		ReadyzEndpoint:   MakeReadyzEndpoint(s),
-		VMInfoEndpoint:   MakeVMInfoEndpoint(s),
-		VMDeployEndpoint: MakeVMDeployEndpoint(s),
+		InfoEndpoint:     infoEndpoint,
+		HealthzEndpoint:  healthzEndpoint,
+		ReadyzEndpoint:   readyzEndpoint,
+		VMInfoEndpoint:   vmInfoEndpoint,
+		VMDeployEndpoint: vmDeployEndpoint,
 	}
 }
 
@@ -36,7 +58,7 @@ func MakeServerEndpoints(s Service) Endpoints {
 //
 // Responses:
 //   200: InfoResponse
-func MakeInfoEndpoint(s Service) endpoint.Endpoint {
+func MakeInfoEndpoint(s jannaservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		b, c := s.Info()
 		return InfoResponse{b, c}, nil
@@ -60,7 +82,7 @@ type InfoResponse struct {
 //
 // Responses:
 //   200: healthzResponse
-func MakeHealthzEndpoint(s Service) endpoint.Endpoint {
+func MakeHealthzEndpoint(s jannaservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		s.Healthz()
 		return healthzResponse{}, nil
@@ -80,7 +102,7 @@ type healthzResponse struct {
 //
 // Responses:
 //   200: readyzResponse
-func MakeReadyzEndpoint(s Service) endpoint.Endpoint {
+func MakeReadyzEndpoint(s jannaservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		s.Readyz()
 		return readyzResponse{}, nil
@@ -100,20 +122,22 @@ type readyzResponse struct {
 //
 // Responses:
 //   200: vmInfoResponse
-func MakeVMInfoEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(vmInfoRequest)
+func MakeVMInfoEndpoint(s jannaservice.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(VMInfoRequest)
 		summary, err := s.VMInfo(ctx, req.Name)
 		return vmInfoResponse{summary, err}, nil
 	}
 }
 
+// VMInfoRequest collects the request parameters for the VMInfo method.
 // swagger:parameters
-type vmInfoRequest struct {
-	Name string `json:"name"`
+type VMInfoRequest struct {
+	Name   string
+	Folder string
 }
 
-// VM info data
+// vmInfoResponse collects the response values for the VMInfo method
 // swagger:response
 type vmInfoResponse struct {
 	// in:body
@@ -134,9 +158,9 @@ func (r vmInfoResponse) error() error {
 //
 // Responses:
 //   200: vmDeployResponse
-func MakeVMDeployEndpoint(s Service) endpoint.Endpoint {
+func MakeVMDeployEndpoint(s jannaservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(vmDeployRequest)
+		req := request.(VMDeployRequest)
 		jid, err := s.VMDeploy(
 			ctx,
 			req.Name,
@@ -152,7 +176,7 @@ func MakeVMDeployEndpoint(s Service) endpoint.Endpoint {
 }
 
 // swagger:parameters
-type vmDeployRequest struct {
+type VMDeployRequest struct {
 	Name       string `json:"name"`
 	OVAURL     string `json:"ova_url"`
 	Network    string `json:"network,omitempty"`

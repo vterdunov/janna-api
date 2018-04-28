@@ -1,4 +1,4 @@
-package main
+package jannatransport
 
 import (
 	"context"
@@ -8,55 +8,52 @@ import (
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/vterdunov/janna-api/pkg/jannaendpoint"
 )
 
-// func My(ctx context.Context, code int, r *http.Request) {
-
-// }
-
-// MakeHTTPHandler mounts all of the service endpoints into an http.Handler.
-func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
+// NewHTTPHandler mounts all of the service endpoints into an http.Handler.
+func NewHTTPHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
-	e := MakeServerEndpoints(s)
-	// f := My(context.Background(), 201, r)
+
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
-		// httptransport.ServerFinalizer(f),
 	}
 
 	r.Methods("GET").Path("/info").Handler(httptransport.NewServer(
-		e.InfoEndpoint,
+		endpoints.InfoEndpoint,
 		decodeInfoRequest,
 		encodeResponse,
 		options...,
 	))
 
 	r.Methods("GET").Path("/healthz").Handler(httptransport.NewServer(
-		e.HealthzEndpoint,
+		endpoints.HealthzEndpoint,
 		decodeHelthzRequest,
 		encodeProbeResponse,
 		options...,
 	))
+
 	r.Methods("GET").Path("/readyz").Handler(httptransport.NewServer(
-		e.ReadyzEndpoint,
+		endpoints.ReadyzEndpoint,
 		decodeReadyzRequest,
 		encodeProbeResponse,
 		options...,
 	))
 
 	r.Methods("GET").Path("/vm").Handler(httptransport.NewServer(
-		e.VMInfoEndpoint,
+		endpoints.VMInfoEndpoint,
 		decodeVMInfoRequest,
 		encodeResponse,
 		options...,
 	))
 
 	r.Methods("POST").Path("/vm").Handler(httptransport.NewServer(
-		e.VMDeployEndpoint,
+		endpoints.VMDeployEndpoint,
 		decodeVMDeployRequest,
 		encodeResponse,
 		options...,
 	))
+
 	return r
 }
 
@@ -73,13 +70,14 @@ func decodeReadyzRequest(_ context.Context, r *http.Request) (interface{}, error
 }
 
 func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req vmInfoRequest
+	var req jannaendpoint.VMInfoRequest
 	req.Name = r.URL.Query().Get("vmname")
+	req.Folder = r.URL.Query().Get("folder")
 	return req, nil
 }
 
 func decodeVMDeployRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req vmDeployRequest
+	var req jannaendpoint.VMDeployRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, err
 	}
