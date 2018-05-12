@@ -2,6 +2,7 @@ package jannaendpoint
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -50,6 +51,13 @@ func New(s jannaservice.Service, logger log.Logger) Endpoints {
 	}
 }
 
+// Failer is an interface that should be implemented by response types.
+// Response encoders can check if responses are Failer, and if so they've
+// failed, and if so encode them using a separate write path based on the error.
+type Failer interface {
+	Failed() error
+}
+
 // MakeInfoEndpoint returns an endpoint via the passed service
 //
 // swagger:route GET /info app appInfo
@@ -91,8 +99,7 @@ func MakeHealthzEndpoint(s jannaservice.Service) endpoint.Endpoint {
 
 // Liveness probe
 // swagger:response
-type healthzResponse struct {
-}
+type healthzResponse struct{}
 
 // MakeReadyzEndpoint returns an endpoint via the passed service
 //
@@ -111,8 +118,7 @@ func MakeReadyzEndpoint(s jannaservice.Service) endpoint.Endpoint {
 
 // Readyness probe
 // swagger:response
-type readyzResponse struct {
-}
+type readyzResponse struct{}
 
 // MakeVMInfoEndpoint returns an endpoint via the passed service
 //
@@ -126,27 +132,28 @@ func MakeVMInfoEndpoint(s jannaservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(VMInfoRequest)
 		summary, err := s.VMInfo(ctx, req.Name)
-		return vmInfoResponse{summary, err}, nil
+		return VMInfoResponse{summary, err}, nil
 	}
 }
 
-// VMInfoRequest collects the request parameters for the VMInfo method.
+// VMInfoRequest collects the request parameters for the VMInfo method
 // swagger:parameters
 type VMInfoRequest struct {
 	Name   string
 	Folder string
 }
 
-// vmInfoResponse collects the response values for the VMInfo method
+// VMInfoResponse collects the response values for the VMInfo method
 // swagger:response
-type vmInfoResponse struct {
+type VMInfoResponse struct {
 	// in:body
-	Summary types.VMSummary `json:"summary,omitempty"`
+	Summary *types.VMSummary `json:"summary,omitempty"`
 	// in:body
 	Err error `json:"error,omitempty"`
 }
 
-func (r vmInfoResponse) error() error {
+// Failed implements Failer
+func (r VMInfoResponse) Failed() error {
 	return r.Err
 }
 
@@ -161,39 +168,46 @@ func (r vmInfoResponse) error() error {
 func MakeVMDeployEndpoint(s jannaservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(VMDeployRequest)
-		jid, err := s.VMDeploy(
-			ctx,
-			req.Name,
-			req.OVAURL,
-			req.Network,
-			req.Datastores,
-			req.Cluster,
-			req.VMFolder,
-		)
 
-		return vmDeployResponse{jid, err}, nil
+		// Validate incoming params
+		if req.Name == "" || req.OVAURL == "" {
+			// TODO: return correct error value
+			return nil, errors.New("Invalid arguments")
+		}
+
+		params := &types.VMDeployParams{
+			Name:       req.Name,
+			OVAURL:     req.OVAURL,
+			Datastores: req.Datastores,
+		}
+
+		jid, err := s.VMDeploy(ctx, params)
+
+		return VMDeployResponse{jid, err}, nil
 	}
 }
 
+// VMDeployRequest collects the request parameters for the VMDeploy method
 // swagger:parameters
 type VMDeployRequest struct {
-	Name       string `json:"name"`
-	OVAURL     string `json:"ova_url"`
-	Network    string `json:"network,omitempty"`
-	Datastores string `json:"datastores,omitempty"`
-	Cluster    string `json:"cluster,omitempty"`
-	VMFolder   string `json:"vm_folder,omitempty"`
+	Name       string   `json:"name"`
+	OVAURL     string   `json:"ova_url"`
+	Network    string   `json:"network,omitempty"`
+	Datastores []string `json:"datastores,omitempty"`
+	Cluster    string   `json:"cluster,omitempty"`
+	VMFolder   string   `json:"vm_folder,omitempty"`
 }
 
-// VM deploy response fields
+// VMDeployResponse fields
 // swagger:response
-type vmDeployResponse struct {
+type VMDeployResponse struct {
 	// in:body
 	JID int `json:"job_id,omitempty"`
 	// in:body
 	Err error `json:"error,omitempty"`
 }
 
-func (r vmDeployResponse) error() error {
+// Failed implements Failer
+func (r VMDeployResponse) Failed() error {
 	return r.Err
 }

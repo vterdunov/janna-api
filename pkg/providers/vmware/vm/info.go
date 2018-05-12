@@ -14,15 +14,13 @@ import (
 )
 
 // Info returns summary information about Virtual Machines
-func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Config, client *vim25.Client) (jannatypes.VMSummary, error) {
-	sum := jannatypes.VMSummary{}
-
+func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Config, client *vim25.Client) (*jannatypes.VMSummary, error) {
 	f := find.NewFinder(client, true)
 
 	dc, err := f.DatacenterOrDefault(ctx, cfg.VMWare.DC)
 	if err != nil {
 		logger.Log("err", err)
-		return sum, err
+		return nil, err
 	}
 
 	f.SetDatacenter(dc)
@@ -31,10 +29,10 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	if err != nil {
 		if _, ok := err.(*find.NotFoundError); ok {
 			logger.Log("err", err)
-			return sum, err
+			return nil, err
 		}
 		logger.Log("err", err)
-		return sum, err
+		return nil, err
 	}
 
 	refs := make([]types.ManagedObjectReference, 0, len(vmObjs))
@@ -54,7 +52,7 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 		err = pc.Retrieve(ctx, refs, props, &vms)
 		if err != nil {
 			logger.Log("err", err)
-			return sum, err
+			return nil, err
 		}
 	}
 
@@ -63,6 +61,7 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 		"msg", "Virtual machines found",
 	)
 
+	sum := &jannatypes.VMSummary{}
 	for _, vmInfo := range vms {
 		sum.Guest = vmInfo.Guest
 		sum.Heartbeat = vmInfo.GuestHeartbeatStatus

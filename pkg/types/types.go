@@ -21,3 +21,9 @@ type VMSummary struct {
 // 	// in: body
 // 	Commit string `json:"commit"`
 // }
+
+type VMDeployParams struct {
+	Name       string
+	OVAURL     string
+	Datastores []string
+}

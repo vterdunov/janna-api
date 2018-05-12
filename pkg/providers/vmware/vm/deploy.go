@@ -14,18 +14,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vmware/govmomi/nfc"
-
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/nfc"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/progress"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
+
 	"github.com/vterdunov/janna-api/pkg/config"
+	jannatypes "github.com/vterdunov/janna-api/pkg/types"
 )
 
 type deployment struct {
@@ -282,65 +284,66 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 }
 
 // Deploy Virtual Machine to VMWare
-func Deploy(ctx context.Context, vmName string, OVAURL string, logger log.Logger, cfg *config.Config, c *vim25.Client, opts ...string) (int, error) {
+func Deploy(ctx context.Context, deployParams *jannatypes.VMDeployParams, logger log.Logger, cfg *config.Config, c *vim25.Client, opts ...string) (int, error) {
+	spew.Dump(deployParams)
 	// TODO: make up a metod to check deploy progress.
 	// Job ID and endpoint with status?
 	// keep HTTP connection with client and poll it?
 	var jid int
 
-	logger.Log("msg", "Starting deploy VM", "vm", vmName)
+	logger.Log("msg", "Starting deploy VM", "vm", deployParams.Name)
 
-	d := newDeployment(c, vmName, logger)
+	d := newDeployment(c, deployParams.Name, logger)
 	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose datacenter"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not choose datacenter"), "vm", deployParams.Name)
 		return jid, err
 	}
 
 	if err := d.ChooseDatastore(ctx, cfg.VMWare.DS); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose datastore"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not choose datastore"), "vm", deployParams.Name)
 		return jid, err
 	}
 
 	if err := d.ChooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose resource pool"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not choose resource pool"), "vm", deployParams.Name)
 		return jid, err
 	}
 
 	if err := d.ChooseFolder(ctx, cfg.VMWare.Folder); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose folder"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not choose folder"), "vm", deployParams.Name)
 		return jid, err
 	}
 
 	if err := d.ChooseHost(ctx, cfg.VMWare.Host); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose host"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not choose host"), "vm", deployParams.Name)
 		return jid, err
 	}
 
-	moref, err := d.Import(ctx, OVAURL)
+	moref, err := d.Import(ctx, deployParams.OVAURL)
 	if err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not import deployement"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not import deployement"), "vm", deployParams.Name)
 		return jid, err
 	}
 
 	vm := object.NewVirtualMachine(c, *moref)
 
-	logger.Log("msg", "Powering on...", "vm", vmName)
+	logger.Log("msg", "Powering on...", "vm", deployParams.Name)
 	if err = powerON(ctx, vm); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not power on VM"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not power on VM"), "vm", deployParams.Name)
 		return jid, err
 	}
 
 	// WaitForIP
-	logger.Log("msg", "Waiting for ip", "vm", vmName)
+	logger.Log("msg", "Waiting for ip", "vm", deployParams.Name)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
 	ip, err := waitForIP(ctx, vm)
 	if err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not get IP address"), "vm", vmName)
+		logger.Log("err", errors.Wrap(err, "Could not get IP address"), "vm", deployParams.Name)
 		return jid, err
 	}
-	logger.Log("msg", "Received IP address", "vm", vmName, "ip", ip)
+	logger.Log("msg", "Received IP address", "vm", deployParams.Name, "ip", ip)
 
 	return jid, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/vterdunov/janna-api/pkg/jannaendpoint"
 )
 
@@ -79,7 +80,7 @@ func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error
 func decodeVMDeployRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req jannaendpoint.VMDeployRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Could not decode request")
 	}
 	return req, nil
 }

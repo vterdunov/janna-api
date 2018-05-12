@@ -36,7 +36,7 @@ cgo-compile: clean
 
 .PHONY: start
 start: cgo-compile
-	PORT=${PORT} ./${PROG_NAME}
+	@./${PROG_NAME}
 
 .PHONY: test
 test:

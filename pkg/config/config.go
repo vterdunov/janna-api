@@ -7,7 +7,7 @@ import (
 
 // Config provide configuration to the application
 type Config struct {
-	Port   string
+	Protocols
 	Debug  bool
 	VMWare resources
 }
@@ -22,6 +22,19 @@ type resources struct {
 	Host     string
 }
 
+type Protocols struct {
+	HTTP
+	JSONRPC
+}
+
+type HTTP struct {
+	Port string
+}
+
+type JSONRPC struct {
+	Port string
+}
+
 // Load configuration
 func Load() (*Config, error) {
 	config := &Config{}
@@ -31,11 +44,15 @@ func Load() (*Config, error) {
 		config.Debug = true
 	}
 
-	port, exist := os.LookupEnv("PORT")
-	if !exist {
-		return nil, errors.New("provide 'PORT' environment variable")
+	port := os.Getenv("PORT")
+	if port != "" {
+		config.Protocols.HTTP.Port = port
 	}
-	config.Port = port
+
+	jsonrpcPort := os.Getenv("JSONRPC_PORT")
+	if jsonrpcPort != "" {
+		config.Protocols.JSONRPC.Port = jsonrpcPort
+	}
 
 	// VMWare URL
 	vmwareURL, exist := os.LookupEnv("VMWARE_URL")

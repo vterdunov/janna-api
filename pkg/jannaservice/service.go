@@ -25,10 +25,10 @@ type Service interface {
 	Readyz() bool
 
 	// VMInfo provide summary information about VM
-	VMInfo(context.Context, string) (types.VMSummary, error)
+	VMInfo(context.Context, string) (*types.VMSummary, error)
 
 	// VMDeploy create VM from OVA file
-	VMDeploy(context.Context, string, string, ...string) (int, error)
+	VMDeploy(context.Context, *types.VMDeployParams) (int, error)
 }
 
 // service implements our Service
@@ -38,6 +38,7 @@ type service struct {
 	Client *vim25.Client
 }
 
+// New creates a new instance of the Service with some preconfigured options
 func New(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
 	return service{
 		logger: log.With(logger, "component", "core"),
@@ -58,10 +59,10 @@ func (s service) Readyz() bool {
 	return health.Readyz()
 }
 
-func (s service) VMInfo(ctx context.Context, name string) (types.VMSummary, error) {
+func (s service) VMInfo(ctx context.Context, name string) (*types.VMSummary, error) {
 	return vm.Info(ctx, name, s.logger, s.cfg, s.Client)
 }
 
-func (s service) VMDeploy(ctx context.Context, name string, OVAURL string, opts ...string) (int, error) {
-	return vm.Deploy(ctx, name, OVAURL, s.logger, s.cfg, s.Client, opts...)
+func (s service) VMDeploy(ctx context.Context, deployParams *types.VMDeployParams) (int, error) {
+	return vm.Deploy(ctx, deployParams, s.logger, s.cfg, s.Client)
 }

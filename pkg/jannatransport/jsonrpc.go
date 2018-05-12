@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport/http/jsonrpc"
 	"github.com/vterdunov/janna-api/pkg/jannaendpoint"
@@ -23,14 +22,20 @@ func NewJSONRPCHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) *js
 // makeEndpointCodecMap returns a codec map configured for the jannaservice
 func makeEndpointCodecMap(endpoints jannaendpoint.Endpoints) jsonrpc.EndpointCodecMap {
 	return jsonrpc.EndpointCodecMap{
-		"info": jsonrpc.EndpointCodec{
+		"vm_info": jsonrpc.EndpointCodec{
 			Endpoint: endpoints.VMInfoEndpoint,
 			Decode:   decodeJSONPRCVMInfoRequest,
 			Encode:   encodeJSONRPCVMInfoResponse,
 		},
+		"vm_deploy": jsonrpc.EndpointCodec{
+			Endpoint: endpoints.VMDeployEndpoint,
+			Decode:   decodeJSONPRCVMDeployRequest,
+			Encode:   encodeJSONRPCVMDeployResponse,
+		},
 	}
 }
 
+// VM Info
 func decodeJSONPRCVMInfoRequest(_ context.Context, msg json.RawMessage) (interface{}, error) {
 	var req jannaendpoint.VMInfoRequest
 	err := json.Unmarshal(msg, &req)
@@ -44,16 +49,57 @@ func decodeJSONPRCVMInfoRequest(_ context.Context, msg json.RawMessage) (interfa
 }
 
 func encodeJSONRPCVMInfoResponse(_ context.Context, obj interface{}) (json.RawMessage, error) {
-	res, ok := obj.(addendpoint.SumResponse)
+	res, ok := obj.(jannaendpoint.VMInfoResponse)
 	if !ok {
 		return nil, &jsonrpc.Error{
 			Code:    -32000,
-			Message: fmt.Sprintf("Asserting result to *SumResponse failed. Got %T, %+v", obj, obj),
+			Message: fmt.Sprintf("Asserting result to *VMInfoResponse failed. Got %T, %+v", obj, obj),
 		}
 	}
+
+	// check business logic errors
+	if f, ok := obj.(jannaendpoint.Failer); ok && f.Failed() != nil {
+		return json.Marshal(f.Failed().Error())
+	}
+
 	b, err := json.Marshal(res)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't marshal response: %s", err)
+		return nil, fmt.Errorf("Could not marshal response: %s", err)
+	}
+
+	return b, nil
+}
+
+// VM Deploy
+func decodeJSONPRCVMDeployRequest(_ context.Context, msg json.RawMessage) (interface{}, error) {
+	var req jannaendpoint.VMDeployRequest
+	err := json.Unmarshal(msg, &req)
+	if err != nil {
+		return nil, &jsonrpc.Error{
+			Code:    -32000,
+			Message: fmt.Sprintf("couldn't unmarshal body to sum request: %s", err),
+		}
+	}
+	return req, nil
+}
+
+func encodeJSONRPCVMDeployResponse(_ context.Context, obj interface{}) (json.RawMessage, error) {
+	res, ok := obj.(jannaendpoint.VMDeployResponse)
+	if !ok {
+		return nil, &jsonrpc.Error{
+			Code:    -32000,
+			Message: fmt.Sprintf("Asserting result to *VMDeployResponse failed. Got %T, %+v", obj, obj),
+		}
+	}
+
+	// check business logic errors
+	if f, ok := obj.(jannaendpoint.Failer); ok && f.Failed() != nil {
+		return json.Marshal(f.Failed().Error())
+	}
+
+	b, err := json.Marshal(res)
+	if err != nil {
+		return nil, fmt.Errorf("Could not marshal response: %s", err)
 	}
 	return b, nil
 }
