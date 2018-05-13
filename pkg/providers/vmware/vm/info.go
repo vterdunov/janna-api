@@ -4,43 +4,23 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/log"
-	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/property"
+	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
-	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
-	"github.com/vterdunov/janna-api/config"
-	jannatypes "github.com/vterdunov/janna-api/types"
+	"github.com/vterdunov/janna-api/pkg/config"
+	jannatypes "github.com/vterdunov/janna-api/pkg/types"
 )
 
 // Info returns summary information about Virtual Machines
-func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Config) (jannatypes.VMSummary, error) {
-	sum := jannatypes.VMSummary{}
-	vmWareURL := cfg.Vmware.URL
+func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Config, client *vim25.Client) (*jannatypes.VMSummary, error) {
+	f := find.NewFinder(client, true)
 
-	u, err := soap.ParseURL(vmWareURL)
-	if err != nil {
-		logger.Log("err", "cannot parse VMWare URL")
-		return sum, err
-	}
-
-	insecure := cfg.Vmware.Insecure
-
-	c, err := govmomi.NewClient(ctx, u, insecure)
+	dc, err := f.DatacenterOrDefault(ctx, cfg.VMWare.DC)
 	if err != nil {
 		logger.Log("err", err)
-		return sum, err
-	}
-
-	defer c.Logout(ctx)
-	f := find.NewFinder(c.Client, true)
-
-	dcName := cfg.Vmware.DC
-	dc, err := f.DatacenterOrDefault(ctx, dcName)
-	if err != nil {
-		logger.Log("err", err)
-		return sum, err
+		return nil, err
 	}
 
 	f.SetDatacenter(dc)
@@ -49,10 +29,10 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	if err != nil {
 		if _, ok := err.(*find.NotFoundError); ok {
 			logger.Log("err", err)
-			return sum, err
+			return nil, err
 		}
 		logger.Log("err", err)
-		return sum, err
+		return nil, err
 	}
 
 	refs := make([]types.ManagedObjectReference, 0, len(vmObjs))
@@ -66,13 +46,13 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	var props []string
 	props = nil
 
-	pc := property.DefaultCollector(c.Client)
+	pc := property.DefaultCollector(client)
 
 	if len(refs) != 0 {
 		err = pc.Retrieve(ctx, refs, props, &vms)
 		if err != nil {
 			logger.Log("err", err)
-			return sum, err
+			return nil, err
 		}
 	}
 
@@ -81,6 +61,7 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 		"msg", "Virtual machines found",
 	)
 
+	sum := &jannatypes.VMSummary{}
 	for _, vmInfo := range vms {
 		sum.Guest = vmInfo.Guest
 		sum.Heartbeat = vmInfo.GuestHeartbeatStatus

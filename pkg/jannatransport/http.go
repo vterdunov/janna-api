@@ -1,4 +1,4 @@
-package main
+package jannatransport
 
 import (
 	"context"
@@ -8,45 +8,49 @@ import (
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"github.com/vterdunov/janna-api/pkg/jannaendpoint"
 )
 
-// func My(ctx context.Context, code int, r *http.Request) {
-
-// }
-
-// MakeHTTPHandler mounts all of the service endpoints into an http.Handler.
-func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
+// NewHTTPHandler mounts all of the service endpoints into an http.Handler.
+func NewHTTPHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
-	e := MakeServerEndpoints(s)
-	// f := My(context.Background(), 201, r)
+
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
-		// httptransport.ServerFinalizer(f),
 	}
 
 	r.Methods("GET").Path("/info").Handler(httptransport.NewServer(
-		e.InfoEndpoint,
+		endpoints.InfoEndpoint,
 		decodeInfoRequest,
 		encodeResponse,
 		options...,
 	))
 
 	r.Methods("GET").Path("/healthz").Handler(httptransport.NewServer(
-		e.HealthzEndpoint,
+		endpoints.HealthzEndpoint,
 		decodeHelthzRequest,
 		encodeProbeResponse,
 		options...,
 	))
+
 	r.Methods("GET").Path("/readyz").Handler(httptransport.NewServer(
-		e.ReadyzEndpoint,
+		endpoints.ReadyzEndpoint,
 		decodeReadyzRequest,
 		encodeProbeResponse,
 		options...,
 	))
 
-	r.Methods("POST").Path("/vm/info").Handler(httptransport.NewServer(
-		e.VMInfoEndpoint,
+	r.Methods("GET").Path("/vm").Handler(httptransport.NewServer(
+		endpoints.VMInfoEndpoint,
 		decodeVMInfoRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("POST").Path("/vm").Handler(httptransport.NewServer(
+		endpoints.VMDeployEndpoint,
+		decodeVMDeployRequest,
 		encodeResponse,
 		options...,
 	))
@@ -67,25 +71,24 @@ func decodeReadyzRequest(_ context.Context, r *http.Request) (interface{}, error
 }
 
 func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req vmInfoRequest
+	var req jannaendpoint.VMInfoRequest
+	req.Name = r.URL.Query().Get("vmname")
+	req.Folder = r.URL.Query().Get("folder")
+	return req, nil
+}
+
+func decodeVMDeployRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req jannaendpoint.VMDeployRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Could not decode request")
 	}
 	return req, nil
 }
 
-// errorer is implemented by all concrete response types that may contain
-// errors. It allows us to change the HTTP response code without needing to
-// trigger an endpoint (transport-level) error.
-type errorer interface {
-	error() error
-}
-
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(errorer); ok && e.error() != nil {
-		// Not a Go kit transport error, but a business-logic error.
-		// Provide those as HTTP errors.
-		encodeError(ctx, e.error(), w)
+	// check business logic errors
+	if e, ok := response.(jannaendpoint.Failer); ok && e.Failed() != nil {
+		encodeError(ctx, e.Failed(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -97,7 +100,6 @@ func encodeProbeResponse(_ context.Context, w http.ResponseWriter, response inte
 	return nil
 }
 
-// encode error
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	if err == nil {
 		panic("encodeError with nil error")

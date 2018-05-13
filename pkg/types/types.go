@@ -14,10 +14,13 @@ type VMSummary struct {
 	Config vmwaretypes.VirtualMachineConfigSummary `json:"Config,omitempty"`
 }
 
-// // AppBuildInfo stores the Service build information
-// type AppBuildInfo struct {
-// 	// in: body
-// 	BuildTime string `json:"build_time"`
-// 	// in: body
-// 	Commit string `json:"commit"`
-// }
+// VMDeployParams stores VM deploy parameters like name, networks mapping and other
+type VMDeployParams struct {
+	Name       string
+	OVAURL     string
+	Datastores []string
+	Networks   map[string]string
+	Datacenter string
+	Cluster    string
+	Folder     string
+}
