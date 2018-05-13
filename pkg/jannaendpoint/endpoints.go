@@ -3,6 +3,7 @@ package jannaendpoint
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -39,7 +40,7 @@ func New(s jannaservice.Service, logger log.Logger) Endpoints {
 	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "method", "VMInfo"))(vmInfoEndpoint)
 
 	var vmDeployEndpoint endpoint.Endpoint
-	vmDeployEndpoint = MakeVMDeployEndpoint(s)
+	vmDeployEndpoint = MakeVMDeployEndpoint(s, logger)
 	vmDeployEndpoint = LoggingMiddleware(log.With(logger, "method", "VMDeploy"))(vmDeployEndpoint)
 
 	return Endpoints{
@@ -165,20 +166,24 @@ func (r VMInfoResponse) Failed() error {
 //
 // Responses:
 //   200: vmDeployResponse
-func MakeVMDeployEndpoint(s jannaservice.Service) endpoint.Endpoint {
+func MakeVMDeployEndpoint(s jannaservice.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(VMDeployRequest)
+		logger.Log("msg", "incoming request params", "params", fmt.Sprintf("%+v", req))
 
-		// Validate incoming params
+		// Minimal validating incoming params
 		if req.Name == "" || req.OVAURL == "" {
-			// TODO: return correct error value
-			return nil, errors.New("Invalid arguments")
+			return VMDeployResponse{0, errors.New("Invalid arguments. Pass reqired arguments")}, nil
 		}
 
 		params := &types.VMDeployParams{
 			Name:       req.Name,
 			OVAURL:     req.OVAURL,
 			Datastores: req.Datastores,
+			Networks:   req.Networks,
+			Datacenter: req.Datacenter,
+			Cluster:    req.Cluster,
+			Folder:     req.Folder,
 		}
 
 		jid, err := s.VMDeploy(ctx, params)
@@ -190,12 +195,13 @@ func MakeVMDeployEndpoint(s jannaservice.Service) endpoint.Endpoint {
 // VMDeployRequest collects the request parameters for the VMDeploy method
 // swagger:parameters
 type VMDeployRequest struct {
-	Name       string   `json:"name"`
-	OVAURL     string   `json:"ova_url"`
-	Network    string   `json:"network,omitempty"`
-	Datastores []string `json:"datastores,omitempty"`
-	Cluster    string   `json:"cluster,omitempty"`
-	VMFolder   string   `json:"vm_folder,omitempty"`
+	Name       string            `json:"name"`
+	OVAURL     string            `json:"ova_url"`
+	Datastores []string          `json:"datastores,omitempty"`
+	Networks   map[string]string `json:"networks,omitempty"`
+	Datacenter string            `json:"datacenter,omitempty"`
+	Cluster    string            `json:"cluster,omitempty"`
+	Folder     string            `json:"folder,omitempty"`
 }
 
 // VMDeployResponse fields

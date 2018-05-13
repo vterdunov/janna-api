@@ -85,18 +85,10 @@ func decodeVMDeployRequest(_ context.Context, r *http.Request) (interface{}, err
 	return req, nil
 }
 
-// errorer is implemented by all concrete response types that may contain
-// errors. It allows us to change the HTTP response code without needing to
-// trigger an endpoint (transport-level) error.
-type errorer interface {
-	error() error
-}
-
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(errorer); ok && e.error() != nil {
-		// Not a Go kit transport error, but a business-logic error.
-		// Provide those as HTTP errors.
-		encodeError(ctx, e.error(), w)
+	// check business logic errors
+	if e, ok := response.(jannaendpoint.Failer); ok && e.Failed() != nil {
+		encodeError(ctx, e.Failed(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -108,7 +100,6 @@ func encodeProbeResponse(_ context.Context, w http.ResponseWriter, response inte
 	return nil
 }
 
-// encode error
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	if err == nil {
 		panic("encodeError with nil error")

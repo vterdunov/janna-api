@@ -35,8 +35,8 @@ cgo-compile: clean
 	 go build -v -o $(PROG_NAME) ./cmd/janna/server.go
 
 .PHONY: start
-start: cgo-compile
-	@./${PROG_NAME}
+start:
+	go run ./cmd/janna/server.go
 
 .PHONY: test
 test:

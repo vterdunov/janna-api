@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
@@ -285,7 +284,6 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 
 // Deploy Virtual Machine to VMWare
 func Deploy(ctx context.Context, deployParams *jannatypes.VMDeployParams, logger log.Logger, cfg *config.Config, c *vim25.Client, opts ...string) (int, error) {
-	spew.Dump(deployParams)
 	// TODO: make up a metod to check deploy progress.
 	// Job ID and endpoint with status?
 	// keep HTTP connection with client and poll it?
@@ -293,7 +291,7 @@ func Deploy(ctx context.Context, deployParams *jannatypes.VMDeployParams, logger
 
 	logger.Log("msg", "Starting deploy VM", "vm", deployParams.Name)
 
-	d := newDeployment(c, deployParams.Name, logger)
+	d := newDeployment(c, deployParams, logger)
 	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose datacenter"), "vm", deployParams.Name)
 		return jid, err
@@ -348,27 +346,33 @@ func Deploy(ctx context.Context, deployParams *jannatypes.VMDeployParams, logger
 	return jid, nil
 }
 
-func newDeployment(c *vim25.Client, vmName string, logger log.Logger) *deployment {
+func newDeployment(c *vim25.Client, deployParams *jannatypes.VMDeployParams, logger log.Logger) *deployment {
 	finder := find.NewFinder(c, true)
 	var nms []Network
 
-	// TODO: Get from user request
-	nm := Network{
-		Name:    "VM Network",
-		Network: "dv-net-27",
+	if len(deployParams.Networks) != 0 {
+		for name, network := range deployParams.Networks {
+			nm := Network{
+				Name:    name,
+				Network: network,
+			}
+			nms = append(nms, nm)
+		}
 	}
 
-	nms = append(nms, nm)
+	ovf := ovfx{
+		Name:           deployParams.Name,
+		NetworkMapping: nms,
+	}
 
-	return &deployment{
+	d := &deployment{
 		Client: c,
 		Finder: finder,
 		logger: logger,
-		ovfx: ovfx{
-			Name:           vmName,
-			NetworkMapping: nms,
-		},
+		ovfx:   ovf,
 	}
+
+	return d
 }
 
 func powerON(ctx context.Context, vm *object.VirtualMachine) error {
@@ -390,21 +394,6 @@ func waitForIP(ctx context.Context, vm *object.VirtualMachine) (string, error) {
 	}
 	return ip, nil
 }
-
-// func readOVF(fpath string) ([]byte, error) {
-// 	f, err := os.Open(fpath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer f.Close()
-
-// 	r, err := ioutil.ReadAll(f)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return r, nil
-// }
 
 func readEnvelope(data []byte) (*ovf.Envelope, error) {
 	r := bytes.NewReader(data)

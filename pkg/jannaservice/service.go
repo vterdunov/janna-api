@@ -64,5 +64,7 @@ func (s service) VMInfo(ctx context.Context, name string) (*types.VMSummary, err
 }
 
 func (s service) VMDeploy(ctx context.Context, deployParams *types.VMDeployParams) (int, error) {
+	// TODO: validate incoming params according busines rules (https://github.com/asaskevich/govalidator)
+
 	return vm.Deploy(ctx, deployParams, s.logger, s.cfg, s.Client)
 }
