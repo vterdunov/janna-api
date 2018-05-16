@@ -4,14 +4,10 @@ import vmwaretypes "github.com/vmware/govmomi/vim25/types"
 
 // VMSummary stores some information about Virtual Machines
 type VMSummary struct {
-	// in: body
-	Guest *vmwaretypes.GuestInfo `json:"Guest,omitempty"`
-	// in: body
-	Heartbeat vmwaretypes.ManagedEntityStatus `json:"HeartBeat,omitempty"`
-	// in: body
-	Runtime vmwaretypes.VirtualMachineRuntimeInfo `json:"Runtime,omitempty"`
-	// in: body
-	Config vmwaretypes.VirtualMachineConfigSummary `json:"Config,omitempty"`
+	Guest     *vmwaretypes.GuestInfo                  `json:"Guest,omitempty"`
+	Heartbeat vmwaretypes.ManagedEntityStatus         `json:"HeartBeat,omitempty"`
+	Runtime   vmwaretypes.VirtualMachineRuntimeInfo   `json:"Runtime,omitempty"`
+	Config    vmwaretypes.VirtualMachineConfigSummary `json:"Config,omitempty"`
 }
 
 // VMDeployParams stores VM deploy parameters like name, networks mapping and other

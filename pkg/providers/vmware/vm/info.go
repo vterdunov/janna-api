@@ -9,6 +9,7 @@ import (
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+
 	"github.com/vterdunov/janna-api/pkg/config"
 	jannatypes "github.com/vterdunov/janna-api/pkg/types"
 )

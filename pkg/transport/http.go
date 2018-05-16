@@ -1,4 +1,4 @@
-package jannatransport
+package transport
 
 import (
 	"context"
@@ -9,17 +9,19 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/vterdunov/janna-api/pkg/jannaendpoint"
+
+	"github.com/vterdunov/janna-api/pkg/endpoint"
 )
 
 // NewHTTPHandler mounts all of the service endpoints into an http.Handler.
-func NewHTTPHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) http.Handler {
+func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
 	}
 
+	// Service state
 	r.Methods("GET").Path("/info").Handler(httptransport.NewServer(
 		endpoints.InfoEndpoint,
 		decodeInfoRequest,
@@ -41,7 +43,15 @@ func NewHTTPHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) http.H
 		options...,
 	))
 
+	// Virtual Machines
 	r.Methods("GET").Path("/vm").Handler(httptransport.NewServer(
+		endpoints.VMListEndpoint,
+		decodeVMListRequest,
+		encodeNotImplemented,
+		options...,
+	))
+
+	r.Methods("GET").Path("/vm/{vm}").Handler(httptransport.NewServer(
 		endpoints.VMInfoEndpoint,
 		decodeVMInfoRequest,
 		encodeResponse,
@@ -52,6 +62,14 @@ func NewHTTPHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) http.H
 		endpoints.VMDeployEndpoint,
 		decodeVMDeployRequest,
 		encodeResponse,
+		options...,
+	))
+
+	// Snapshots
+	r.Methods("GET").Path("/vm/{vm}/snapshots").Handler(httptransport.NewServer(
+		endpoints.VMSnapshotsListEndpoint,
+		decodeVMSnapshotsListyRequest,
+		encodeNotImplemented,
 		options...,
 	))
 
@@ -70,24 +88,42 @@ func decodeReadyzRequest(_ context.Context, r *http.Request) (interface{}, error
 	return nil, nil
 }
 
-func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req jannaendpoint.VMInfoRequest
-	req.Name = r.URL.Query().Get("vmname")
+func decodeVMListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMListRequest
 	req.Folder = r.URL.Query().Get("folder")
+
+	return req, nil
+}
+
+func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMInfoRequest
+	vars := mux.Vars(r)
+	req.Name = vars["vm"]
+	req.Folder = r.URL.Query().Get("folder")
+
 	return req, nil
 }
 
 func decodeVMDeployRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req jannaendpoint.VMDeployRequest
+	var req endpoint.VMDeployRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(err, "Could not decode request")
 	}
 	return req, nil
 }
 
+func decodeVMSnapshotsListyRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMSnapshotsListRequest
+
+	vars := mux.Vars(r)
+	req.VMName = vars["vm"]
+
+	return req, nil
+}
+
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	// check business logic errors
-	if e, ok := response.(jannaendpoint.Failer); ok && e.Failed() != nil {
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
 		encodeError(ctx, e.Failed(), w)
 		return nil
 	}
@@ -97,6 +133,17 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 
 func encodeProbeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func encodeNotImplemented(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeError(ctx, e.Failed(), w)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 	return nil
 }
 

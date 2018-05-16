@@ -1,4 +1,4 @@
-package jannaendpoint
+package endpoint
 
 import (
 	"context"

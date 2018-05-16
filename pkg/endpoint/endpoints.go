@@ -1,4 +1,4 @@
-package jannaendpoint
+package endpoint
 
 import (
 	"context"
@@ -7,22 +7,25 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/vterdunov/janna-api/pkg/jannaservice"
+
+	"github.com/vterdunov/janna-api/pkg/service"
 	"github.com/vterdunov/janna-api/pkg/types"
 )
 
 // Endpoints collects all of the endpoints that compose the Service.
 type Endpoints struct {
-	InfoEndpoint     endpoint.Endpoint
-	ReadyzEndpoint   endpoint.Endpoint
-	HealthzEndpoint  endpoint.Endpoint
-	VMInfoEndpoint   endpoint.Endpoint
-	VMDeployEndpoint endpoint.Endpoint
+	InfoEndpoint            endpoint.Endpoint
+	ReadyzEndpoint          endpoint.Endpoint
+	HealthzEndpoint         endpoint.Endpoint
+	VMListEndpoint          endpoint.Endpoint
+	VMInfoEndpoint          endpoint.Endpoint
+	VMDeployEndpoint        endpoint.Endpoint
+	VMSnapshotsListEndpoint endpoint.Endpoint
 }
 
 // New returns an Endpoints struct where each endpoint invokes
 // the corresponding method on the provided service.
-func New(s jannaservice.Service, logger log.Logger) Endpoints {
+func New(s service.Service, logger log.Logger) Endpoints {
 	var infoEndpoint endpoint.Endpoint
 	infoEndpoint = MakeInfoEndpoint(s)
 	infoEndpoint = LoggingMiddleware(log.With(logger, "method", "Info"))(infoEndpoint)
@@ -35,6 +38,10 @@ func New(s jannaservice.Service, logger log.Logger) Endpoints {
 	readyzEndpoint = MakeReadyzEndpoint(s)
 	readyzEndpoint = LoggingMiddleware(log.With(logger, "method", "Readyz"))(readyzEndpoint)
 
+	var vmListEndpoint endpoint.Endpoint
+	vmListEndpoint = MakeVMListEndpoint(s)
+	vmListEndpoint = LoggingMiddleware(log.With(logger, "method", "VMList"))(vmListEndpoint)
+
 	var vmInfoEndpoint endpoint.Endpoint
 	vmInfoEndpoint = MakeVMInfoEndpoint(s)
 	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "method", "VMInfo"))(vmInfoEndpoint)
@@ -43,12 +50,18 @@ func New(s jannaservice.Service, logger log.Logger) Endpoints {
 	vmDeployEndpoint = MakeVMDeployEndpoint(s, logger)
 	vmDeployEndpoint = LoggingMiddleware(log.With(logger, "method", "VMDeploy"))(vmDeployEndpoint)
 
+	var vmSnapshotsListEndpoint endpoint.Endpoint
+	vmSnapshotsListEndpoint = MakeVMSnapshotsListEndpoint(s)
+	vmSnapshotsListEndpoint = LoggingMiddleware(log.With(logger, "method", "VMSnapshotsList"))(vmSnapshotsListEndpoint)
+
 	return Endpoints{
-		InfoEndpoint:     infoEndpoint,
-		HealthzEndpoint:  healthzEndpoint,
-		ReadyzEndpoint:   readyzEndpoint,
-		VMInfoEndpoint:   vmInfoEndpoint,
-		VMDeployEndpoint: vmDeployEndpoint,
+		InfoEndpoint:            infoEndpoint,
+		HealthzEndpoint:         healthzEndpoint,
+		ReadyzEndpoint:          readyzEndpoint,
+		VMListEndpoint:          vmListEndpoint,
+		VMInfoEndpoint:          vmInfoEndpoint,
+		VMDeployEndpoint:        vmDeployEndpoint,
+		VMSnapshotsListEndpoint: vmSnapshotsListEndpoint,
 	}
 }
 
@@ -60,14 +73,7 @@ type Failer interface {
 }
 
 // MakeInfoEndpoint returns an endpoint via the passed service
-//
-// swagger:route GET /info app appInfo
-//
-// get information about the Service
-//
-// Responses:
-//   200: InfoResponse
-func MakeInfoEndpoint(s jannaservice.Service) endpoint.Endpoint {
+func MakeInfoEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		b, c := s.Info()
 		return InfoResponse{b, c}, nil
@@ -75,23 +81,13 @@ func MakeInfoEndpoint(s jannaservice.Service) endpoint.Endpoint {
 }
 
 // InfoResponse is the Service build information
-// swagger:response
 type InfoResponse struct {
-	// in: body
 	BuildTime string `json:"build_time"`
-	// in: body
-	Commit string `json:"commit"`
+	Commit    string `json:"commit"`
 }
 
 // MakeHealthzEndpoint returns an endpoint via the passed service
-//
-// swagger:route GET /healthz app appHealth
-//
-// liveness probe
-//
-// Responses:
-//   200: healthzResponse
-func MakeHealthzEndpoint(s jannaservice.Service) endpoint.Endpoint {
+func MakeHealthzEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		s.Healthz()
 		return healthzResponse{}, nil
@@ -99,18 +95,10 @@ func MakeHealthzEndpoint(s jannaservice.Service) endpoint.Endpoint {
 }
 
 // Liveness probe
-// swagger:response
 type healthzResponse struct{}
 
 // MakeReadyzEndpoint returns an endpoint via the passed service
-//
-// swagger:route GET /readyz app appReady
-//
-// readiness probe
-//
-// Responses:
-//   200: readyzResponse
-func MakeReadyzEndpoint(s jannaservice.Service) endpoint.Endpoint {
+func MakeReadyzEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		s.Readyz()
 		return readyzResponse{}, nil
@@ -118,18 +106,35 @@ func MakeReadyzEndpoint(s jannaservice.Service) endpoint.Endpoint {
 }
 
 // Readyness probe
-// swagger:response
 type readyzResponse struct{}
 
+// MakeVMListEndpoint returns an endpoint via the passed service
+func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(VMListRequest)
+		list, err := s.VMList(ctx, req.Folder)
+		return VMListResponse{list, err}, nil
+	}
+}
+
+// VMListRequest collects the request parameters for the VMList method
+type VMListRequest struct {
+	Folder string
+}
+
+// VMListResponse collects the response values for the VMList method
+type VMListResponse struct {
+	VMList []string `json:"vm_list,omitempty"`
+	Err    error    `json:"error,omitempty"`
+}
+
+// Failed implements Failer
+func (r VMListResponse) Failed() error {
+	return r.Err
+}
+
 // MakeVMInfoEndpoint returns an endpoint via the passed service
-//
-// swagger:route GET /vm vm vmInfo
-//
-// get information about VMs
-//
-// Responses:
-//   200: vmInfoResponse
-func MakeVMInfoEndpoint(s jannaservice.Service) endpoint.Endpoint {
+func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(VMInfoRequest)
 		summary, err := s.VMInfo(ctx, req.Name)
@@ -138,19 +143,15 @@ func MakeVMInfoEndpoint(s jannaservice.Service) endpoint.Endpoint {
 }
 
 // VMInfoRequest collects the request parameters for the VMInfo method
-// swagger:parameters
 type VMInfoRequest struct {
 	Name   string
 	Folder string
 }
 
 // VMInfoResponse collects the response values for the VMInfo method
-// swagger:response
 type VMInfoResponse struct {
-	// in:body
 	Summary *types.VMSummary `json:"summary,omitempty"`
-	// in:body
-	Err error `json:"error,omitempty"`
+	Err     error            `json:"error,omitempty"`
 }
 
 // Failed implements Failer
@@ -159,18 +160,12 @@ func (r VMInfoResponse) Failed() error {
 }
 
 // MakeVMDeployEndpoint returns an endpoint via the passed service
-//
-// swagger:route POST /vm vm vmDeploy
-//
-// Create VM from OVA file
-//
-// Responses:
-//   200: vmDeployResponse
-func MakeVMDeployEndpoint(s jannaservice.Service, logger log.Logger) endpoint.Endpoint {
+func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(VMDeployRequest)
 		logger.Log("msg", "incoming request params", "params", fmt.Sprintf("%+v", req))
 
+		// TODO: Try to write middleware that will validate parameters
 		// Minimal validating incoming params
 		if req.Name == "" || req.OVAURL == "" {
 			return VMDeployResponse{0, errors.New("Invalid arguments. Pass reqired arguments")}, nil
@@ -193,7 +188,6 @@ func MakeVMDeployEndpoint(s jannaservice.Service, logger log.Logger) endpoint.En
 }
 
 // VMDeployRequest collects the request parameters for the VMDeploy method
-// swagger:parameters
 type VMDeployRequest struct {
 	Name       string            `json:"name"`
 	OVAURL     string            `json:"ova_url"`
@@ -205,15 +199,37 @@ type VMDeployRequest struct {
 }
 
 // VMDeployResponse fields
-// swagger:response
 type VMDeployResponse struct {
-	// in:body
-	JID int `json:"job_id,omitempty"`
-	// in:body
+	JID int   `json:"job_id,omitempty"`
 	Err error `json:"error,omitempty"`
 }
 
 // Failed implements Failer
 func (r VMDeployResponse) Failed() error {
+	return r.Err
+}
+
+// MakeVMSnapshotsListEndpoint returns an endpoint via the passed service
+func MakeVMSnapshotsListEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(VMSnapshotsListRequest)
+		list, err := s.VMSnapshotsList(ctx, req.VMName)
+		return VMSnapshotsListResponse{list, err}, nil
+	}
+}
+
+// VMSnapshotsListRequest collects the request parameters for the VMSnapshotsList method
+type VMSnapshotsListRequest struct {
+	VMName string
+}
+
+// VMSnapshotsListResponse collects the response values for the VMSnapshotsList method
+type VMSnapshotsListResponse struct {
+	VMSnapshotsList []string `json:"snapshots,omitempty"`
+	Err             error    `json:"error,omitempty"`
+}
+
+// Failed implements Failer
+func (r VMSnapshotsListResponse) Failed() error {
 	return r.Err
 }
