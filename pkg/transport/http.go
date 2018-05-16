@@ -69,7 +69,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r.Methods("GET").Path("/vm/{vm}/snapshots").Handler(httptransport.NewServer(
 		endpoints.VMSnapshotsListEndpoint,
 		decodeVMSnapshotsListyRequest,
-		encodeNotImplemented,
+		encodeResponse,
 		options...,
 	))
 

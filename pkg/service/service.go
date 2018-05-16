@@ -82,7 +82,10 @@ func (s service) VMDeploy(ctx context.Context, deployParams *types.VMDeployParam
 }
 
 func (s service) VMSnapshotsList(ctx context.Context, vmName string) ([]string, error) {
-	// TODO: Implement business logic
-	var ss []string
-	return ss, nil
+	st, err := vm.VMSnapshotsList(ctx, s.Client, s.cfg, vmName)
+	if err != nil {
+		return nil, err
+	}
+
+	return st, nil
 }

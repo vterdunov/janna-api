@@ -225,7 +225,7 @@ type VMSnapshotsListRequest struct {
 
 // VMSnapshotsListResponse collects the response values for the VMSnapshotsList method
 type VMSnapshotsListResponse struct {
-	VMSnapshotsList []string `json:"snapshots,omitempty"`
+	VMSnapshotsList []string `json:"snapshots"`
 	Err             error    `json:"error,omitempty"`
 }
 
