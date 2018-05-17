@@ -7,10 +7,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/vim25/soap"
 
 	"github.com/vterdunov/janna-api/pkg/config"
@@ -48,6 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 	vimClient := client.Client
+	session.KeepAlive(client.Client.RoundTripper, time.Minute*5)
 
 	// Build the layers of the service "onion" from the inside out.
 	svc := service.New(logger, cfg, vimClient)
