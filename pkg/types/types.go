@@ -1,6 +1,10 @@
 package types
 
-import vmwaretypes "github.com/vmware/govmomi/vim25/types"
+import (
+	"time"
+
+	vmwaretypes "github.com/vmware/govmomi/vim25/types"
+)
 
 // VMSummary stores some information about Virtual Machines
 type VMSummary struct {
@@ -19,4 +23,25 @@ type VMDeployParams struct {
 	Datacenter string
 	Cluster    string
 	Folder     string
+}
+
+type Snapshot struct {
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	ID          int32     `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type SnapshotCreateParams struct {
+	VMName      string `json:"vm_name"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Memory      bool   `json:"memory"`
+	Quiesce     bool   `json:"quiesce"`
+}
+
+type VMRestoreFromSnapshotParams struct {
+	VMName  string `json:"vm_name"`
+	Name    string `json:"name"`
+	PowerOn bool   `json:"power_on"`
 }

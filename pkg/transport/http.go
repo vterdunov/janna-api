@@ -73,6 +73,19 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		options...,
 	))
 
+	r.Methods("POST").Path("/vm/{vm}/snapshots").Handler(httptransport.NewServer(
+		endpoints.VMSnapshotCreateEndpoint,
+		decodeVMSnapshotCreateRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Methods("POST").Path("/vm/{vm}/revert/{snapshot}").Handler(httptransport.NewServer(
+		endpoints.VMRestoreFromSnapshotEndpoint,
+		decodeVMRestoreFromSnapshotRequest,
+		encodeResponse,
+		options...,
+	))
 	return r
 }
 
@@ -117,6 +130,29 @@ func decodeVMSnapshotsListyRequest(_ context.Context, r *http.Request) (interfac
 
 	vars := mux.Vars(r)
 	req.VMName = vars["vm"]
+
+	return req, nil
+}
+
+func decodeVMSnapshotCreateRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMSnapshotCreateRequest
+
+	vars := mux.Vars(r)
+	req.VMname = vars["vm"]
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(err, "Could not decode request")
+	}
+
+	return req, nil
+}
+
+func decodeVMRestoreFromSnapshotRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMRestoreFromSnapshotRequest
+
+	vars := mux.Vars(r)
+	req.VMname = vars["vm"]
+	req.Name = vars["snapshot"]
+	req.PowerOn = true
 
 	return req, nil
 }

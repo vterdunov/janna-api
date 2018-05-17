@@ -34,7 +34,13 @@ type Service interface {
 	VMDeploy(context.Context, *types.VMDeployParams) (int, error)
 
 	// VMSnapshotsList returns VM snapshots list
-	VMSnapshotsList(context.Context, string) ([]string, error)
+	VMSnapshotsList(context.Context, string) ([]types.Snapshot, error)
+
+	// VMSnapshotCreate creates a VM snapshot
+	VMSnapshotCreate(context.Context, *types.SnapshotCreateParams) error
+
+	// VMRestoreFromSnapshot creates a VM snapshot
+	VMRestoreFromSnapshot(context.Context, *types.VMRestoreFromSnapshotParams) error
 }
 
 // service implements our Service
@@ -81,11 +87,27 @@ func (s service) VMDeploy(ctx context.Context, deployParams *types.VMDeployParam
 	return vm.Deploy(ctx, deployParams, s.logger, s.cfg, s.Client)
 }
 
-func (s service) VMSnapshotsList(ctx context.Context, vmName string) ([]string, error) {
-	st, err := vm.VMSnapshotsList(ctx, s.Client, s.cfg, vmName)
+func (s service) VMSnapshotsList(ctx context.Context, vmName string) ([]types.Snapshot, error) {
+	st, err := vm.SnapshotsList(ctx, s.Client, s.cfg, vmName)
 	if err != nil {
 		return nil, err
 	}
 
 	return st, nil
+}
+
+func (s service) VMSnapshotCreate(ctx context.Context, p *types.SnapshotCreateParams) error {
+	if err := vm.SnapshotCreate(ctx, s.Client, s.cfg, p); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s service) VMRestoreFromSnapshot(ctx context.Context, p *types.VMRestoreFromSnapshotParams) error {
+	if err := vm.RestoreFromSnapshot(ctx, s.Client, s.cfg, p); err != nil {
+		return err
+	}
+
+	return nil
 }
