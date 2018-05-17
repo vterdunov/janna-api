@@ -8,11 +8,11 @@ PROJECT ?= github.com/vterdunov/${PROG_NAME}
 GO_VARS=CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 GO_LDFLAGS :="
 GO_LDFLAGS += -s -w
-GO_LDFLAGS += -X ${PROJECT}/version.Commit=${COMMIT}
-GO_LDFLAGS += -X ${PROJECT}/version.BuildTime=${BUILD_TIME}
+GO_LDFLAGS += -X ${PROJECT}/pkg/version.Commit=${COMMIT}
+GO_LDFLAGS += -X ${PROJECT}/pkg/version.BuildTime=${BUILD_TIME}
 GO_LDFLAGS +="
 
-all: dep check test compile api-doc
+all: dep check test compile
 
 .PHONY: container
 container:
@@ -66,12 +66,3 @@ check:
 .PHONY: clean
 clean:
 	@rm -f ${PROG_NAME}
-
-.PHONY: api-doc
-api-doc:
-	swagger generate spec --scan-models --output=swagger.json
-	swagger validate swagger.json
-
-.PHONY: serve-api-doc
-serve-api-doc:
-	swagger serve swagger.json

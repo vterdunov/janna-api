@@ -1,13 +1,13 @@
-package jannaservice
+package service
 
 import (
 	"context"
 
 	"github.com/go-kit/kit/log"
 	"github.com/vmware/govmomi/vim25"
+
 	"github.com/vterdunov/janna-api/pkg/config"
 	"github.com/vterdunov/janna-api/pkg/health"
-
 	"github.com/vterdunov/janna-api/pkg/providers/vmware/vm"
 	"github.com/vterdunov/janna-api/pkg/types"
 	"github.com/vterdunov/janna-api/pkg/version"
@@ -24,11 +24,23 @@ type Service interface {
 	// Readyz is a readyness probe
 	Readyz() bool
 
+	// VMList returns list of VMs
+	VMList(context.Context, string) ([]string, error)
+
 	// VMInfo provide summary information about VM
 	VMInfo(context.Context, string) (*types.VMSummary, error)
 
 	// VMDeploy create VM from OVA file
 	VMDeploy(context.Context, *types.VMDeployParams) (int, error)
+
+	// VMSnapshotsList returns VM snapshots list
+	VMSnapshotsList(context.Context, string) ([]types.Snapshot, error)
+
+	// VMSnapshotCreate creates a VM snapshot
+	VMSnapshotCreate(context.Context, *types.SnapshotCreateParams) error
+
+	// VMRestoreFromSnapshot creates a VM snapshot
+	VMRestoreFromSnapshot(context.Context, *types.VMRestoreFromSnapshotParams) error
 }
 
 // service implements our Service
@@ -59,12 +71,43 @@ func (s service) Readyz() bool {
 	return health.Readyz()
 }
 
+func (s service) VMList(ctx context.Context, folder string) ([]string, error) {
+	// TODO: Implement business logic
+	var vms []string
+	return vms, nil
+}
+
 func (s service) VMInfo(ctx context.Context, name string) (*types.VMSummary, error) {
 	return vm.Info(ctx, name, s.logger, s.cfg, s.Client)
 }
 
 func (s service) VMDeploy(ctx context.Context, deployParams *types.VMDeployParams) (int, error) {
-	// TODO: validate incoming params according busines rules (https://github.com/asaskevich/govalidator)
+	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
 
 	return vm.Deploy(ctx, deployParams, s.logger, s.cfg, s.Client)
+}
+
+func (s service) VMSnapshotsList(ctx context.Context, vmName string) ([]types.Snapshot, error) {
+	st, err := vm.SnapshotsList(ctx, s.Client, s.cfg, vmName)
+	if err != nil {
+		return nil, err
+	}
+
+	return st, nil
+}
+
+func (s service) VMSnapshotCreate(ctx context.Context, p *types.SnapshotCreateParams) error {
+	if err := vm.SnapshotCreate(ctx, s.Client, s.cfg, p); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s service) VMRestoreFromSnapshot(ctx context.Context, p *types.VMRestoreFromSnapshotParams) error {
+	if err := vm.RestoreFromSnapshot(ctx, s.Client, s.cfg, p); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -1,4 +1,4 @@
-package jannatransport
+package transport
 
 import (
 	"context"
@@ -7,11 +7,12 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport/http/jsonrpc"
-	"github.com/vterdunov/janna-api/pkg/jannaendpoint"
+
+	"github.com/vterdunov/janna-api/pkg/endpoint"
 )
 
 // NewJSONRPCHandler returns a JSON RPC Server/Handler that can be passed to http.Handle()
-func NewJSONRPCHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) *jsonrpc.Server {
+func NewJSONRPCHandler(endpoints endpoint.Endpoints, logger log.Logger) *jsonrpc.Server {
 	handler := jsonrpc.NewServer(
 		makeEndpointCodecMap(endpoints),
 		jsonrpc.ServerErrorLogger(logger),
@@ -19,8 +20,8 @@ func NewJSONRPCHandler(endpoints jannaendpoint.Endpoints, logger log.Logger) *js
 	return handler
 }
 
-// makeEndpointCodecMap returns a codec map configured for the jannaservice
-func makeEndpointCodecMap(endpoints jannaendpoint.Endpoints) jsonrpc.EndpointCodecMap {
+// makeEndpointCodecMap returns a codec map configured for the service
+func makeEndpointCodecMap(endpoints endpoint.Endpoints) jsonrpc.EndpointCodecMap {
 	return jsonrpc.EndpointCodecMap{
 		"vm_info": jsonrpc.EndpointCodec{
 			Endpoint: endpoints.VMInfoEndpoint,
@@ -37,7 +38,7 @@ func makeEndpointCodecMap(endpoints jannaendpoint.Endpoints) jsonrpc.EndpointCod
 
 // VM Info
 func decodeJSONPRCVMInfoRequest(_ context.Context, msg json.RawMessage) (interface{}, error) {
-	var req jannaendpoint.VMInfoRequest
+	var req endpoint.VMInfoRequest
 	err := json.Unmarshal(msg, &req)
 	if err != nil {
 		return nil, &jsonrpc.Error{
@@ -49,7 +50,7 @@ func decodeJSONPRCVMInfoRequest(_ context.Context, msg json.RawMessage) (interfa
 }
 
 func encodeJSONRPCVMInfoResponse(_ context.Context, obj interface{}) (json.RawMessage, error) {
-	res, ok := obj.(jannaendpoint.VMInfoResponse)
+	res, ok := obj.(endpoint.VMInfoResponse)
 	if !ok {
 		return nil, &jsonrpc.Error{
 			Code:    -32000,
@@ -58,7 +59,7 @@ func encodeJSONRPCVMInfoResponse(_ context.Context, obj interface{}) (json.RawMe
 	}
 
 	// check business logic errors
-	if f, ok := obj.(jannaendpoint.Failer); ok && f.Failed() != nil {
+	if f, ok := obj.(endpoint.Failer); ok && f.Failed() != nil {
 		return json.Marshal(f.Failed().Error())
 	}
 
@@ -72,7 +73,7 @@ func encodeJSONRPCVMInfoResponse(_ context.Context, obj interface{}) (json.RawMe
 
 // VM Deploy
 func decodeJSONPRCVMDeployRequest(_ context.Context, msg json.RawMessage) (interface{}, error) {
-	var req jannaendpoint.VMDeployRequest
+	var req endpoint.VMDeployRequest
 	err := json.Unmarshal(msg, &req)
 	if err != nil {
 		return nil, &jsonrpc.Error{
@@ -84,7 +85,7 @@ func decodeJSONPRCVMDeployRequest(_ context.Context, msg json.RawMessage) (inter
 }
 
 func encodeJSONRPCVMDeployResponse(_ context.Context, obj interface{}) (json.RawMessage, error) {
-	res, ok := obj.(jannaendpoint.VMDeployResponse)
+	res, ok := obj.(endpoint.VMDeployResponse)
 	if !ok {
 		return nil, &jsonrpc.Error{
 			Code:    -32000,
@@ -93,7 +94,7 @@ func encodeJSONRPCVMDeployResponse(_ context.Context, obj interface{}) (json.Raw
 	}
 
 	// check business logic errors
-	if f, ok := obj.(jannaendpoint.Failer); ok && f.Failed() != nil {
+	if f, ok := obj.(endpoint.Failer); ok && f.Failed() != nil {
 		return json.Marshal(f.Failed().Error())
 	}
 

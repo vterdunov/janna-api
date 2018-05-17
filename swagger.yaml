@@ -1,0 +1,248 @@
+openapi: "3.0.1"
+
+info:
+  title: Janna API docs
+  description: "Janna is a little REST API interface for VMware."
+  version: '0.0.1'
+  license:
+    name: "MIT"
+    url: http://opensource.org/licenses/MIT
+
+servers:
+- url: http://localhost:8080/
+  description: localhost server
+
+paths:
+  /info:
+    get:
+      summary: "Information about the Janna build"
+      tags:
+      - Service state
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/build_info"
+
+
+  /healthz:
+    get:
+      summary: "Liveness probe"
+      tags:
+      - Service state
+      responses:
+        200:
+          description: OK
+
+  /readyz:
+    get:
+      summary: "Readiness probe"
+      tags:
+      - Service state
+      responses:
+        200:
+          description: OK
+
+  /vm:
+    get:
+      summary: "VMs list"
+      description: Returns VMs list from default directory.
+      tags:
+      - Virtual Machines
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/vm_list"
+
+  /vm/{vm}:
+    get:
+      summary: "Get information about VM"
+      tags:
+      - Virtual Machines
+      parameters:
+      - name: vm
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+        examples:
+          vm:
+            summary: test
+            value: vm1
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/vm_info"
+
+  /vm/{vm}/snapshots:
+    get:
+      summary: "List of VM snapshots"
+      tags:
+      - Virtual Machines
+      - Snapshots
+      parameters:
+      - name: vm
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+        examples:
+          vm:
+            summary: test
+            value: vm1
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/snapshots"
+
+  /vm/{vm}/snapshots/{snapshot}:
+    delete:
+      summary: "Delete VM snapshot"
+      tags:
+      - Virtual Machines
+      - Snapshots
+      parameters:
+      - name: vm
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+      - name: snapshot
+        in: path
+        required: true
+        schema:
+          type: string
+          minimum: 1
+      responses:
+        200:
+          description: OK
+
+
+  /vm/{vm}/revert/{snapshot}:
+    post:
+      summary: "Restore VM from snapshot"
+      tags:
+      - Virtual Machines
+      - Snapshots
+      parameters:
+      - name: vm
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+      - name: snapshot
+        in: path
+        required: true
+        description: Snapshot ID
+        schema:
+          type: string
+          minimum: 1
+      responses:
+        200:
+          description: OK
+
+  /vm/{vm}/revert:
+    post:
+      summary: "Restore VM from latest snapshot"
+      tags:
+      - Virtual Machines
+      - Snapshots
+      parameters:
+      - name: vm
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+      - name: snapshot
+        in: path
+        required: true
+        description: Snapshot ID
+        schema:
+          type: string
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/snapshot_id'
+      responses:
+        200:
+          description: OK
+
+components:
+  schemas:
+    build_info:
+      type: object
+      properties:
+        build_time:
+          type: string
+          format: date-time
+        commit:
+          type: string
+          example: "c0c5f0a"
+
+    vm_list:
+      type: object
+      properties:
+        vms:
+          type: array
+
+    vm_info:
+      type: object
+      properties:
+        Config:
+          type: object
+          example:
+            Annotation: Test annotation,
+            Name: coreos
+        Guest:
+          type: object
+        HeartBeat:
+          type: object
+        Runtime:
+          type: object
+          example:
+            BootTime: 2018-05-14T23:18:10Z,
+            Paused: true,
+            PowerState: poweredOn
+
+    snapshot_id:
+      properties:
+        snapshot_id:
+          type: string
+          example: 1512-snapshot-2
+
+    snapshots:
+      type: object
+      properties:
+        snapshots:
+          type: array
+          items:
+            type: object
+            example:
+              name: "snapshot1"
+              description: "My snapshot"
+              created_at: "2018-05-17T08:54:35.251931Z"
+              id: 4

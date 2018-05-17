@@ -12,6 +12,7 @@
   packages = [
     "endpoint",
     "log",
+    "metrics",
     "transport/http",
     "transport/http/jsonrpc"
   ]
@@ -81,6 +82,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bb11ccfeb5d1a2996e479f34cf6699d82b6e7cfafa50709c5ba0d711eb6b00a9"
+  inputs-digest = "edcdfd3a32d71aaf5821d780a44ded4db73eed1e3ff8d049b20799ae4150c2e2"
   solver-name = "gps-cdcl"
   solver-version = 1
