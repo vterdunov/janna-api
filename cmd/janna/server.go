@@ -49,8 +49,9 @@ func main() {
 		logger.Log("err", errors.Wrap(err, "Could not create Govmomi client"))
 		os.Exit(1)
 	}
+
 	vimClient := client.Client
-	session.KeepAlive(client.Client.RoundTripper, time.Minute*5)
+	session.KeepAlive(vimClient.RoundTripper, time.Second*10)
 
 	// Build the layers of the service "onion" from the inside out.
 	svc := service.New(logger, cfg, vimClient)
