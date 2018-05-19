@@ -18,7 +18,7 @@ all: dep check test docker
 
 .PHONY: docker
 docker:
-	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest .
+	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --file build/Dockerfile .
 
 .PHONY: push
 push:
@@ -39,6 +39,10 @@ cgo-compile: clean
 .PHONY: start
 start:
 	@env `cat .env | grep -v ^# | xargs` go run ./cmd/janna/server.go
+
+.PHONY: dc
+dc:
+	docker-compose -f deploy/docker-compose.dev.yml up --build
 
 .PHONY: test
 test:
