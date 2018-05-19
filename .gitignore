@@ -3,8 +3,4 @@ vendor/
 
 janna-api
 debug
-.loadenv.sh
-*.mf
-*.ova
-*.ovf
-*.vmdk
+.env

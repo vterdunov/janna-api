@@ -38,7 +38,7 @@ cgo-compile: clean
 
 .PHONY: start
 start:
-	go run ./cmd/janna/server.go
+	@env `cat .env | grep -v ^# | xargs` go run ./cmd/janna/server.go
 
 .PHONY: test
 test:
