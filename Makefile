@@ -13,6 +13,7 @@ GO_LDFLAGS += -X ${PROJECT}/pkg/version.Commit=${COMMIT}
 GO_LDFLAGS += -X ${PROJECT}/pkg/version.BuildTime=${BUILD_TIME}
 GO_LDFLAGS +="
 
+TAG ?= $(COMMIT)
 
 all: dep check test docker
 
@@ -22,7 +23,8 @@ docker:
 
 .PHONY: push
 push:
-	docker push $(IMAGE_NAME):$(COMMIT)
+	docker tag $(IMAGE_NAME):$(COMMIT) $(IMAGE_NAME):$(TAG)
+	docker push $(IMAGE_NAME):$(TAG)
 
 .PHONY: dep
 dep:
