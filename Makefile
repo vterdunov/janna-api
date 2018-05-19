@@ -46,7 +46,7 @@ test:
 
 .PHONY: check
 check:
-	@gometalinter ./...
+	@gometalinter.v2 ./...
 
 .PHONY: clean
 clean:
