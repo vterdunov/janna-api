@@ -7,9 +7,9 @@ import (
 
 // Config provide configuration to the application
 type Config struct {
-	Protocols
-	Debug  bool
-	VMWare resources
+	Protocols protocols
+	Debug     bool
+	VMWare    resources
 }
 
 type resources struct {
@@ -22,16 +22,16 @@ type resources struct {
 	Host     string
 }
 
-type Protocols struct {
-	HTTP
-	JSONRPC
+type protocols struct {
+	HTTP    http
+	JSONRPC jsonrpc
 }
 
-type HTTP struct {
+type http struct {
 	Port string
 }
 
-type JSONRPC struct {
+type jsonrpc struct {
 	Port string
 }
 

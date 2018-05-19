@@ -97,17 +97,9 @@ func (s service) VMSnapshotsList(ctx context.Context, vmName string) ([]types.Sn
 }
 
 func (s service) VMSnapshotCreate(ctx context.Context, p *types.SnapshotCreateParams) error {
-	if err := vm.SnapshotCreate(ctx, s.Client, s.cfg, p); err != nil {
-		return err
-	}
-
-	return nil
+	return vm.SnapshotCreate(ctx, s.Client, s.cfg, p)
 }
 
 func (s service) VMRestoreFromSnapshot(ctx context.Context, p *types.VMRestoreFromSnapshotParams) error {
-	if err := vm.RestoreFromSnapshot(ctx, s.Client, s.cfg, p); err != nil {
-		return err
-	}
-
-	return nil
+	return vm.RestoreFromSnapshot(ctx, s.Client, s.cfg, p)
 }

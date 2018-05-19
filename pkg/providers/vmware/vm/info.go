@@ -45,7 +45,6 @@ func Info(ctx context.Context, vmName string, logger log.Logger, cfg *config.Con
 	// Retrieve all properties
 	// Reference: http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.VirtualMachine.html
 	var props []string
-	props = nil
 
 	pc := property.DefaultCollector(client)
 

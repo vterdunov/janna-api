@@ -25,6 +25,7 @@ type VMDeployParams struct {
 	Folder     string
 }
 
+// Snapshot stores info about VM snapshot
 type Snapshot struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
@@ -32,6 +33,7 @@ type Snapshot struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// SnapshotCreateParams stores user request params
 type SnapshotCreateParams struct {
 	VMName      string `json:"vm_name"`
 	Name        string `json:"name"`
@@ -40,6 +42,7 @@ type SnapshotCreateParams struct {
 	Quiesce     bool   `json:"quiesce"`
 }
 
+// VMRestoreFromSnapshotParams stores user request params
 type VMRestoreFromSnapshotParams struct {
 	VMName  string `json:"vm_name"`
 	Name    string `json:"name"`

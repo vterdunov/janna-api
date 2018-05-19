@@ -134,7 +134,7 @@ func (o *deployment) NetworkMap(ctx context.Context, e *ovf.Envelope) (p []types
 		}
 	}
 
-	return
+	return p
 }
 
 func (o *deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.FileItem) error {
@@ -189,7 +189,7 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 		return nil, untarErr
 	}
 
-	ovfName, err := checkExt(".ovf", td)
+	ovfName, err := checkOVFfiles(td)
 	if err != nil {
 		o.logger.Log("err", err)
 		return nil, err
@@ -283,7 +283,7 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 }
 
 // Deploy Virtual Machine to VMWare
-func Deploy(ctx context.Context, deployParams *jannatypes.VMDeployParams, logger log.Logger, cfg *config.Config, c *vim25.Client, opts ...string) (int, error) {
+func Deploy(ctx context.Context, deployParams *jannatypes.VMDeployParams, logger log.Logger, cfg *config.Config, c *vim25.Client) (int, error) { // nolint: unparam
 	// TODO: make up a metod to check deploy progress.
 	// Job ID and endpoint with status?
 	// keep HTTP connection with client and poll it?
@@ -551,14 +551,14 @@ func untar(dst string, r io.Reader) error {
 	}
 }
 
-func checkExt(ext string, dir string) (string, error) {
+func checkOVFfiles(dir string) (string, error) {
 	var file string
 	filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if filepath.Ext(path) == ext {
+		if filepath.Ext(path) == ".ovf" {
 			file = f.Name()
 		}
 		return nil

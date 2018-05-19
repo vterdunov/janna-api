@@ -28,40 +28,31 @@ type Endpoints struct {
 // New returns an Endpoints struct where each endpoint invokes
 // the corresponding method on the provided service.
 func New(s service.Service, logger log.Logger) Endpoints {
-	var infoEndpoint endpoint.Endpoint
-	infoEndpoint = MakeInfoEndpoint(s)
+	infoEndpoint := MakeInfoEndpoint(s)
 	infoEndpoint = LoggingMiddleware(log.With(logger, "method", "Info"))(infoEndpoint)
 
-	var healthzEndpoint endpoint.Endpoint
-	healthzEndpoint = MakeHealthzEndpoint(s)
+	healthzEndpoint := MakeHealthzEndpoint(s)
 	healthzEndpoint = LoggingMiddleware(log.With(logger, "method", "Healthz"))(healthzEndpoint)
 
-	var readyzEndpoint endpoint.Endpoint
-	readyzEndpoint = MakeReadyzEndpoint(s)
+	readyzEndpoint := MakeReadyzEndpoint(s)
 	readyzEndpoint = LoggingMiddleware(log.With(logger, "method", "Readyz"))(readyzEndpoint)
 
-	var vmListEndpoint endpoint.Endpoint
-	vmListEndpoint = MakeVMListEndpoint(s)
+	vmListEndpoint := MakeVMListEndpoint(s)
 	vmListEndpoint = LoggingMiddleware(log.With(logger, "method", "VMList"))(vmListEndpoint)
 
-	var vmInfoEndpoint endpoint.Endpoint
-	vmInfoEndpoint = MakeVMInfoEndpoint(s)
+	vmInfoEndpoint := MakeVMInfoEndpoint(s)
 	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "method", "VMInfo"))(vmInfoEndpoint)
 
-	var vmDeployEndpoint endpoint.Endpoint
-	vmDeployEndpoint = MakeVMDeployEndpoint(s, logger)
+	vmDeployEndpoint := MakeVMDeployEndpoint(s, logger)
 	vmDeployEndpoint = LoggingMiddleware(log.With(logger, "method", "VMDeploy"))(vmDeployEndpoint)
 
-	var vmSnapshotsListEndpoint endpoint.Endpoint
-	vmSnapshotsListEndpoint = MakeVMSnapshotsListEndpoint(s)
+	vmSnapshotsListEndpoint := MakeVMSnapshotsListEndpoint(s)
 	vmSnapshotsListEndpoint = LoggingMiddleware(log.With(logger, "method", "VMSnapshotsList"))(vmSnapshotsListEndpoint)
 
-	var vmSnapshotCreateEndpoint endpoint.Endpoint
-	vmSnapshotCreateEndpoint = MakeVMSnapshotCreateEndpoint(s)
+	vmSnapshotCreateEndpoint := MakeVMSnapshotCreateEndpoint(s)
 	vmSnapshotCreateEndpoint = LoggingMiddleware(log.With(logger, "method", "VMSnapshotCreate"))(vmSnapshotCreateEndpoint)
 
-	var vmRestoreFromSnapshotEndpoint endpoint.Endpoint
-	vmRestoreFromSnapshotEndpoint = MakeVMRestoreFromSnapshotEndpoint(s)
+	vmRestoreFromSnapshotEndpoint := MakeVMRestoreFromSnapshotEndpoint(s)
 	vmRestoreFromSnapshotEndpoint = LoggingMiddleware(log.With(logger, "method", "VMRestoreFromSnapshot"))(vmRestoreFromSnapshotEndpoint)
 	return Endpoints{
 		InfoEndpoint:                  infoEndpoint,

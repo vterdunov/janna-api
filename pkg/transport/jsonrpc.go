@@ -49,7 +49,7 @@ func decodeJSONPRCVMInfoRequest(_ context.Context, msg json.RawMessage) (interfa
 	return req, nil
 }
 
-func encodeJSONRPCVMInfoResponse(_ context.Context, obj interface{}) (json.RawMessage, error) {
+func encodeJSONRPCVMInfoResponse(_ context.Context, obj interface{}) (json.RawMessage, error) { // nolint: dupl
 	res, ok := obj.(endpoint.VMInfoResponse)
 	if !ok {
 		return nil, &jsonrpc.Error{
@@ -84,7 +84,7 @@ func decodeJSONPRCVMDeployRequest(_ context.Context, msg json.RawMessage) (inter
 	return req, nil
 }
 
-func encodeJSONRPCVMDeployResponse(_ context.Context, obj interface{}) (json.RawMessage, error) {
+func encodeJSONRPCVMDeployResponse(_ context.Context, obj interface{}) (json.RawMessage, error) { // nolint: dupl
 	res, ok := obj.(endpoint.VMDeployResponse)
 	if !ok {
 		return nil, &jsonrpc.Error{
