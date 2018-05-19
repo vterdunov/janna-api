@@ -14,7 +14,7 @@ GO_LDFLAGS += -X ${PROJECT}/pkg/version.BuildTime=${BUILD_TIME}
 GO_LDFLAGS +="
 
 
-all: check test docker
+all: dep check test docker
 
 .PHONY: docker
 docker:
