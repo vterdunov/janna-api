@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/session"
+	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
 
 	"github.com/vterdunov/janna-api/pkg/config"
@@ -43,7 +44,6 @@ func main() {
 
 	ctx := context.Background()
 
-	// TODO: add retries with backoff
 	client, err := newGovmomiClient(ctx, cfg.VMWare.URL, cfg.VMWare.Insecure)
 	if err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not create Govmomi client"))
@@ -51,7 +51,6 @@ func main() {
 	}
 
 	vimClient := client.Client
-	session.KeepAlive(vimClient.RoundTripper, time.Second*10)
 
 	// Build the layers of the service "onion" from the inside out.
 	svc := service.New(logger, cfg, vimClient)
@@ -133,9 +132,22 @@ func newGovmomiClient(ctx context.Context, URL string, insecure bool) (*govmomi.
 		return nil, err
 	}
 
-	c, err := govmomi.NewClient(ctx, u, insecure)
+	soapClient := soap.NewClient(u, insecure)
+	vimClient, err := vim25.NewClient(ctx, soapClient)
 	if err != nil {
 		return nil, err
 	}
-	return c, nil
+
+	vimClient.RoundTripper = session.KeepAlive(vimClient.RoundTripper, 1*time.Minute)
+	client := &govmomi.Client{
+		Client:         vimClient,
+		SessionManager: session.NewManager(vimClient),
+	}
+
+	err = client.SessionManager.Login(ctx, u.User)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
