@@ -6,8 +6,6 @@ services:
 env:
   global:
     - COMMIT=${TRAVIS_COMMIT::7}
-    - DOCKER_REG=vterdunov
-    - PROJECT_NAME=janna-api
 
 language: go
 
