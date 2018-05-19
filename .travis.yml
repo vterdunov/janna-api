@@ -1,3 +1,14 @@
+sudo: required
+
+services:
+  - docker
+
+env:
+  global:
+    - COMMIT=${TRAVIS_COMMIT::7}
+    - DOCKER_REG=vterdunov
+    - PROJECT_NAME=janna-api
+
 language: go
 
 go:
@@ -5,9 +16,19 @@ go:
   - 1.10.x
 
 install:
-  - go get -u github.com/alecthomas/gometalinter
-  - gometalinter --install
+  - o get -u gopkg.in/alecthomas/gometalinter.v2
+  - gometalinter.v2 --install
   - go get -u github.com/golang/dep/cmd/dep
 
 script:
   - make
+
+after_success:
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+      make push;
+      make push TAG=latest;
+    fi
+  - if [ -n "$TRAVIS_TAG" ]; then
+      make push TAG=$TRAVIS_TAG;
+    fi

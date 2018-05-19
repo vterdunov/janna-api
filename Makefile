@@ -1,4 +1,5 @@
 PROG_NAME = janna-api
+IMAGE_NAME = vterdunov/$(PROG_NAME)
 
 PORT ?= 8080
 COMMIT ?= $(shell git rev-parse --short HEAD)
@@ -12,15 +13,16 @@ GO_LDFLAGS += -X ${PROJECT}/pkg/version.Commit=${COMMIT}
 GO_LDFLAGS += -X ${PROJECT}/pkg/version.BuildTime=${BUILD_TIME}
 GO_LDFLAGS +="
 
-all: dep check test compile
 
-.PHONY: container
-container:
-	docker build -t $(PROG_NAME) .
+all: check test docker
 
-.PHONY: container-run
-container-run:
-	docker run -it --rm --name=$(PROG_NAME) $(PROG_NAME)
+.PHONY: docker
+docker:
+	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest .
+
+.PHONY: push
+push:
+	docker push $(IMAGE_NAME):$(COMMIT)
 
 .PHONY: dep
 dep:
