@@ -43,7 +43,7 @@ start:
 	@env `cat .env | grep -v ^# | xargs` go run ./cmd/janna/server.go
 
 .PHONY: dc
-dc:
+dc: compile
 	docker-compose -f deploy/docker-compose.dev.yml up --build
 
 .PHONY: test

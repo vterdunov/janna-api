@@ -13,7 +13,7 @@ services:
   janna: &janna
     build:
       context: ../
-      dockerfile: build/Dockerfile
+      dockerfile: build/Dockerfile.dev
     env_file: ../.env
     ports:
       - '8080:8080'

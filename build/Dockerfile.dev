@@ -1,0 +1,5 @@
+FROM scratch
+
+CMD ["/janna-api"]
+
+COPY janna-api /janna-api

@@ -59,13 +59,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/vm_list"
 
-  /vm/{vm}:
+  /vm/{vm_uuid}:
     get:
       summary: "Get information about VM"
       tags:
       - Virtual Machines
       parameters:
-      - name: vm
+      - name: vm_uuid
         in: path
         required: true
         description: VM UUID
@@ -84,14 +84,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/vm_info"
 
-  /vm/{vm}/snapshots:
+  /vm/{vm_uuid}/snapshots:
     get:
       summary: "List of VM snapshots"
       tags:
       - Virtual Machines
       - Snapshots
       parameters:
-      - name: vm
+      - name: vm_uuid
         in: path
         required: true
         description: VM UUID
@@ -109,15 +109,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/snapshots"
+    post:
+      summary: "Create VM snapshot"
+      tags:
+      - Virtual Machines
+      - Snapshots
+      parameters:
+      - name: vm_uuid
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+        examples:
+          vm:
+            summary: test
+            value: vm1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create_snapshot'
+      responses:
+        200:
+          description: OK
 
-  /vm/{vm}/snapshots/{snapshot}:
+  /vm/{vm_uuid}/snapshots/{snapshot}:
     delete:
       summary: "Delete VM snapshot"
       tags:
       - Virtual Machines
       - Snapshots
       parameters:
-      - name: vm
+      - name: vm_uuid
         in: path
         required: true
         description: VM UUID
@@ -135,14 +161,14 @@ paths:
           description: OK
 
 
-  /vm/{vm}/revert/{snapshot}:
+  /vm/{vm_uuid}/revert/{snapshot}:
     post:
       summary: "Restore VM from snapshot"
       tags:
       - Virtual Machines
       - Snapshots
       parameters:
-      - name: vm
+      - name: vm_uuid
         in: path
         required: true
         description: VM UUID
@@ -160,14 +186,14 @@ paths:
         200:
           description: OK
 
-  /vm/{vm}/revert:
+  /vm/{vm_uuid}/revert:
     post:
       summary: "Restore VM from latest snapshot"
       tags:
       - Virtual Machines
       - Snapshots
       parameters:
-      - name: vm
+      - name: vm_uuid
         in: path
         required: true
         description: VM UUID
@@ -204,10 +230,11 @@ components:
           example: "c0c5f0a"
 
     vm_list:
-      type: object
-      properties:
-        vms:
-          type: array
+      type: array
+      example:
+      - vm1
+      - vm2
+      - vm3
 
     vm_info:
       type: object
@@ -234,6 +261,18 @@ components:
           type: string
           example: 1512-snapshot-2
 
+    create_snapshot:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          example: "MySnapshot"
+        description:
+          type: string
+          example: "This is a snapshot"
+
     snapshots:
       type: object
       properties:
@@ -244,5 +283,5 @@ components:
             example:
               name: "snapshot1"
               description: "My snapshot"
-              created_at: "2018-05-17T08:54:35.251931Z"
               id: 4
+              created_at: "2018-05-17T08:54:35.251931Z"
