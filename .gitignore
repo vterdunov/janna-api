@@ -1,7 +1,7 @@
 .vscode/
 
 /janna-api
-debug
+/debug
 .env
 
 deploy/kubernetes/janna-api/charts
