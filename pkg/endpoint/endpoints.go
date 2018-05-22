@@ -32,10 +32,8 @@ func New(s service.Service, logger log.Logger) Endpoints {
 	infoEndpoint = LoggingMiddleware(log.With(logger, "method", "Info"))(infoEndpoint)
 
 	healthzEndpoint := MakeHealthzEndpoint(s)
-	healthzEndpoint = LoggingMiddleware(log.With(logger, "method", "Healthz"))(healthzEndpoint)
 
 	readyzEndpoint := MakeReadyzEndpoint(s)
-	readyzEndpoint = LoggingMiddleware(log.With(logger, "method", "Readyz"))(readyzEndpoint)
 
 	vmListEndpoint := MakeVMListEndpoint(s)
 	vmListEndpoint = LoggingMiddleware(log.With(logger, "method", "VMList"))(vmListEndpoint)
