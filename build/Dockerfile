@@ -2,7 +2,7 @@ FROM golang:1.10.2-alpine AS build-stage
 
 WORKDIR /go/src/github.com/vterdunov/janna-api
 
-RUN apk add --no-cache make
+RUN apk add --no-cache make git
 
 COPY . .
 
