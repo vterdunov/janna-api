@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/pkg/errors"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/vim25"
@@ -52,9 +54,17 @@ func main() {
 
 	vimClient := client.Client
 
+	// Endpoint-level metrics.
+	duration := prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: "duration",
+		Subsystem: "API",
+		Name:      "request_duration_seconds",
+		Help:      "Request duration in seconds.",
+	}, []string{"method", "success"})
+
 	// Build the layers of the service "onion" from the inside out.
 	svc := service.New(logger, cfg, vimClient)
-	endpoints := endpoint.New(svc, logger)
+	endpoints := endpoint.New(svc, logger, duration)
 	httpHandler := transport.NewHTTPHandler(endpoints, logger)
 	jsonrpcHandler := transport.NewJSONRPCHandler(endpoints, logger)
 

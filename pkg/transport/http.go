@@ -9,17 +9,18 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/vterdunov/janna-api/pkg/endpoint"
 )
 
 // NewHTTPHandler mounts all of the service endpoints into an http.Handler.
 func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handler {
-	r := mux.NewRouter()
-
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
 	}
+
+	r := mux.NewRouter()
 
 	// Service state
 	r.Methods("GET").Path("/info").Handler(httptransport.NewServer(
@@ -86,6 +87,8 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		encodeResponse,
 		options...,
 	))
+
+	r.Path("/metrics").Methods("GET").Handler(promhttp.Handler())
 	return r
 }
 
