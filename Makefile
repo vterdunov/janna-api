@@ -15,7 +15,7 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-all: dep check test docker
+all: check test docker
 
 .PHONY: docker
 docker:

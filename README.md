@@ -2,15 +2,7 @@
 Learning Go with implements https://github.com/vterdunov/janna with Go and [govmomi](https://github.com/vmware/govmomi)
 
 ## Dependencies
-- Install Golang
-- Install `go dep`  
-```
-go get -u github.com/golang/dep/cmd/dep
-```  
-- Install dependencies
-```
-make dep
-```
+- Golang 
 
 ## Start
 - Configure
