@@ -7,15 +7,14 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 
-	"github.com/vterdunov/janna-api/pkg/config"
 	jt "github.com/vterdunov/janna-api/pkg/types"
 )
 
 // SnapshotsList return a list of VM snapshots
-func SnapshotsList(ctx context.Context, client *vim25.Client, cfg *config.Config, vmName string) ([]jt.Snapshot, error) {
+func SnapshotsList(ctx context.Context, client *vim25.Client, params *jt.VMSnapshotsListParams) ([]jt.Snapshot, error) {
 	st := make([]jt.Snapshot, 0)
 
-	vm, err := FindByUUID(ctx, client, cfg, vmName)
+	vm, err := FindByUUID(ctx, client, params.Datacenter, params.UUID)
 	if err != nil {
 		return nil, err
 	}
@@ -43,13 +42,13 @@ func SnapshotsList(ctx context.Context, client *vim25.Client, cfg *config.Config
 }
 
 // SnapshotCreate creates VM snapshot
-func SnapshotCreate(ctx context.Context, client *vim25.Client, cfg *config.Config, p *jt.SnapshotCreateParams) error {
-	vm, err := FindByUUID(ctx, client, cfg, p.VMName)
+func SnapshotCreate(ctx context.Context, client *vim25.Client, params *jt.SnapshotCreateParams) error {
+	vm, err := FindByUUID(ctx, client, params.Datacenter, params.UUID)
 	if err != nil {
 		return err
 	}
 
-	task, err := vm.CreateSnapshot(ctx, p.Name, p.Description, p.Memory, p.Quiesce)
+	task, err := vm.CreateSnapshot(ctx, params.Name, params.Description, params.Memory, params.Quiesce)
 	if err != nil {
 		return err
 	}
@@ -62,13 +61,13 @@ func SnapshotCreate(ctx context.Context, client *vim25.Client, cfg *config.Confi
 }
 
 // RestoreFromSnapshot creates VM snapshot
-func RestoreFromSnapshot(ctx context.Context, client *vim25.Client, cfg *config.Config, p *jt.VMRestoreFromSnapshotParams) error {
-	vm, err := FindByUUID(ctx, client, cfg, p.VMName)
+func RestoreFromSnapshot(ctx context.Context, client *vim25.Client, params *jt.VMRestoreFromSnapshotParams) error {
+	vm, err := FindByUUID(ctx, client, params.Datacenter, params.UUID)
 	if err != nil {
 		return err
 	}
 
-	task, err := vm.RevertToSnapshot(ctx, p.Name, p.PowerOn)
+	task, err := vm.RevertToSnapshot(ctx, params.Name, params.PowerOn)
 	if err != nil {
 		return err
 	}

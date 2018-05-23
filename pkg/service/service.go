@@ -15,6 +15,8 @@ import (
 
 // Service is the interface that represents methods of the business logic
 type Service interface {
+	GetConfig() *config.Config
+
 	// Info returns some info about the Service
 	Info() (string, string)
 
@@ -28,13 +30,13 @@ type Service interface {
 	VMList(context.Context, string) ([]string, error)
 
 	// VMInfo provide summary information about VM
-	VMInfo(context.Context, string) (*types.VMSummary, error)
+	VMInfo(context.Context, *types.VMInfoParams) (*types.VMSummary, error)
 
 	// VMDeploy create VM from OVA file
 	VMDeploy(context.Context, *types.VMDeployParams) (int, error)
 
 	// VMSnapshotsList returns VM snapshots list
-	VMSnapshotsList(context.Context, string) ([]types.Snapshot, error)
+	VMSnapshotsList(context.Context, *types.VMSnapshotsListParams) ([]types.Snapshot, error)
 
 	// VMSnapshotCreate creates a VM snapshot
 	VMSnapshotCreate(context.Context, *types.SnapshotCreateParams) error
@@ -59,6 +61,10 @@ func New(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
 	}
 }
 
+func (s service) GetConfig() *config.Config {
+	return s.cfg
+}
+
 func (s service) Info() (string, string) {
 	return version.GetBuildInfo()
 }
@@ -77,18 +83,18 @@ func (s service) VMList(ctx context.Context, folder string) ([]string, error) {
 	return vms, nil
 }
 
-func (s service) VMInfo(ctx context.Context, name string) (*types.VMSummary, error) {
-	return vm.Info(ctx, name, s.logger, s.cfg, s.Client)
+func (s service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*types.VMSummary, error) {
+	return vm.Info(ctx, s.Client, params)
 }
 
-func (s service) VMDeploy(ctx context.Context, deployParams *types.VMDeployParams) (int, error) {
+func (s service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (int, error) {
 	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
 
-	return vm.Deploy(ctx, deployParams, s.logger, s.cfg, s.Client)
+	return vm.Deploy(ctx, s.Client, params, s.logger, s.cfg)
 }
 
-func (s service) VMSnapshotsList(ctx context.Context, vmName string) ([]types.Snapshot, error) {
-	st, err := vm.SnapshotsList(ctx, s.Client, s.cfg, vmName)
+func (s service) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) ([]types.Snapshot, error) {
+	st, err := vm.SnapshotsList(ctx, s.Client, params)
 	if err != nil {
 		return nil, err
 	}
@@ -96,10 +102,10 @@ func (s service) VMSnapshotsList(ctx context.Context, vmName string) ([]types.Sn
 	return st, nil
 }
 
-func (s service) VMSnapshotCreate(ctx context.Context, p *types.SnapshotCreateParams) error {
-	return vm.SnapshotCreate(ctx, s.Client, s.cfg, p)
+func (s service) VMSnapshotCreate(ctx context.Context, params *types.SnapshotCreateParams) error {
+	return vm.SnapshotCreate(ctx, s.Client, params)
 }
 
-func (s service) VMRestoreFromSnapshot(ctx context.Context, p *types.VMRestoreFromSnapshotParams) error {
-	return vm.RestoreFromSnapshot(ctx, s.Client, s.cfg, p)
+func (s service) VMRestoreFromSnapshot(ctx context.Context, params *types.VMRestoreFromSnapshotParams) error {
+	return vm.RestoreFromSnapshot(ctx, s.Client, params)
 }

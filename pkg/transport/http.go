@@ -114,8 +114,8 @@ func decodeVMListRequest(_ context.Context, r *http.Request) (interface{}, error
 func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMInfoRequest
 	vars := mux.Vars(r)
-	req.Name = vars["vm"]
-	req.Folder = r.URL.Query().Get("folder")
+	req.UUID = vars["vm"]
+	req.Datacenter = r.URL.Query().Get("datacenter")
 
 	return req, nil
 }
@@ -132,7 +132,8 @@ func decodeVMSnapshotsListyRequest(_ context.Context, r *http.Request) (interfac
 	var req endpoint.VMSnapshotsListRequest
 
 	vars := mux.Vars(r)
-	req.VMName = vars["vm"]
+	req.UUID = vars["vm"]
+	req.Datacenter = r.URL.Query().Get("datacenter")
 
 	return req, nil
 }
@@ -141,7 +142,7 @@ func decodeVMSnapshotCreateRequest(_ context.Context, r *http.Request) (interfac
 	var req endpoint.VMSnapshotCreateRequest
 
 	vars := mux.Vars(r)
-	req.VMname = vars["vm"]
+	req.UUID = vars["vm"]
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(err, "Could not decode request")
 	}
@@ -153,7 +154,7 @@ func decodeVMRestoreFromSnapshotRequest(_ context.Context, r *http.Request) (int
 	var req endpoint.VMRestoreFromSnapshotRequest
 
 	vars := mux.Vars(r)
-	req.VMname = vars["vm"]
+	req.UUID = vars["vm"]
 	req.Name = vars["snapshot"]
 	req.PowerOn = true
 

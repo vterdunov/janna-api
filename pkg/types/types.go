@@ -4,6 +4,8 @@ import (
 	"time"
 
 	vmwaretypes "github.com/vmware/govmomi/vim25/types"
+
+	"github.com/vterdunov/janna-api/pkg/config"
 )
 
 // VMSummary stores some information about Virtual Machines
@@ -35,7 +37,8 @@ type Snapshot struct {
 
 // SnapshotCreateParams stores user request params
 type SnapshotCreateParams struct {
-	VMName      string `json:"vm_name"`
+	UUID        string `json:"vm_uuid"`
+	Datacenter  string `json:"datacenter"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Memory      bool   `json:"memory"`
@@ -44,7 +47,27 @@ type SnapshotCreateParams struct {
 
 // VMRestoreFromSnapshotParams stores user request params
 type VMRestoreFromSnapshotParams struct {
-	VMName  string `json:"vm_name"`
-	Name    string `json:"name"`
-	PowerOn bool   `json:"power_on"`
+	UUID       string `json:"vm_uuid"`
+	Datacenter string `json:"datacenter"`
+	Name       string `json:"name"`
+	PowerOn    bool   `json:"power_on"`
+}
+
+type VMInfoParams struct {
+	UUID       string
+	Datacenter string
+}
+
+// NewVMInfoParams creates VMInfoParams struct with default params
+func NewVMInfoParams(cfg *config.Config) *VMInfoParams {
+	p := &VMInfoParams{
+		Datacenter: cfg.VMWare.DC,
+	}
+
+	return p
+}
+
+type VMSnapshotsListParams struct {
+	UUID       string
+	Datacenter string
 }

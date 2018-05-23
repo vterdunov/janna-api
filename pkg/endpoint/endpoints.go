@@ -119,7 +119,11 @@ type readyzResponse struct{}
 // MakeVMListEndpoint returns an endpoint via the passed service
 func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(VMListRequest)
+		req, ok := request.(VMListRequest)
+		if !ok {
+			return nil, errors.New("Could not parse request")
+		}
+
 		list, err := s.VMList(ctx, req.Folder)
 		return VMListResponse{list, err}, nil
 	}
@@ -144,16 +148,26 @@ func (r VMListResponse) Failed() error {
 // MakeVMInfoEndpoint returns an endpoint via the passed service
 func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(VMInfoRequest)
-		summary, err := s.VMInfo(ctx, req.Name)
+		req, ok := request.(VMInfoRequest)
+		if !ok {
+			return nil, errors.New("Could not parse request")
+		}
+
+		params := types.NewVMInfoParams(s.GetConfig())
+		params.UUID = req.UUID
+		if params.Datacenter == "" {
+			params.Datacenter = req.Datacenter
+		}
+
+		summary, err := s.VMInfo(ctx, params)
 		return VMInfoResponse{summary, err}, nil
 	}
 }
 
 // VMInfoRequest collects the request parameters for the VMInfo method
 type VMInfoRequest struct {
-	Name   string
-	Folder string
+	UUID       string
+	Datacenter string
 }
 
 // VMInfoResponse collects the response values for the VMInfo method
@@ -170,7 +184,11 @@ func (r VMInfoResponse) Failed() error {
 // MakeVMDeployEndpoint returns an endpoint via the passed service
 func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(VMDeployRequest)
+		req, ok := request.(VMDeployRequest)
+		if !ok {
+			return nil, errors.New("Could not parse request")
+		}
+
 		logger.Log("msg", "incoming request params", "params", fmt.Sprintf("%+v", req))
 
 		// TODO: Try to write middleware that will validate parameters
@@ -220,15 +238,25 @@ func (r VMDeployResponse) Failed() error {
 // MakeVMSnapshotsListEndpoint returns an endpoint via the passed service
 func MakeVMSnapshotsListEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(VMSnapshotsListRequest)
-		list, err := s.VMSnapshotsList(ctx, req.VMName)
+		req, ok := request.(VMSnapshotsListRequest)
+		if !ok {
+			return nil, errors.New("Could not parse request")
+		}
+
+		params := &types.VMSnapshotsListParams{
+			UUID:       req.UUID,
+			Datacenter: req.Datacenter,
+		}
+
+		list, err := s.VMSnapshotsList(ctx, params)
 		return VMSnapshotsListResponse{list, err}, nil
 	}
 }
 
 // VMSnapshotsListRequest collects the request parameters for the VMSnapshotsList method
 type VMSnapshotsListRequest struct {
-	VMName string
+	UUID       string
+	Datacenter string
 }
 
 // VMSnapshotsListResponse collects the response values for the VMSnapshotsList method
@@ -245,10 +273,14 @@ func (r VMSnapshotsListResponse) Failed() error {
 // MakeVMSnapshotCreateEndpoint creates VM snapshot
 func MakeVMSnapshotCreateEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(VMSnapshotCreateRequest)
+		req, ok := request.(VMSnapshotCreateRequest)
+		if !ok {
+			return nil, errors.New("Could not parse request")
+		}
 
 		params := &types.SnapshotCreateParams{
-			VMName:      req.VMname,
+			UUID:        req.UUID,
+			Datacenter:  req.Datacenter,
 			Name:        req.Name,
 			Description: req.Description,
 			Memory:      req.Memory,
@@ -262,7 +294,8 @@ func MakeVMSnapshotCreateEndpoint(s service.Service) endpoint.Endpoint {
 
 // VMSnapshotCreateRequest collects the request parameters for the VMSnapshotCreate method
 type VMSnapshotCreateRequest struct {
-	VMname      string
+	UUID        string
+	Datacenter  string
 	Name        string
 	Description string
 	Memory      bool
@@ -282,12 +315,16 @@ func (r VMSnapshotCreateResponse) Failed() error {
 // MakeVMRestoreFromSnapshotEndpoint creates VM snapshot
 func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(VMRestoreFromSnapshotRequest)
+		req, ok := request.(VMRestoreFromSnapshotRequest)
+		if !ok {
+			return nil, errors.New("Could not parse request")
+		}
 
 		params := &types.VMRestoreFromSnapshotParams{
-			VMName:  req.VMname,
-			Name:    req.Name,
-			PowerOn: req.PowerOn,
+			UUID:       req.UUID,
+			Datacenter: req.Datacenter,
+			Name:       req.Name,
+			PowerOn:    req.PowerOn,
 		}
 
 		err = s.VMRestoreFromSnapshot(ctx, params)
@@ -297,9 +334,10 @@ func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 
 // VMRestoreFromSnapshotRequest collects the request parameters for the VMRestoreFromSnapshot method
 type VMRestoreFromSnapshotRequest struct {
-	VMname  string
-	Name    string
-	PowerOn bool
+	UUID       string
+	Datacenter string
+	Name       string
+	PowerOn    bool
 }
 
 // VMSRestoreFromSnapshotResponse collects the response values for the VMRestoreFromSnapshot method

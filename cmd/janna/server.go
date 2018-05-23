@@ -56,9 +56,9 @@ func main() {
 
 	// Endpoint-level metrics.
 	duration := prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
-		Namespace: "duration",
-		Subsystem: "API",
-		Name:      "request_duration_seconds",
+		Namespace: "http",
+		Subsystem: "request",
+		Name:      "duration_seconds",
 		Help:      "Request duration in seconds.",
 	}, []string{"method", "success"})
 

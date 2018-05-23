@@ -283,7 +283,7 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 }
 
 // Deploy Virtual Machine to VMWare
-func Deploy(ctx context.Context, deployParams *jannatypes.VMDeployParams, logger log.Logger, cfg *config.Config, c *vim25.Client) (int, error) { // nolint: unparam
+func Deploy(ctx context.Context, c *vim25.Client, deployParams *jannatypes.VMDeployParams, logger log.Logger, cfg *config.Config) (int, error) { // nolint: unparam
 	// TODO: make up a metod to check deploy progress.
 	// Job ID and endpoint with status?
 	// keep HTTP connection with client and poll it?
