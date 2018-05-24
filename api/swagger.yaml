@@ -86,6 +86,10 @@ paths:
           type: string
           format: uuid
           minimum: 1
+      - name: datacenter
+        in: query
+        schema:
+          type: string
       responses:
         200:
           description: OK
@@ -109,10 +113,10 @@ paths:
           type: string
           minimum: 1
           format: uuid
-        examples:
-          vm:
-            summary: test
-            value: vm1
+      - name: datacenter
+        in: query
+        schema:
+          type: string
       responses:
         200:
           description: OK

@@ -23,43 +23,46 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r := mux.NewRouter()
 
 	// Service state
-	r.Methods("GET").Path("/info").Handler(httptransport.NewServer(
+	r.Path("/info").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.InfoEndpoint,
 		decodeInfoRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Methods("GET").Path("/healthz").Handler(httptransport.NewServer(
+	r.Path("/healthz").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.HealthzEndpoint,
 		decodeHelthzRequest,
 		encodeProbeResponse,
 		options...,
 	))
 
-	r.Methods("GET").Path("/readyz").Handler(httptransport.NewServer(
+	r.Path("/readyz").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.ReadyzEndpoint,
 		decodeReadyzRequest,
 		encodeProbeResponse,
 		options...,
 	))
 
+	r.Path("/metrics").Methods("GET").Handler(promhttp.Handler())
+
 	// Virtual Machines
-	r.Methods("GET").Path("/vm").Handler(httptransport.NewServer(
+	r.Path("/vm").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMListEndpoint,
 		decodeVMListRequest,
+		// TODO: Implement
 		encodeNotImplemented,
 		options...,
 	))
 
-	r.Methods("GET").Path("/vm/{vm}").Handler(httptransport.NewServer(
+	r.Path("/vm/{vm}").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMInfoEndpoint,
 		decodeVMInfoRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Methods("POST").Path("/vm").Handler(httptransport.NewServer(
+	r.Path("/vm").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMDeployEndpoint,
 		decodeVMDeployRequest,
 		encodeResponse,
@@ -67,28 +70,27 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	))
 
 	// Snapshots
-	r.Methods("GET").Path("/vm/{vm}/snapshots").Handler(httptransport.NewServer(
+	r.Path("/vm/{vm}/snapshots").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMSnapshotsListEndpoint,
 		decodeVMSnapshotsListyRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Methods("POST").Path("/vm/{vm}/snapshots").Handler(httptransport.NewServer(
+	r.Path("/vm/{vm}/snapshots").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMSnapshotCreateEndpoint,
 		decodeVMSnapshotCreateRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Methods("POST").Path("/vm/{vm}/revert/{snapshot}").Handler(httptransport.NewServer(
+	r.Path("/vm/{vm}/revert/{snapshot}").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMRestoreFromSnapshotEndpoint,
 		decodeVMRestoreFromSnapshotRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Path("/metrics").Methods("GET").Handler(promhttp.Handler())
 	return r
 }
 
@@ -114,8 +116,8 @@ func decodeVMListRequest(_ context.Context, r *http.Request) (interface{}, error
 func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMInfoRequest
 	vars := mux.Vars(r)
-	req.Name = vars["vm"]
-	req.Folder = r.URL.Query().Get("folder")
+	req.UUID = vars["vm"]
+	req.Datacenter = r.URL.Query().Get("datacenter")
 
 	return req, nil
 }
@@ -132,7 +134,8 @@ func decodeVMSnapshotsListyRequest(_ context.Context, r *http.Request) (interfac
 	var req endpoint.VMSnapshotsListRequest
 
 	vars := mux.Vars(r)
-	req.VMName = vars["vm"]
+	req.UUID = vars["vm"]
+	req.Datacenter = r.URL.Query().Get("datacenter")
 
 	return req, nil
 }
@@ -141,7 +144,7 @@ func decodeVMSnapshotCreateRequest(_ context.Context, r *http.Request) (interfac
 	var req endpoint.VMSnapshotCreateRequest
 
 	vars := mux.Vars(r)
-	req.VMname = vars["vm"]
+	req.UUID = vars["vm"]
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(err, "Could not decode request")
 	}
@@ -153,7 +156,7 @@ func decodeVMRestoreFromSnapshotRequest(_ context.Context, r *http.Request) (int
 	var req endpoint.VMRestoreFromSnapshotRequest
 
 	vars := mux.Vars(r)
-	req.VMname = vars["vm"]
+	req.UUID = vars["vm"]
 	req.Name = vars["snapshot"]
 	req.PowerOn = true
 

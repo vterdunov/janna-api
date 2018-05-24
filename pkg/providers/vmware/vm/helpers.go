@@ -12,15 +12,16 @@ import (
 )
 
 // FindByUUID find and returns VM by its UUID
-func FindByUUID(ctx context.Context, client *vim25.Client, cfg *config.Config, uuid string) (*object.VirtualMachine, error) {
+func FindByUUID(ctx context.Context, client *vim25.Client, DCName string, uuid string) (*object.VirtualMachine, error) {
 	f := find.NewFinder(client, true)
 
-	dc, err := f.DatacenterOrDefault(ctx, cfg.VMWare.DC)
+	dc, err := f.DatacenterOrDefault(ctx, DCName)
 	if err != nil {
 		return nil, err
 	}
 
 	f.SetDatacenter(dc)
+
 	si := object.NewSearchIndex(client)
 
 	ref, err := si.FindByUuid(ctx, dc, uuid, true, nil)
