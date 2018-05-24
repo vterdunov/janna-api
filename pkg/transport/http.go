@@ -50,14 +50,6 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r.Path("/vm").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMListEndpoint,
 		decodeVMListRequest,
-		// TODO: Implement
-		encodeNotImplemented,
-		options...,
-	))
-
-	r.Path("/vm/{vm}").Methods("GET").Handler(httptransport.NewServer(
-		endpoints.VMInfoEndpoint,
-		decodeVMInfoRequest,
 		encodeResponse,
 		options...,
 	))
@@ -65,6 +57,13 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r.Path("/vm").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMDeployEndpoint,
 		decodeVMDeployRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Path("/vm/{vm}").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.VMInfoEndpoint,
+		decodeVMInfoRequest,
 		encodeResponse,
 		options...,
 	))
@@ -109,6 +108,7 @@ func decodeReadyzRequest(_ context.Context, r *http.Request) (interface{}, error
 func decodeVMListRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMListRequest
 	req.Folder = r.URL.Query().Get("folder")
+	req.Datacenter = r.URL.Query().Get("datacenter")
 
 	return req, nil
 }
@@ -178,16 +178,16 @@ func encodeProbeResponse(_ context.Context, w http.ResponseWriter, response inte
 	return nil
 }
 
-func encodeNotImplemented(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	// check business logic errors
-	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
-		encodeError(ctx, e.Failed(), w)
-		return nil
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
-	return nil
-}
+// func encodeNotImplemented(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+// 	// check business logic errors
+// 	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+// 		encodeError(ctx, e.Failed(), w)
+// 		return nil
+// 	}
+// 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+// 	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
+// 	return nil
+// }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	if err == nil {

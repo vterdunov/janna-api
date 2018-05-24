@@ -124,14 +124,21 @@ func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 			return nil, errors.New("Could not parse request")
 		}
 
-		list, err := s.VMList(ctx, req.Folder)
+		params := &types.VMListParams{
+			Datacenter: req.Datacenter,
+			Folder:     req.Folder,
+		}
+		params.FillEmptyFields(s.GetConfig())
+
+		list, err := s.VMList(ctx, params)
 		return VMListResponse{list, err}, nil
 	}
 }
 
 // VMListRequest collects the request parameters for the VMList method
 type VMListRequest struct {
-	Folder string
+	Datacenter string
+	Folder     string
 }
 
 // VMListResponse collects the response values for the VMList method

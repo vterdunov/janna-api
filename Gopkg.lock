@@ -117,6 +117,7 @@
     "property",
     "session",
     "task",
+    "view",
     "vim25",
     "vim25/debug",
     "vim25/methods",
@@ -132,6 +133,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "181ca600798f23c263990f4c5eda114ffd6db2e1259bb73f562ac07f47e1daa8"
+  inputs-digest = "cd6497d09fba09a985e8d02c6d66f5a16172c534d7ed6abf01326015f1b748fb"
   solver-name = "gps-cdcl"
   solver-version = 1
