@@ -45,6 +45,13 @@ type SnapshotCreateParams struct {
 	Quiesce     bool   `json:"quiesce"`
 }
 
+// FillEmptyFields stores default parameters to the struct if some fields was empty
+func (p *SnapshotCreateParams) FillEmptyFields(cfg *config.Config) {
+	if p.Datacenter == "" {
+		p.Datacenter = cfg.VMWare.DC
+	}
+}
+
 // VMRestoreFromSnapshotParams stores user request params
 type VMRestoreFromSnapshotParams struct {
 	UUID       string `json:"vm_uuid"`
@@ -53,21 +60,35 @@ type VMRestoreFromSnapshotParams struct {
 	PowerOn    bool   `json:"power_on"`
 }
 
+// FillEmptyFields stores default parameters to the struct if some fields was empty
+func (p *VMRestoreFromSnapshotParams) FillEmptyFields(cfg *config.Config) {
+	if p.Datacenter == "" {
+		p.Datacenter = cfg.VMWare.DC
+	}
+}
+
+// VMInfoParams stores user request parameters
 type VMInfoParams struct {
 	UUID       string
 	Datacenter string
 }
 
-// NewVMInfoParams creates VMInfoParams struct with default params
-func NewVMInfoParams(cfg *config.Config) *VMInfoParams {
-	p := &VMInfoParams{
-		Datacenter: cfg.VMWare.DC,
+// FillEmptyFields stores default parameters to the struct if some fields was empty
+func (p *VMInfoParams) FillEmptyFields(cfg *config.Config) {
+	if p.Datacenter == "" {
+		p.Datacenter = cfg.VMWare.DC
 	}
-
-	return p
 }
 
+// VMSnapshotsListParams stores user request parameters
 type VMSnapshotsListParams struct {
 	UUID       string
 	Datacenter string
+}
+
+// FillEmptyFields stores default parameters to the struct if some fields was empty
+func (p *VMSnapshotsListParams) FillEmptyFields(cfg *config.Config) {
+	if p.Datacenter == "" {
+		p.Datacenter = cfg.VMWare.DC
+	}
 }

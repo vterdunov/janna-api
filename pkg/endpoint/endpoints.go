@@ -150,14 +150,15 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMInfoRequest)
 		if !ok {
+
 			return nil, errors.New("Could not parse request")
 		}
 
-		params := types.NewVMInfoParams(s.GetConfig())
-		params.UUID = req.UUID
-		if params.Datacenter == "" {
-			params.Datacenter = req.Datacenter
+		params := &types.VMInfoParams{
+			UUID:       req.UUID,
+			Datacenter: req.Datacenter,
 		}
+		params.FillEmptyFields(s.GetConfig())
 
 		summary, err := s.VMInfo(ctx, params)
 		return VMInfoResponse{summary, err}, nil
@@ -247,6 +248,7 @@ func MakeVMSnapshotsListEndpoint(s service.Service) endpoint.Endpoint {
 			UUID:       req.UUID,
 			Datacenter: req.Datacenter,
 		}
+		params.FillEmptyFields(s.GetConfig())
 
 		list, err := s.VMSnapshotsList(ctx, params)
 		return VMSnapshotsListResponse{list, err}, nil
@@ -286,6 +288,7 @@ func MakeVMSnapshotCreateEndpoint(s service.Service) endpoint.Endpoint {
 			Memory:      req.Memory,
 			Quiesce:     req.Quiesce,
 		}
+		params.FillEmptyFields(s.GetConfig())
 
 		err = s.VMSnapshotCreate(ctx, params)
 		return VMSnapshotCreateResponse{err}, nil
@@ -326,6 +329,7 @@ func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 			Name:       req.Name,
 			PowerOn:    req.PowerOn,
 		}
+		params.FillEmptyFields(s.GetConfig())
 
 		err = s.VMRestoreFromSnapshot(ctx, params)
 		return VMSRestoreFromSnapshotResponse{err}, nil
