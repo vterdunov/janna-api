@@ -60,10 +60,28 @@ paths:
                 $ref: "#/components/schemas/metrics"
   /vm:
     get:
-      summary: "VMs list"
+      summary: "Virtual Machines UUIDs and names list"
       description: Returns VMs list from default directory.
       tags:
       - Virtual Machines
+      parameters:
+      - name: datacenter
+        in: query
+        description: Datacenter name
+        schema:
+          type: string
+          format: uuid
+          minimum: 1
+      - name: folder
+        in: query
+        description: Folder name to find VMs in. If the parameter was set 'resource_pool' will be ignored.
+        schema:
+          type: string
+      - name: resource_pool
+        in: query
+        description: Resource pool to find VMs in. If 'folder' parameter was passed this parameter will be ignored.
+        schema:
+          type: string
       responses:
         200:
           description: OK
@@ -267,11 +285,12 @@ components:
         go_gc_duration_seconds{quantile="1"} 8.9717e-05
 
     vm_list:
-      type: array
+      type: object
       example:
-      - vm1
-      - vm2
-      - vm3
+        "vm_list":
+          "420502ba-0a60-311a-5c7b-0d7c3fec60a3": "my-vm1"
+          "42050306-51f9-3b3d-8fbb-8ce6912e1f4c": "my-vm2"
+          "42050646-6bed-ddfe-1f81-ddf8eae21a67": "my-vm3"
 
     vm_info:
       type: object

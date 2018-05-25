@@ -109,6 +109,7 @@ func decodeVMListRequest(_ context.Context, r *http.Request) (interface{}, error
 	var req endpoint.VMListRequest
 	req.Folder = r.URL.Query().Get("folder")
 	req.Datacenter = r.URL.Query().Get("datacenter")
+	req.ResourcePool = r.URL.Query().Get("resource_pool")
 
 	return req, nil
 }

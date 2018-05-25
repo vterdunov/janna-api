@@ -3,21 +3,25 @@ package vm
 import (
 	"context"
 
+	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/view"
-	"github.com/vmware/govmomi/vim25/mo"
-
-	"github.com/go-kit/kit/log"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/types"
 
 	jt "github.com/vterdunov/janna-api/pkg/types"
 )
 
 // List returns a list of VM names and its UUIDs
-func List(ctx context.Context, c *vim25.Client, params *jt.VMListParams, logger log.Logger) ([]string, error) {
-	// this implementation works two times faster on my workload that using finder. 280VMs gets around 2.3sec vs ~6.6.sec using finder
-	// but I don't know how to get machines from specific Datacenter, not all ESXi/vSPhere hosts.
+func List(ctx context.Context, c *vim25.Client, params *jt.VMListParams) (map[string]string, error) {
+
+	root, err := chooseRoot(ctx, c, params)
+	if err != nil {
+		return nil, err
+	}
+
 	m := view.NewManager(c)
-	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
+	v, err := m.CreateContainerView(ctx, root, []string{"VirtualMachine"}, true)
 	if err != nil {
 		return nil, err
 	}
@@ -32,43 +36,38 @@ func List(ctx context.Context, c *vim25.Client, params *jt.VMListParams, logger 
 		return nil, err
 	}
 
-	var res []string
+	res := make(map[string]string)
 	for _, vm := range vms {
-		// fmt.Println(vm.Summary.)
-		// fmt.Printf("%s: %s\n", vm.Summary.Config.Name, vm.Summary.Config.Uuid)
-		res = append(res, vm.Summary.Config.Name)
+		res[vm.Summary.Config.Uuid] = vm.Summary.Config.Name
 	}
 
-	// // Implementation using finder. Slow.
-	// f := find.NewFinder(c, true)
-	// dc, err := f.DatacenterOrDefault(ctx, params.Datacenter)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// f.SetDatacenter(dc)
-
-	// vms, err := f.VirtualMachineList(ctx, "*")
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// pc := property.DefaultCollector(c)
-
-	// // Convert datastores into list of references
-	// var refs []types.ManagedObjectReference
-	// for _, vm := range vms {
-	// 	refs = append(refs, vm.Reference())
-	// }
-
-	// var vmt []mo.VirtualMachine
-	// if err = pc.Retrieve(ctx, refs, []string{"summary"}, &vmt); err != nil {
-	// 	return nil, err
-	// }
-
-	// for _, vm := range vmt {
-	// 	fmt.Printf("%s: %s\n", vm.Summary.Config.Name, vm.Summary.Config.Uuid)
-	// }
-
 	return res, nil
+}
+
+func chooseRoot(ctx context.Context, c *vim25.Client, params *jt.VMListParams) (types.ManagedObjectReference, error) {
+	var ref types.ManagedObjectReference
+	f := find.NewFinder(c, true)
+	dc, err := f.DatacenterOrDefault(ctx, params.Datacenter)
+	if err != nil {
+		return ref, err
+	}
+
+	if params.Folder != "" {
+		f.SetDatacenter(dc)
+		rp, err := f.FolderOrDefault(ctx, params.Folder)
+		if err != nil {
+			return ref, err
+		}
+		return rp.Reference(), nil
+	}
+
+	if params.ResourcePool != "" {
+		f.SetDatacenter(dc)
+		rp, err := f.ResourcePoolOrDefault(ctx, params.ResourcePool)
+		if err != nil {
+			return ref, err
+		}
+		return rp.Reference(), nil
+	}
+	return dc.Reference(), nil
 }

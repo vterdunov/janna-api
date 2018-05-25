@@ -6,8 +6,9 @@ import (
 
 // VMListParams stores user request params
 type VMListParams struct {
-	Datacenter string
-	Folder     string
+	Datacenter   string
+	Folder       string
+	ResourcePool string
 }
 
 // FillEmptyFields stores default parameters to the struct if some fields was empty

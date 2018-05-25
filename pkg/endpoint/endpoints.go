@@ -125,8 +125,9 @@ func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 		}
 
 		params := &types.VMListParams{
-			Datacenter: req.Datacenter,
-			Folder:     req.Folder,
+			Datacenter:   req.Datacenter,
+			Folder:       req.Folder,
+			ResourcePool: req.ResourcePool,
 		}
 		params.FillEmptyFields(s.GetConfig())
 
@@ -137,14 +138,15 @@ func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 
 // VMListRequest collects the request parameters for the VMList method
 type VMListRequest struct {
-	Datacenter string
-	Folder     string
+	Datacenter   string
+	Folder       string
+	ResourcePool string
 }
 
 // VMListResponse collects the response values for the VMList method
 type VMListResponse struct {
-	VMList []string `json:"vm_list,omitempty"`
-	Err    error    `json:"error,omitempty"`
+	VMList map[string]string `json:"vm_list,omitempty"`
+	Err    error             `json:"error,omitempty"`
 }
 
 // Failed implements Failer

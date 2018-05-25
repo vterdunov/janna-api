@@ -27,7 +27,7 @@ type Service interface {
 	Readyz() bool
 
 	// VMList returns list of VMs
-	VMList(context.Context, *types.VMListParams) ([]string, error)
+	VMList(context.Context, *types.VMListParams) (map[string]string, error)
 
 	// VMInfo provide summary information about VM
 	VMInfo(context.Context, *types.VMInfoParams) (*types.VMSummary, error)
@@ -77,8 +77,8 @@ func (s service) Readyz() bool {
 	return health.Readyz()
 }
 
-func (s service) VMList(ctx context.Context, params *types.VMListParams) ([]string, error) {
-	return vm.List(ctx, s.Client, params, s.logger)
+func (s service) VMList(ctx context.Context, params *types.VMListParams) (map[string]string, error) {
+	return vm.List(ctx, s.Client, params)
 }
 
 func (s service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*types.VMSummary, error) {
