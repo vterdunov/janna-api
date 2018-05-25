@@ -90,6 +90,14 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		options...,
 	))
 
+	// Find VM
+	r.Path("/find/vm").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.VMFindEndpoint,
+		decodeVMFindRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -118,6 +126,15 @@ func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error
 	var req endpoint.VMInfoRequest
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]
+	req.Datacenter = r.URL.Query().Get("datacenter")
+
+	return req, nil
+}
+
+func decodeVMFindRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMFindRequest
+
+	req.Path = r.URL.Query().Get("path")
 	req.Datacenter = r.URL.Query().Get("datacenter")
 
 	return req, nil

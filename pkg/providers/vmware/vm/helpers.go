@@ -7,12 +7,10 @@ import (
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
-
-	"github.com/vterdunov/janna-api/pkg/config"
 )
 
 // FindByUUID find and returns VM by its UUID
-func FindByUUID(ctx context.Context, client *vim25.Client, DCName string, uuid string) (*object.VirtualMachine, error) {
+func FindByUUID(ctx context.Context, client *vim25.Client, DCName, uuid string) (*object.VirtualMachine, error) {
 	f := find.NewFinder(client, true)
 
 	dc, err := f.DatacenterOrDefault(ctx, DCName)
@@ -38,10 +36,10 @@ func FindByUUID(ctx context.Context, client *vim25.Client, DCName string, uuid s
 }
 
 // FindByPath find and returns VM by Inventory Path
-func FindByPath(ctx context.Context, client *vim25.Client, cfg *config.Config, path string) (*object.VirtualMachine, error) {
+func FindByPath(ctx context.Context, client *vim25.Client, DCname, path string) (*object.VirtualMachine, error) {
 	f := find.NewFinder(client, true)
 
-	dc, err := f.DatacenterOrDefault(ctx, cfg.VMWare.DC)
+	dc, err := f.DatacenterOrDefault(ctx, DCname)
 	if err != nil {
 		return nil, err
 	}

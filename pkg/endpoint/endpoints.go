@@ -20,6 +20,7 @@ type Endpoints struct {
 	HealthzEndpoint               endpoint.Endpoint
 	VMListEndpoint                endpoint.Endpoint
 	VMInfoEndpoint                endpoint.Endpoint
+	VMFindEndpoint                endpoint.Endpoint
 	VMDeployEndpoint              endpoint.Endpoint
 	VMSnapshotsListEndpoint       endpoint.Endpoint
 	VMSnapshotCreateEndpoint      endpoint.Endpoint
@@ -44,6 +45,10 @@ func New(s service.Service, logger log.Logger, duration metrics.Histogram) Endpo
 	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "method", "VMInfo"))(vmInfoEndpoint)
 	vmInfoEndpoint = InstrumentingMiddleware(duration.With("method", "VMInfo"))(vmInfoEndpoint)
 
+	vmFindEndpoint := MakeVMFindEndpoint(s)
+	vmFindEndpoint = LoggingMiddleware(log.With(logger, "method", "VMFind"))(vmFindEndpoint)
+	vmFindEndpoint = InstrumentingMiddleware(duration.With("method", "VMFind"))(vmFindEndpoint)
+
 	vmDeployEndpoint := MakeVMDeployEndpoint(s, logger)
 	vmDeployEndpoint = LoggingMiddleware(log.With(logger, "method", "VMDeploy"))(vmDeployEndpoint)
 	vmDeployEndpoint = InstrumentingMiddleware(duration.With("method", "VMDeploy"))(vmDeployEndpoint)
@@ -66,6 +71,7 @@ func New(s service.Service, logger log.Logger, duration metrics.Histogram) Endpo
 		ReadyzEndpoint:                readyzEndpoint,
 		VMListEndpoint:                vmListEndpoint,
 		VMInfoEndpoint:                vmInfoEndpoint,
+		VMFindEndpoint:                vmFindEndpoint,
 		VMDeployEndpoint:              vmDeployEndpoint,
 		VMSnapshotsListEndpoint:       vmSnapshotsListEndpoint,
 		VMSnapshotCreateEndpoint:      vmSnapshotCreateEndpoint,
@@ -159,7 +165,6 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMInfoRequest)
 		if !ok {
-
 			return nil, errors.New("Could not parse request")
 		}
 

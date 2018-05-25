@@ -254,6 +254,39 @@ paths:
         200:
           description: OK
 
+  /find/vm:
+    get:
+      summary: "Find VM by path"
+      tags:
+      - Find
+      parameters:
+      - name: path
+        in: query
+        required: true
+        description: Virtual Machine name or path. Wildcard supported.
+        schema:
+          type: string
+      - name: datacenter
+        in: query
+        description: Datacenter name
+        schema:
+          type: string
+          format: uuid
+          minimum: 1
+      responses:
+        200:
+          description: OK
+          content:
+            application/json::
+              schema:
+                $ref: "#/components/schemas/find_vm"
+        500:
+          description: Error
+          content:
+            application/json::
+              schema:
+                $ref: "#/components/schemas/find_vm_error"
+
 components:
   schemas:
     build_info:
@@ -341,3 +374,14 @@ components:
               description: "My snapshot"
               id: 4
               created_at: "2018-05-17T08:54:35.251931Z"
+
+    find_vm:
+      type: object
+      example:
+        "vm":
+          "420502ba-0a60-311a-5c7b-0d7c3fec60a3": "my-vm"
+
+    find_vm_error:
+      type: object
+      example:
+        "error": "vm 'my-folder/my-vm' not found"
