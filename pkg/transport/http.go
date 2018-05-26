@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -79,6 +80,13 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r.Path("/vm/{vm}/snapshots").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMSnapshotCreateEndpoint,
 		decodeVMSnapshotCreateRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Path("/vm/{vm}/snapshots").Methods("DELETE").Handler(httptransport.NewServer(
+		endpoints.VMSnapshotDeleteEndpoint,
+		decodeVMSnapshotDeleteRequest,
 		encodeResponse,
 		options...,
 	))
@@ -170,13 +178,30 @@ func decodeVMSnapshotCreateRequest(_ context.Context, r *http.Request) (interfac
 	return req, nil
 }
 
+func decodeVMSnapshotDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMSnapshotDeleteRequest
+
+	vars := mux.Vars(r)
+	req.UUID = vars["vm"]
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(err, "Could not decode request")
+	}
+
+	return req, nil
+}
+
 func decodeVMRestoreFromSnapshotRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMRestoreFromSnapshotRequest
 
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]
-	req.Name = vars["snapshot"]
 	req.PowerOn = true
+
+	sID, err := strconv.Atoi(vars["snapshot"])
+	if err != nil {
+		return nil, err
+	}
+	req.SnapshotID = int32(sID)
 
 	return req, nil
 }

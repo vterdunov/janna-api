@@ -24,6 +24,7 @@ type Endpoints struct {
 	VMDeployEndpoint              endpoint.Endpoint
 	VMSnapshotsListEndpoint       endpoint.Endpoint
 	VMSnapshotCreateEndpoint      endpoint.Endpoint
+	VMSnapshotDeleteEndpoint      endpoint.Endpoint
 	VMRestoreFromSnapshotEndpoint endpoint.Endpoint
 }
 
@@ -65,6 +66,10 @@ func New(s service.Service, logger log.Logger, duration metrics.Histogram) Endpo
 	vmRestoreFromSnapshotEndpoint = LoggingMiddleware(log.With(logger, "method", "VMRestoreFromSnapshot"))(vmRestoreFromSnapshotEndpoint)
 	vmRestoreFromSnapshotEndpoint = InstrumentingMiddleware(duration.With("method", "VMRestoreFromSnapshot"))(vmRestoreFromSnapshotEndpoint)
 
+	vmSnapshotDeleteEndpoint := MakeVMSnapshotDeleteEndpoint(s)
+	vmSnapshotDeleteEndpoint = LoggingMiddleware(log.With(logger, "method", "VMSnapshotDelete"))(vmSnapshotDeleteEndpoint)
+	vmSnapshotDeleteEndpoint = InstrumentingMiddleware(duration.With("method", "VMSnapshotDelete"))(vmSnapshotDeleteEndpoint)
+
 	return Endpoints{
 		InfoEndpoint:                  infoEndpoint,
 		HealthzEndpoint:               healthzEndpoint,
@@ -75,6 +80,7 @@ func New(s service.Service, logger log.Logger, duration metrics.Histogram) Endpo
 		VMDeployEndpoint:              vmDeployEndpoint,
 		VMSnapshotsListEndpoint:       vmSnapshotsListEndpoint,
 		VMSnapshotCreateEndpoint:      vmSnapshotCreateEndpoint,
+		VMSnapshotDeleteEndpoint:      vmSnapshotDeleteEndpoint,
 		VMRestoreFromSnapshotEndpoint: vmRestoreFromSnapshotEndpoint,
 	}
 }
@@ -304,8 +310,8 @@ func MakeVMSnapshotCreateEndpoint(s service.Service) endpoint.Endpoint {
 		}
 		params.FillEmptyFields(s.GetConfig())
 
-		err = s.VMSnapshotCreate(ctx, params)
-		return VMSnapshotCreateResponse{err}, nil
+		id, err := s.VMSnapshotCreate(ctx, params)
+		return VMSnapshotCreateResponse{id, err}, nil
 	}
 }
 
@@ -321,7 +327,8 @@ type VMSnapshotCreateRequest struct {
 
 // VMSnapshotCreateResponse collects the response values for the VMSnapshotCreate method
 type VMSnapshotCreateResponse struct {
-	Err error `json:"error"`
+	SnapshotID int32 `json:"snapshot_id,omitempty"`
+	Err        error `json:"error,omitempty"`
 }
 
 // Failed implements Failer
@@ -339,8 +346,8 @@ func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 
 		params := &types.VMRestoreFromSnapshotParams{
 			UUID:       req.UUID,
+			SnapshotID: req.SnapshotID,
 			Datacenter: req.Datacenter,
-			Name:       req.Name,
 			PowerOn:    req.PowerOn,
 		}
 		params.FillEmptyFields(s.GetConfig())
@@ -353,14 +360,14 @@ func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 // VMRestoreFromSnapshotRequest collects the request parameters for the VMRestoreFromSnapshot method
 type VMRestoreFromSnapshotRequest struct {
 	UUID       string
+	SnapshotID int32
 	Datacenter string
-	Name       string
 	PowerOn    bool
 }
 
 // VMSRestoreFromSnapshotResponse collects the response values for the VMRestoreFromSnapshot method
 type VMSRestoreFromSnapshotResponse struct {
-	Err error `json:"error"`
+	Err error `json:"error,omitempty"`
 }
 
 // Failed implements Failer

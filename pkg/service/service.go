@@ -42,10 +42,13 @@ type Service interface {
 	VMSnapshotsList(context.Context, *types.VMSnapshotsListParams) ([]types.Snapshot, error)
 
 	// VMSnapshotCreate creates a VM snapshot
-	VMSnapshotCreate(context.Context, *types.SnapshotCreateParams) error
+	VMSnapshotCreate(context.Context, *types.SnapshotCreateParams) (int32, error)
 
 	// VMRestoreFromSnapshot creates a VM snapshot
 	VMRestoreFromSnapshot(context.Context, *types.VMRestoreFromSnapshotParams) error
+
+	// VMSnapshotDelete deletes snapshot
+	VMSnapshotDelete(context.Context, *types.VMSnapshotDeleteParams) error
 }
 
 // service implements our Service
@@ -107,10 +110,14 @@ func (s service) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsL
 	return st, nil
 }
 
-func (s service) VMSnapshotCreate(ctx context.Context, params *types.SnapshotCreateParams) error {
+func (s service) VMSnapshotCreate(ctx context.Context, params *types.SnapshotCreateParams) (int32, error) {
 	return vm.SnapshotCreate(ctx, s.Client, params)
 }
 
 func (s service) VMRestoreFromSnapshot(ctx context.Context, params *types.VMRestoreFromSnapshotParams) error {
 	return vm.RestoreFromSnapshot(ctx, s.Client, params)
+}
+
+func (s service) VMSnapshotDelete(ctx context.Context, params *types.VMSnapshotDeleteParams) error {
+	return vm.DeleteSnapshot(ctx, s.Client, params)
 }

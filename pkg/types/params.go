@@ -64,8 +64,8 @@ func (p *SnapshotCreateParams) FillEmptyFields(cfg *config.Config) {
 // VMRestoreFromSnapshotParams stores user request params
 type VMRestoreFromSnapshotParams struct {
 	UUID       string `json:"vm_uuid"`
+	SnapshotID int32  `json:"snapshot_id"`
 	Datacenter string `json:"datacenter"`
-	Name       string `json:"name"`
 	PowerOn    bool   `json:"power_on"`
 }
 

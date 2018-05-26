@@ -165,10 +165,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/create_snapshot'
+              $ref: '#/components/schemas/create_snapshot_body'
       responses:
         200:
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/create_snapshot_response"
 
   /vm/{vm_uuid}/snapshots/{snapshot}:
     delete:
@@ -183,13 +187,14 @@ paths:
         description: VM UUID
         schema:
           type: string
-          minimum: 1
           format: uuid
+          minimum: 1
       - name: snapshot
+        description: Snapshot ID
         in: path
         required: true
         schema:
-          type: string
+          type: integer
           minimum: 1
       responses:
         200:
@@ -216,7 +221,7 @@ paths:
         required: true
         description: Snapshot ID
         schema:
-          type: string
+          type: integer
           minimum: 1
       responses:
         200:
@@ -224,7 +229,7 @@ paths:
 
   /vm/{vm_uuid}/revert:
     post:
-      summary: "Restore VM from latest snapshot"
+      summary: "Restore VM from current snapshot"
       tags:
       - Virtual Machines
       - Snapshots
@@ -242,14 +247,8 @@ paths:
         required: true
         description: Snapshot ID
         schema:
-          type: string
+          type: integer
           minimum: 1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/snapshot_id'
       responses:
         200:
           description: OK
@@ -347,10 +346,10 @@ components:
     snapshot_id:
       properties:
         snapshot_id:
-          type: string
-          example: 1512-snapshot-2
+          type: integer
+          example: 8
 
-    create_snapshot:
+    create_snapshot_body:
       type: object
       required:
       - name
@@ -361,6 +360,11 @@ components:
         description:
           type: string
           example: "This is a snapshot"
+
+    create_snapshot_response:
+      type: object
+      example:
+        "snapshot_id": 8
 
     snapshots:
       type: object
