@@ -39,3 +39,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+redis-ha:
+  enabled: false
