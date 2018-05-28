@@ -5,6 +5,10 @@ services:
 
 language: go
 
+env:
+  global:
+    - - COMMIT=${TRAVIS_COMMIT::7}
+
 go:
   - "1.10.x"
 
@@ -13,14 +17,5 @@ install:
   - gometalinter.v2 --install
 
 script:
-  - make
-
-after_success:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-  - if [ "$TRAVIS_BRANCH" == "master" ]; then
-      make push;
-      make push TAG=latest;
-    fi
-  - if [ -n "$TRAVIS_TAG" ]; then
-      make push TAG=$TRAVIS_TAG;
-    fi
+  - ./build/ci/travis.yml
