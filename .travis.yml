@@ -7,6 +7,7 @@ language: go
 
 env:
   global:
+    - TRAVIS_TAG=test
     - COMMIT=${TRAVIS_COMMIT::7}
 
 go:
@@ -18,4 +19,4 @@ install:
 
 script:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-  - ./build/ci/travis.sh
+  - ./build/ci/travis.sh "$DOCKER_USERNAME" "$COMMIT"
