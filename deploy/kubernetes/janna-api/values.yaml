@@ -26,6 +26,13 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+# Create a secret that will be using to provide envinonment variables
+vmwareURL: changeme
+vmwareInsecure: 'true'
+vmwareDC: DatacenterC1
+vmwareDS: Cluster1/Host1
+vmwareRP: GOld
+
 resources:
   limits:
    cpu: 100m

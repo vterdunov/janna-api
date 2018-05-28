@@ -23,6 +23,32 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: VMWARE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "janna-api.fullname" . }}
+                  key: vmwareURL
+            - name: VMWARE_INSECURE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "janna-api.fullname" . }}
+                  key: vmwareInsecure
+            - name: VMWARE_DC
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "janna-api.fullname" . }}
+                  key: vmwareDC
+            - name: VMWARE_DS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "janna-api.fullname" . }}
+                  key: vmwareDS
+            - name: VMWARE_RP
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "janna-api.fullname" . }}
+                  key: vmwareRP
           ports:
             - name: http
               containerPort: 8080
