@@ -1,9 +1,12 @@
 #!/bin/bash
 
+set -e
+
 # Do not rebuild/retest image that we already have.
 if [ -n "$TRAVIS_TAG" ]; then
-  docker pull ${$DOCKER_USERNAME}/janna-api:${COMMIT}
-  docker tag ${$DOCKER_USERNAME}/janna-api:${COMMIT} ${$DOCKER_USERNAME}/janna-api:${TRAVIS_TAG}
+  echo "Found release tag"
+  docker pull ${DOCKER_USERNAME}/janna-api:${COMMIT}
+  docker tag ${DOCKER_USERNAME}/janna-api:${COMMIT} ${DOCKER_USERNAME}/janna-api:${TRAVIS_TAG}
   exit 0
 fi
 
