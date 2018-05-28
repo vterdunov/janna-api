@@ -1,7 +1,6 @@
 #!/bin/bash
 
-echo $DOCKER_USERNAME
-echo $COMMIT
+set -e
 
 # Do not rebuild/retest image that we already have.
 if [ -n "$TRAVIS_TAG" ]; then
