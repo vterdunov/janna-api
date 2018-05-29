@@ -343,12 +343,6 @@ components:
             Paused: true,
             PowerState: poweredOn
 
-    snapshot_id:
-      properties:
-        snapshot_id:
-          type: integer
-          example: 8
-
     create_snapshot_body:
       type: object
       required:
@@ -382,8 +376,8 @@ components:
     find_vm:
       type: object
       example:
-        "vm":
-          "420502ba-0a60-311a-5c7b-0d7c3fec60a3": "my-vm"
+        "uuid": "42053cb7-b8b7-904f-807e-9d18b1a366fb"
+        "name": "my-vm"
 
     find_vm_error:
       type: object

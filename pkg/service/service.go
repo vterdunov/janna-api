@@ -33,7 +33,7 @@ type Service interface {
 	VMInfo(context.Context, *types.VMInfoParams) (*types.VMSummary, error)
 
 	// VMFind find VM by path and return its UUID
-	VMFind(context.Context, *types.VMFindParams) (map[string]string, error)
+	VMFind(context.Context, *types.VMFindParams) (*types.VMFound, error)
 
 	// VMDeploy create VM from OVA file
 	VMDeploy(context.Context, *types.VMDeployParams) (int, error)
@@ -91,7 +91,7 @@ func (s service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*types
 	return vm.Info(ctx, s.Client, params)
 }
 
-func (s service) VMFind(ctx context.Context, params *types.VMFindParams) (map[string]string, error) {
+func (s service) VMFind(ctx context.Context, params *types.VMFindParams) (*types.VMFound, error) {
 	return vm.Find(ctx, s.Client, params)
 }
 

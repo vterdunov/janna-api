@@ -12,7 +12,7 @@ import (
 )
 
 // Find search Virtual Machine from given Datacenter and Path
-func Find(ctx context.Context, client *vim25.Client, params *jt.VMFindParams) (map[string]string, error) {
+func Find(ctx context.Context, client *vim25.Client, params *jt.VMFindParams) (*jt.VMFound, error) {
 	oVM, err := FindByPath(ctx, client, params.Datacenter, params.Path)
 	if err != nil {
 		return nil, err
@@ -28,8 +28,10 @@ func Find(ctx context.Context, client *vim25.Client, params *jt.VMFindParams) (m
 		return nil, err
 	}
 
-	res := make(map[string]string)
-	res[vm.Summary.Config.Uuid] = vm.Summary.Config.Name
+	res := &jt.VMFound{
+		UUID: vm.Summary.Config.Uuid,
+		Name: vm.Summary.Config.Name,
+	}
 
 	return res, nil
 }

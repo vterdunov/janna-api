@@ -21,3 +21,9 @@ type Snapshot struct {
 	ID          int32     `json:"id"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+// VMFound stores response from VMFind method
+type VMFound struct {
+	UUID string
+	Name string
+}
