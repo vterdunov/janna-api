@@ -24,6 +24,6 @@ type Snapshot struct {
 
 // VMFound stores response from VMFind method
 type VMFound struct {
-	UUID string
-	Name string
+	UUID string `json:"uuid,omitempty"`
+	Name string `json:"name,omitempty"`
 }

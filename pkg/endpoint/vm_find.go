@@ -24,11 +24,8 @@ func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		vm, err := s.VMFind(ctx, params)
-		return VMFindResponse{
-			UUID: vm.UUID,
-			Name: vm.Name,
-			Err:  err,
-		}, nil
+
+		return VMFindResponse{vm, err}, nil
 	}
 }
 
@@ -40,9 +37,8 @@ type VMFindRequest struct {
 
 // VMFindResponse collects the response values for the VMFind method
 type VMFindResponse struct {
-	UUID string `json:"uuid,omitempty"`
-	Name string `json:"name,omitempty"`
-	Err  error  `json:"error,omitempty"`
+	*types.VMFound
+	Err error `json:"error,omitempty"`
 }
 
 // Failed implements Failer
