@@ -64,6 +64,7 @@ func main() {
 
 	// Build the layers of the service "onion" from the inside out.
 	svc := service.New(logger, cfg, vimClient)
+	svc = service.NewLoggingService(log.With(logger, "component", "core"), svc)
 	endpoints := endpoint.New(svc, logger, duration)
 	httpHandler := transport.NewHTTPHandler(endpoints, logger)
 	jsonrpcHandler := transport.NewJSONRPCHandler(endpoints, logger)

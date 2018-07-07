@@ -18,7 +18,10 @@ func LoggingMiddleware(logger log.Logger) endpoint.Middleware {
 			logger.Log("msg", "calling endpoint")
 
 			defer func(begin time.Time) {
-				logger.Log("transport_error", err, "took", time.Since(begin))
+				logger.Log(
+					"msg", "called endpoint",
+					"transport_error", err,
+					"took", time.Since(begin))
 			}(time.Now())
 
 			return next(ctx, request)

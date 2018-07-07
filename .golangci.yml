@@ -1,0 +1,23 @@
+---
+run:
+  deadline: 5m
+  skip-files:
+    - ".*\\.pb\\.go$"
+
+linters-settings:
+  golint:
+    min-confidence: 0
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 30
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 100
+
+linters:
+  enable-all: true
+  disable:
+    - errcheck
+    - lll

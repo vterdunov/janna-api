@@ -14,7 +14,7 @@ func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMRestoreFromSnapshotRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		params := &types.VMRestoreFromSnapshotParams{
@@ -26,15 +26,15 @@ func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		err = s.VMRestoreFromSnapshot(ctx, params)
-		return VMSRestoreFromSnapshotResponse{err}, nil
+		return VMSRestoreFromSnapshotResponse{Err: err}, nil
 	}
 }
 
 // VMRestoreFromSnapshotRequest collects the request parameters for the VMRestoreFromSnapshot method
 type VMRestoreFromSnapshotRequest struct {
 	UUID       string
-	SnapshotID int32
 	Datacenter string
+	SnapshotID int32
 	PowerOn    bool
 }
 

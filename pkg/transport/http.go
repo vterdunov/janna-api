@@ -139,7 +139,7 @@ func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error
 	return req, nil
 }
 
-func decodeVMFindRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeVMFindRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMFindRequest
 
 	req.Path = r.URL.Query().Get("path")

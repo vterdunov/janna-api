@@ -8,6 +8,12 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/go-kit/kit"
   packages = [
     "endpoint",
@@ -133,6 +139,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cd6497d09fba09a985e8d02c6d66f5a16172c534d7ed6abf01326015f1b748fb"
+  inputs-digest = "f97a202f2f95f1b08d2fe059f2879991d5686994baec3dfe9f4745cfd94dc730"
   solver-name = "gps-cdcl"
   solver-version = 1

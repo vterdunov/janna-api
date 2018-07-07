@@ -14,7 +14,7 @@ func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint { // nolint:dupl
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMFindRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		params := &types.VMFindParams{
@@ -25,7 +25,13 @@ func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint { // nolint:dupl
 
 		vm, err := s.VMFind(ctx, params)
 
-		return VMFindResponse{vm, err}, nil
+		return VMFindResponse{
+			VMFound: &types.VMFound{
+				Name: vm.Name,
+				UUID: vm.UUID,
+			},
+			Err: err,
+		}, nil
 	}
 }
 

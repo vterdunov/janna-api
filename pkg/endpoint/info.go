@@ -11,7 +11,7 @@ import (
 func MakeInfoEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		b, c := s.Info()
-		return InfoResponse{b, c}, nil
+		return InfoResponse{BuildTime: b, Commit: c}, nil
 	}
 }
 

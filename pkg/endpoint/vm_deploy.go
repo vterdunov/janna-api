@@ -16,7 +16,7 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req, ok := request.(VMDeployRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		logger.Log("msg", "incoming request params", "params", fmt.Sprintf("%+v", req))
@@ -24,7 +24,7 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 		// TODO: Try to write middleware that will validate parameters
 		// Minimal validating incoming params
 		if req.Name == "" || req.OVAURL == "" {
-			return VMDeployResponse{0, errors.New("Invalid arguments. Pass reqired arguments")}, nil
+			return VMDeployResponse{JID: 0, Err: errors.New("invalid arguments. Pass reqired arguments")}, nil
 		}
 
 		params := &types.VMDeployParams{
@@ -39,7 +39,7 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 
 		jid, err := s.VMDeploy(ctx, params)
 
-		return VMDeployResponse{jid, err}, nil
+		return VMDeployResponse{JID: jid, Err: err}, nil
 	}
 }
 

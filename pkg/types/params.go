@@ -39,9 +39,9 @@ func (p *VMDeployParams) FillEmptyFields(cfg *config.Config) {
 		p.Datacenter = cfg.VMWare.DC
 	}
 
-	if p.Datastores == nil {
-		// TODO: add default datastores
-	}
+	// TODO: add default datastores
+	// if p.Datastores == nil {
+	// }
 }
 
 // SnapshotCreateParams stores user request params
@@ -64,8 +64,8 @@ func (p *SnapshotCreateParams) FillEmptyFields(cfg *config.Config) {
 // VMRestoreFromSnapshotParams stores user request params
 type VMRestoreFromSnapshotParams struct {
 	UUID       string `json:"vm_uuid"`
-	SnapshotID int32  `json:"snapshot_id"`
 	Datacenter string `json:"datacenter"`
+	SnapshotID int32  `json:"snapshot_id"`
 	PowerOn    bool   `json:"power_on"`
 }
 
