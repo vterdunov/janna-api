@@ -65,7 +65,7 @@ func main() {
 	svc := service.New(logger, cfg, vimClient, duration)
 
 	endpoints := endpoint.New(svc, logger)
-	httpHandler := transport.NewHTTPHandler(ctx, endpoints, logger)
+	httpHandler := transport.NewHTTPHandler(endpoints, logger)
 	jsonrpcHandler := transport.NewJSONRPCHandler(endpoints, logger)
 
 	logger.Log(

@@ -16,7 +16,7 @@ import (
 )
 
 // NewHTTPHandler mounts all of the service endpoints into an http.Handler.
-func NewHTTPHandler(ctx context.Context, endpoints endpoint.Endpoints, logger log.Logger) http.Handler {
+func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
 		httptransport.ServerBefore(httptransport.PopulateRequestContext),
