@@ -52,7 +52,7 @@ test:
 
 .PHONY: lint
 lint:
-	@golangci-lint run
+	golangci-lint run
 
 .PHONY: clean
 clean:
