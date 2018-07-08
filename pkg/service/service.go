@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
 	"github.com/vmware/govmomi/vim25"
 
 	"github.com/vterdunov/janna-api/pkg/config"
@@ -58,8 +59,17 @@ type service struct {
 	Client *vim25.Client
 }
 
-// New creates a new instance of the Service with some preconfigured options
-func New(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
+// New creates a new instance of the Service with wrapped middlewares
+func New(logger log.Logger, cfg *config.Config, client *vim25.Client, duration metrics.Histogram) Service {
+	svc := NewSimpleService(logger, cfg, client)
+	svc = NewLoggingService(log.With(logger, "component", "core"), svc)
+	svc = NewInstrumentingService(duration, svc)
+
+	return svc
+}
+
+// NewSimpleService creates a new instance of the Service with minimal preconfigured options
+func NewSimpleService(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
 	return &service{
 		logger: logger,
 		cfg:    cfg,

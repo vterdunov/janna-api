@@ -54,19 +54,18 @@ func main() {
 
 	vimClient := client.Client
 
-	// Endpoint-level metrics.
 	duration := prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: "http",
 		Subsystem: "request",
-		Name:      "duration_seconds",
-		Help:      "Request duration in seconds.",
+		Name:      "request_latency_seconds",
+		Help:      "Total duration of requests in seconds.",
 	}, []string{"method", "success"})
 
 	// Build the layers of the service "onion" from the inside out.
-	svc := service.New(logger, cfg, vimClient)
-	svc = service.NewLoggingService(log.With(logger, "component", "core"), svc)
-	endpoints := endpoint.New(svc, logger, duration)
-	httpHandler := transport.NewHTTPHandler(endpoints, logger)
+	svc := service.New(logger, cfg, vimClient, duration)
+
+	endpoints := endpoint.New(svc, logger)
+	httpHandler := transport.NewHTTPHandler(ctx, endpoints, logger)
 	jsonrpcHandler := transport.NewJSONRPCHandler(endpoints, logger)
 
 	logger.Log(
