@@ -14,7 +14,7 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMInfoRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		params := &types.VMInfoParams{
@@ -24,7 +24,7 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
 		params.FillEmptyFields(s.GetConfig())
 
 		summary, err := s.VMInfo(ctx, params)
-		return VMInfoResponse{summary, err}, nil
+		return VMInfoResponse{Summary: summary, Err: err}, nil
 	}
 }
 

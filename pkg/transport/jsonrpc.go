@@ -65,7 +65,7 @@ func encodeJSONRPCVMInfoResponse(_ context.Context, obj interface{}) (json.RawMe
 
 	b, err := json.Marshal(res)
 	if err != nil {
-		return nil, fmt.Errorf("Could not marshal response: %s", err)
+		return nil, fmt.Errorf("could not marshal response: %s", err)
 	}
 
 	return b, nil
@@ -100,7 +100,7 @@ func encodeJSONRPCVMDeployResponse(_ context.Context, obj interface{}) (json.Raw
 
 	b, err := json.Marshal(res)
 	if err != nil {
-		return nil, fmt.Errorf("Could not marshal response: %s", err)
+		return nil, fmt.Errorf("could not marshal response: %s", err)
 	}
 	return b, nil
 }

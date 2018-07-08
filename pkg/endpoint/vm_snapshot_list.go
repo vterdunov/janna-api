@@ -14,7 +14,7 @@ func MakeVMSnapshotsListEndpoint(s service.Service) endpoint.Endpoint { // nolin
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMSnapshotsListRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		params := &types.VMSnapshotsListParams{
@@ -24,7 +24,7 @@ func MakeVMSnapshotsListEndpoint(s service.Service) endpoint.Endpoint { // nolin
 		params.FillEmptyFields(s.GetConfig())
 
 		list, err := s.VMSnapshotsList(ctx, params)
-		return VMSnapshotsListResponse{list, err}, nil
+		return VMSnapshotsListResponse{VMSnapshotsList: list, Err: err}, nil
 	}
 }
 

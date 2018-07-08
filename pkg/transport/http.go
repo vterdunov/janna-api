@@ -19,6 +19,7 @@ import (
 func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerBefore(httptransport.PopulateRequestContext),
 	}
 
 	r := mux.NewRouter()
@@ -139,7 +140,7 @@ func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error
 	return req, nil
 }
 
-func decodeVMFindRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeVMFindRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMFindRequest
 
 	req.Path = r.URL.Query().Get("path")

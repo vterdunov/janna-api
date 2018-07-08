@@ -553,16 +553,18 @@ func untar(dst string, r io.Reader) error {
 
 func checkOVFfiles(dir string) (string, error) {
 	var file string
-	filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-
 		if filepath.Ext(path) == ".ovf" {
 			file = f.Name()
 		}
 		return nil
 	})
 
+	if err != nil {
+		return "", err
+	}
 	return file, nil
 }

@@ -14,7 +14,7 @@ func MakeVMSnapshotCreateEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMSnapshotCreateRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		params := &types.SnapshotCreateParams{
@@ -28,7 +28,7 @@ func MakeVMSnapshotCreateEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		id, err := s.VMSnapshotCreate(ctx, params)
-		return VMSnapshotCreateResponse{id, err}, nil
+		return VMSnapshotCreateResponse{SnapshotID: id, Err: err}, nil
 	}
 }
 

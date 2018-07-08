@@ -4,17 +4,9 @@
   non-go = true
 
 [[constraint]]
-  name = "github.com/gorilla/mux"
-  version = "1.6.0"
-
-[[constraint]]
   name = "github.com/vmware/govmomi"
   version = "0.17.1"
 
 [[constraint]]
-  name = "github.com/pkg/errors"
-  version = "0.8.0"
-
-[[constraint]]
-  name = "github.com/davecgh/go-kit"
+  name = "github.com/go-kit/kit"
   version = "0.7.0"

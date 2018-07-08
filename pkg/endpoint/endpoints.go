@@ -3,7 +3,6 @@ package endpoint
 import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
 
 	"github.com/vterdunov/janna-api/pkg/service"
 )
@@ -25,45 +24,37 @@ type Endpoints struct {
 
 // New returns an Endpoints struct where each endpoint invokes
 // the corresponding method on the provided service.
-func New(s service.Service, logger log.Logger, duration metrics.Histogram) Endpoints {
+func New(s service.Service, logger log.Logger) Endpoints {
 	infoEndpoint := MakeInfoEndpoint(s)
-	infoEndpoint = LoggingMiddleware(log.With(logger, "method", "Info"))(infoEndpoint)
+	infoEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "Info"))(infoEndpoint)
 
 	healthzEndpoint := MakeHealthzEndpoint(s)
 
 	readyzEndpoint := MakeReadyzEndpoint(s)
 
 	vmListEndpoint := MakeVMListEndpoint(s)
-	vmListEndpoint = LoggingMiddleware(log.With(logger, "method", "VMList"))(vmListEndpoint)
-	vmListEndpoint = InstrumentingMiddleware(duration.With("method", "VMList"))(vmListEndpoint)
+	vmListEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMList"))(vmListEndpoint)
 
 	vmInfoEndpoint := MakeVMInfoEndpoint(s)
-	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "method", "VMInfo"))(vmInfoEndpoint)
-	vmInfoEndpoint = InstrumentingMiddleware(duration.With("method", "VMInfo"))(vmInfoEndpoint)
+	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMInfo"))(vmInfoEndpoint)
 
 	vmFindEndpoint := MakeVMFindEndpoint(s)
-	vmFindEndpoint = LoggingMiddleware(log.With(logger, "method", "VMFind"))(vmFindEndpoint)
-	vmFindEndpoint = InstrumentingMiddleware(duration.With("method", "VMFind"))(vmFindEndpoint)
+	vmFindEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMFind"))(vmFindEndpoint)
 
 	vmDeployEndpoint := MakeVMDeployEndpoint(s, logger)
-	vmDeployEndpoint = LoggingMiddleware(log.With(logger, "method", "VMDeploy"))(vmDeployEndpoint)
-	vmDeployEndpoint = InstrumentingMiddleware(duration.With("method", "VMDeploy"))(vmDeployEndpoint)
+	vmDeployEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMDeploy"))(vmDeployEndpoint)
 
 	vmSnapshotsListEndpoint := MakeVMSnapshotsListEndpoint(s)
-	vmSnapshotsListEndpoint = LoggingMiddleware(log.With(logger, "method", "VMSnapshotsList"))(vmSnapshotsListEndpoint)
-	vmSnapshotsListEndpoint = InstrumentingMiddleware(duration.With("method", "VMSnapshotsList"))(vmSnapshotsListEndpoint)
+	vmSnapshotsListEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMSnapshotsList"))(vmSnapshotsListEndpoint)
 
 	vmSnapshotCreateEndpoint := MakeVMSnapshotCreateEndpoint(s)
-	vmSnapshotCreateEndpoint = LoggingMiddleware(log.With(logger, "method", "VMSnapshotCreate"))(vmSnapshotCreateEndpoint)
-	vmSnapshotCreateEndpoint = InstrumentingMiddleware(duration.With("method", "VMSnapshotCreate"))(vmSnapshotCreateEndpoint)
+	vmSnapshotCreateEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMSnapshotCreate"))(vmSnapshotCreateEndpoint)
 
 	vmRestoreFromSnapshotEndpoint := MakeVMRestoreFromSnapshotEndpoint(s)
-	vmRestoreFromSnapshotEndpoint = LoggingMiddleware(log.With(logger, "method", "VMRestoreFromSnapshot"))(vmRestoreFromSnapshotEndpoint)
-	vmRestoreFromSnapshotEndpoint = InstrumentingMiddleware(duration.With("method", "VMRestoreFromSnapshot"))(vmRestoreFromSnapshotEndpoint)
+	vmRestoreFromSnapshotEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMRestoreFromSnapshot"))(vmRestoreFromSnapshotEndpoint)
 
 	vmSnapshotDeleteEndpoint := MakeVMSnapshotDeleteEndpoint(s)
-	vmSnapshotDeleteEndpoint = LoggingMiddleware(log.With(logger, "method", "VMSnapshotDelete"))(vmSnapshotDeleteEndpoint)
-	vmSnapshotDeleteEndpoint = InstrumentingMiddleware(duration.With("method", "VMSnapshotDelete"))(vmSnapshotDeleteEndpoint)
+	vmSnapshotDeleteEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMSnapshotDelete"))(vmSnapshotDeleteEndpoint)
 
 	return Endpoints{
 		InfoEndpoint:                  infoEndpoint,

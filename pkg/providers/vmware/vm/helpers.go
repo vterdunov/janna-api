@@ -29,7 +29,7 @@ func FindByUUID(ctx context.Context, client *vim25.Client, DCName, uuid string) 
 
 	vm, ok := ref.(*object.VirtualMachine)
 	if !ok {
-		return nil, errors.New("Could not find Virtual Machine by UUID. Could not assert reference to Virtual Machine")
+		return nil, errors.New("could not find Virtual Machine by UUID. Could not assert reference to Virtual Machine")
 	}
 
 	return vm, nil

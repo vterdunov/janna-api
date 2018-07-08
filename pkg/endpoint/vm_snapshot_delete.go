@@ -15,7 +15,7 @@ func MakeVMSnapshotDeleteEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMSnapshotDeleteRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		params := &types.VMSnapshotDeleteParams{
@@ -26,7 +26,7 @@ func MakeVMSnapshotDeleteEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		err = s.VMSnapshotDelete(ctx, params)
-		return VMSnapshotDeleteResponse{err}, nil
+		return VMSnapshotDeleteResponse{Err: err}, nil
 	}
 }
 

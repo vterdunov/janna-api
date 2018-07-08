@@ -54,12 +54,12 @@ func SnapshotCreate(ctx context.Context, client *vim25.Client, params *jt.Snapsh
 		return 0, err
 	}
 
-	var afterIDs []int32
+	afterIDs := make([]int32, 0, len(afterSnapshots))
 	for _, i := range afterSnapshots {
 		afterIDs = append(afterIDs, i.ID)
 	}
 
-	var beforeIDs []int32
+	beforeIDs := make([]int32, 0, len(beforeSnapshots))
 	for _, i := range beforeSnapshots {
 		beforeIDs = append(beforeIDs, i.ID)
 	}
@@ -73,7 +73,7 @@ func SnapshotCreate(ctx context.Context, client *vim25.Client, params *jt.Snapsh
 		}
 	}
 
-	return 0, errors.New("Could not get snapshot ID")
+	return 0, errors.New("could not get snapshot ID")
 }
 
 // RestoreFromSnapshot restore VM from snapshot
@@ -91,13 +91,13 @@ func RestoreFromSnapshot(ctx context.Context, client *vim25.Client, params *jt.V
 	}
 
 	if o.Snapshot == nil || len(o.Snapshot.RootSnapshotList) == 0 {
-		return errors.New("No snapshots for this VM")
+		return errors.New("no snapshots for this VM")
 	}
 
 	sRef := &snapshotReference{}
 	sRef.findByID(o.Snapshot.RootSnapshotList, params.SnapshotID)
 	if !sRef.exist {
-		return fmt.Errorf("Cound not find snapshot with id %d", params.SnapshotID)
+		return fmt.Errorf("cound not find snapshot with id %d", params.SnapshotID)
 	}
 
 	task, err := vm.RevertToSnapshot(ctx, sRef.value(), params.PowerOn)
@@ -127,13 +127,13 @@ func DeleteSnapshot(ctx context.Context, client *vim25.Client, params *jt.VMSnap
 	}
 
 	if o.Snapshot == nil || len(o.Snapshot.RootSnapshotList) == 0 {
-		return errors.New("No snapshots for this VM")
+		return errors.New("no snapshots for this VM")
 	}
 
 	sRef := &snapshotReference{}
 	sRef.findByID(o.Snapshot.RootSnapshotList, params.SnapshotID)
 	if !sRef.exist {
-		return fmt.Errorf("Cound not find snapshot with id %d", params.SnapshotID)
+		return fmt.Errorf("cound not find snapshot with id %d", params.SnapshotID)
 	}
 
 	task, err := vm.RemoveSnapshot(ctx, sRef.value(), false, nil)

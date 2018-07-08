@@ -20,18 +20,18 @@ ingress:
     # kubernetes.io/tls-acme: "true"
   path: /
   hosts:
-    - janna-api.k8s.lab.vi.local
+    - janna-api.k8s.organization.com
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
 
 # Create a secret that will be using to provide envinonment variables
-vmwareURL: changeme
+vmwareURL: 'vmware.organization.com'
 vmwareInsecure: 'true'
-vmwareDC: DatacenterC1
+vmwareDC: DC1
 vmwareDS: Cluster1/Host1
-vmwareRP: GOld
+vmwareRP: Gold
 
 resources:
   limits:

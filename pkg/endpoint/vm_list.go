@@ -14,7 +14,7 @@ func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMListRequest)
 		if !ok {
-			return nil, errors.New("Could not parse request")
+			return nil, errors.New("could not parse request")
 		}
 
 		params := &types.VMListParams{
@@ -25,7 +25,7 @@ func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		list, err := s.VMList(ctx, params)
-		return VMListResponse{list, err}, nil
+		return VMListResponse{VMList: list, Err: err}, nil
 	}
 }
 
