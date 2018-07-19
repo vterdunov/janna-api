@@ -1,3 +1,4 @@
+// nolint: dupl
 package endpoint
 
 import (
@@ -33,9 +34,9 @@ func MakeVMRestoreFromSnapshotEndpoint(s service.Service) endpoint.Endpoint {
 // VMRestoreFromSnapshotRequest collects the request parameters for the VMRestoreFromSnapshot method
 type VMRestoreFromSnapshotRequest struct {
 	UUID       string
-	Datacenter string
-	SnapshotID int32
-	PowerOn    bool
+	Datacenter string `json:"datacenter"`
+	SnapshotID int32  `json:"snapshot_id"`
+	PowerOn    bool   `json:"power_on"`
 }
 
 // VMSRestoreFromSnapshotResponse collects the response values for the VMRestoreFromSnapshot method

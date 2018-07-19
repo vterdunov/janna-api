@@ -35,11 +35,11 @@ func MakeVMSnapshotCreateEndpoint(s service.Service) endpoint.Endpoint {
 // VMSnapshotCreateRequest collects the request parameters for the VMSnapshotCreate method
 type VMSnapshotCreateRequest struct {
 	UUID        string
-	Datacenter  string
-	Name        string
-	Description string
-	Memory      bool
-	Quiesce     bool
+	Datacenter  string `json:"datacenter"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Memory      bool   `json:"memory"`
+	Quiesce     bool   `json:"quiesce"`
 }
 
 // VMSnapshotCreateResponse collects the response values for the VMSnapshotCreate method

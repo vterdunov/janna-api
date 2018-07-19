@@ -1,3 +1,4 @@
+// nolint: dupl
 package endpoint
 
 import (
@@ -10,7 +11,7 @@ import (
 )
 
 // MakeVMSnapshotsListEndpoint returns an endpoint via the passed service
-func MakeVMSnapshotsListEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
+func MakeVMSnapshotsListEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMSnapshotsListRequest)
 		if !ok {

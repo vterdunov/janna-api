@@ -46,12 +46,12 @@ func (p *VMDeployParams) FillEmptyFields(cfg *config.Config) {
 
 // SnapshotCreateParams stores user request params
 type SnapshotCreateParams struct {
-	UUID        string `json:"vm_uuid"`
-	Datacenter  string `json:"datacenter"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Memory      bool   `json:"memory"`
-	Quiesce     bool   `json:"quiesce"`
+	UUID        string
+	Datacenter  string
+	Name        string
+	Description string
+	Memory      bool
+	Quiesce     bool
 }
 
 // FillEmptyFields stores default parameters to the struct if some fields was empty
@@ -63,10 +63,10 @@ func (p *SnapshotCreateParams) FillEmptyFields(cfg *config.Config) {
 
 // VMRestoreFromSnapshotParams stores user request params
 type VMRestoreFromSnapshotParams struct {
-	UUID       string `json:"vm_uuid"`
-	Datacenter string `json:"datacenter"`
-	SnapshotID int32  `json:"snapshot_id"`
-	PowerOn    bool   `json:"power_on"`
+	UUID       string
+	Datacenter string
+	SnapshotID int32
+	PowerOn    bool
 }
 
 // FillEmptyFields stores default parameters to the struct if some fields was empty

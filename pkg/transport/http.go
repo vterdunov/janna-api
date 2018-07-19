@@ -99,10 +99,34 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		options...,
 	))
 
+	// Read VM roles
+	r.Path("/vm/{vm}/roles").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.VMRolesListEndpoint,
+		decodeVMRolesListRequest,
+		encodeResponse,
+		options...,
+	))
+
+	// Add VM roles
+	r.Path("/vm/{vm}/roles").Methods("PATCH").Handler(httptransport.NewServer(
+		endpoints.VMAddRoleEndpoint,
+		decodeVMAddRoleRequest,
+		encodeResponse,
+		options...,
+	))
+
 	// Find VM
 	r.Path("/find/vm").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMFindEndpoint,
 		decodeVMFindRequest,
+		encodeResponse,
+		options...,
+	))
+
+	// Roles
+	r.Path("/permissions/roles").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.RoleListEndpoint,
+		decodeRoleListRequest,
 		encodeResponse,
 		options...,
 	))
@@ -207,6 +231,34 @@ func decodeVMRestoreFromSnapshotRequest(_ context.Context, r *http.Request) (int
 	return req, nil
 }
 
+func decodeVMRolesListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMRolesListRequest
+
+	vars := mux.Vars(r)
+	req.UUID = vars["vm"]
+	req.Datacenter = r.URL.Query().Get("datacenter")
+
+	return req, nil
+}
+
+func decodeVMAddRoleRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMAddRoleRequest
+
+	vars := mux.Vars(r)
+	req.UUID = vars["vm"]
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(err, "Could not decode request")
+	}
+
+	return req, nil
+}
+
+func decodeRoleListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.RoleListRequest
+	return req, nil
+}
+
+// common response decoder
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	// check business logic errors
 	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
@@ -221,17 +273,6 @@ func encodeProbeResponse(_ context.Context, w http.ResponseWriter, response inte
 	w.WriteHeader(http.StatusOK)
 	return nil
 }
-
-// func encodeNotImplemented(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-// 	// check business logic errors
-// 	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
-// 		encodeError(ctx, e.Failed(), w)
-// 		return nil
-// 	}
-// 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-// 	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
-// 	return nil
-// }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	if err == nil {
