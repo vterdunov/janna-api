@@ -27,3 +27,13 @@ type VMFound struct {
 	UUID string `json:"uuid,omitempty"`
 	Name string `json:"name,omitempty"`
 }
+
+// Role stores response from RoleList method
+type Role struct {
+	Name        string `json:"name"`
+	ID          int32  `json:"id"`
+	Description struct {
+		Label   string `json:"label"`
+		Summary string `json:"summary"`
+	} `json:"description"`
+}

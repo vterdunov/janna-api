@@ -9,6 +9,7 @@ import (
 
 	"github.com/vterdunov/janna-api/pkg/config"
 	"github.com/vterdunov/janna-api/pkg/health"
+	"github.com/vterdunov/janna-api/pkg/providers/vmware/permissions"
 	"github.com/vterdunov/janna-api/pkg/providers/vmware/vm"
 	"github.com/vterdunov/janna-api/pkg/types"
 	"github.com/vterdunov/janna-api/pkg/version"
@@ -50,6 +51,12 @@ type Service interface {
 
 	// VMSnapshotDelete deletes snapshot
 	VMSnapshotDelete(context.Context, *types.VMSnapshotDeleteParams) error
+
+	VMRolesList(context.Context, *types.VMRolesListParams) ([]types.Role, error)
+
+	VMAddRole(context.Context, *types.VMAddRoleParams) error
+
+	RoleList(context.Context) ([]types.Role, error)
 }
 
 // service implements our Service
@@ -62,8 +69,8 @@ type service struct {
 // New creates a new instance of the Service with wrapped middlewares
 func New(logger log.Logger, cfg *config.Config, client *vim25.Client, duration metrics.Histogram) Service {
 	svc := NewSimpleService(logger, cfg, client)
-	svc = NewLoggingService(log.With(logger, "component", "core"), svc)
-	svc = NewInstrumentingService(duration, svc)
+	svc = NewLoggingService(log.With(logger, "component", "core"))(svc)
+	svc = NewInstrumentingService(duration)(svc)
 
 	return svc
 }
@@ -130,4 +137,16 @@ func (s *service) VMRestoreFromSnapshot(ctx context.Context, params *types.VMRes
 
 func (s *service) VMSnapshotDelete(ctx context.Context, params *types.VMSnapshotDeleteParams) error {
 	return vm.DeleteSnapshot(ctx, s.Client, params)
+}
+
+func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListParams) ([]types.Role, error) {
+	return vm.RolesList(ctx, s.Client, params)
+}
+
+func (s *service) VMAddRole(ctx context.Context, params *types.VMAddRoleParams) error {
+	return vm.AddRole(ctx, s.Client, params)
+}
+
+func (s *service) RoleList(ctx context.Context) ([]types.Role, error) {
+	return permissions.RoleList(ctx, s.Client)
 }

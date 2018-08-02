@@ -9,17 +9,26 @@ import (
 
 // Endpoints collects all of the endpoints that compose the Service.
 type Endpoints struct {
-	InfoEndpoint                  endpoint.Endpoint
-	ReadyzEndpoint                endpoint.Endpoint
-	HealthzEndpoint               endpoint.Endpoint
-	VMListEndpoint                endpoint.Endpoint
-	VMInfoEndpoint                endpoint.Endpoint
-	VMFindEndpoint                endpoint.Endpoint
-	VMDeployEndpoint              endpoint.Endpoint
+	InfoEndpoint endpoint.Endpoint
+
+	HealthzEndpoint endpoint.Endpoint
+	ReadyzEndpoint  endpoint.Endpoint
+
+	VMListEndpoint endpoint.Endpoint
+	VMInfoEndpoint endpoint.Endpoint
+	VMFindEndpoint endpoint.Endpoint
+
+	VMDeployEndpoint endpoint.Endpoint
+
 	VMSnapshotsListEndpoint       endpoint.Endpoint
 	VMSnapshotCreateEndpoint      endpoint.Endpoint
 	VMSnapshotDeleteEndpoint      endpoint.Endpoint
 	VMRestoreFromSnapshotEndpoint endpoint.Endpoint
+
+	VMRolesListEndpoint endpoint.Endpoint
+	VMAddRoleEndpoint   endpoint.Endpoint
+
+	RoleListEndpoint endpoint.Endpoint
 }
 
 // New returns an Endpoints struct where each endpoint invokes
@@ -56,18 +65,36 @@ func New(s service.Service, logger log.Logger) Endpoints {
 	vmSnapshotDeleteEndpoint := MakeVMSnapshotDeleteEndpoint(s)
 	vmSnapshotDeleteEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMSnapshotDelete"))(vmSnapshotDeleteEndpoint)
 
+	vmRolesListEndpoint := MakeVMRolesListEndpoint(s)
+	vmRolesListEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMRolesListEndpoint"))(vmRolesListEndpoint)
+
+	vmAddROleEndpoint := MakeVMAddRoleEndpoint(s)
+	vmAddROleEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMAddRoleEndpoint"))(vmAddROleEndpoint)
+
+	roleListEndpoint := MakeRolesListEndpoint(s)
+	roleListEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "RoleListEndpoint"))(roleListEndpoint)
+
 	return Endpoints{
-		InfoEndpoint:                  infoEndpoint,
-		HealthzEndpoint:               healthzEndpoint,
-		ReadyzEndpoint:                readyzEndpoint,
-		VMListEndpoint:                vmListEndpoint,
-		VMInfoEndpoint:                vmInfoEndpoint,
-		VMFindEndpoint:                vmFindEndpoint,
-		VMDeployEndpoint:              vmDeployEndpoint,
+		InfoEndpoint: infoEndpoint,
+
+		HealthzEndpoint: healthzEndpoint,
+		ReadyzEndpoint:  readyzEndpoint,
+
+		VMListEndpoint: vmListEndpoint,
+		VMInfoEndpoint: vmInfoEndpoint,
+		VMFindEndpoint: vmFindEndpoint,
+
+		VMDeployEndpoint: vmDeployEndpoint,
+
 		VMSnapshotsListEndpoint:       vmSnapshotsListEndpoint,
 		VMSnapshotCreateEndpoint:      vmSnapshotCreateEndpoint,
 		VMSnapshotDeleteEndpoint:      vmSnapshotDeleteEndpoint,
 		VMRestoreFromSnapshotEndpoint: vmRestoreFromSnapshotEndpoint,
+
+		VMRolesListEndpoint: vmRolesListEndpoint,
+		VMAddRoleEndpoint:   vmAddROleEndpoint,
+
+		RoleListEndpoint: roleListEndpoint,
 	}
 }
 

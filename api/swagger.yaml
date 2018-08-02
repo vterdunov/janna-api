@@ -19,12 +19,12 @@ paths:
       tags:
       - Service state
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/build_info"
+                $ref: "#/components/schemas/build_info_response"
 
 
   /healthz:
@@ -33,7 +33,7 @@ paths:
       tags:
       - Service state
       responses:
-        200:
+        '200':
           description: OK
 
   /readyz:
@@ -42,7 +42,7 @@ paths:
       tags:
       - Service state
       responses:
-        200:
+        '200':
           description: OK
 
   /metrics:
@@ -52,12 +52,12 @@ paths:
       tags:
       - Service state
       responses:
-        200:
+        '200':
           description: OK
           content:
             text/plain:
               schema:
-                $ref: "#/components/schemas/metrics"
+                $ref: "#/components/schemas/metrics_response"
   /vm:
     get:
       summary: "Virtual Machines UUIDs and names list"
@@ -83,12 +83,12 @@ paths:
         schema:
           type: string
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/vm_list"
+                $ref: "#/components/schemas/vm_list_response"
 
   /vm/{vm_uuid}:
     get:
@@ -109,12 +109,12 @@ paths:
         schema:
           type: string
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/vm_info"
+                $ref: "#/components/schemas/vm_info_response"
 
   /vm/{vm_uuid}/snapshots:
     get:
@@ -136,7 +136,7 @@ paths:
         schema:
           type: string
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -167,7 +167,7 @@ paths:
             schema:
               $ref: '#/components/schemas/create_snapshot_body'
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -197,9 +197,8 @@ paths:
           type: integer
           minimum: 1
       responses:
-        200:
+        '200':
           description: OK
-
 
   /vm/{vm_uuid}/revert/{snapshot}:
     post:
@@ -224,7 +223,7 @@ paths:
           type: integer
           minimum: 1
       responses:
-        200:
+        '200':
           description: OK
 
   /vm/{vm_uuid}/revert:
@@ -250,8 +249,58 @@ paths:
           type: integer
           minimum: 1
       responses:
-        200:
+        '200':
           description: OK
+
+  /vm/{vm_uuid}/roles:
+    patch:
+      summary: "Add role to VM"
+      tags:
+      - Virtual Machines
+      - Permissions
+      parameters:
+      - name: vm_uuid
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/vm_add_role_body'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Error
+          content:
+            application/json::
+              schema:
+                $ref: "#/components/schemas/vm_add_role_error_response"
+
+  /permissions/roles:
+    get:
+      summary: "List roles"
+      tags:
+      - Permissions
+      parameters:
+      - in: header
+        name: X-Request-ID
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/permissions_roles_response"
 
   /find/vm:
     get:
@@ -273,22 +322,22 @@ paths:
           format: uuid
           minimum: 1
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json::
               schema:
-                $ref: "#/components/schemas/find_vm"
-        500:
+                $ref: "#/components/schemas/find_vm_response"
+        '500':
           description: Error
           content:
             application/json::
               schema:
-                $ref: "#/components/schemas/find_vm_error"
+                $ref: "#/components/schemas/find_vm_error_response"
 
 components:
   schemas:
-    build_info:
+    build_info_response:
       type: object
       properties:
         build_time:
@@ -298,7 +347,7 @@ components:
           type: string
           example: "c0c5f0a"
 
-    metrics:
+    metrics_response:
       type: string
       example: |-
         # HELP duration_API_request_duration_seconds Request duration in seconds.
@@ -316,7 +365,7 @@ components:
         go_gc_duration_seconds{quantile="0.75"} 8.9717e-05
         go_gc_duration_seconds{quantile="1"} 8.9717e-05
 
-    vm_list:
+    vm_list_response:
       type: object
       example:
         "vm_list":
@@ -324,7 +373,7 @@ components:
           "42050306-51f9-3b3d-8fbb-8ce6912e1f4c": "my-vm2"
           "42050646-6bed-ddfe-1f81-ddf8eae21a67": "my-vm3"
 
-    vm_info:
+    vm_info_response:
       type: object
       properties:
         Config:
@@ -373,13 +422,50 @@ components:
               id: 4
               created_at: "2018-05-17T08:54:35.251931Z"
 
-    find_vm:
+    find_vm_response:
       type: object
       example:
         "uuid": "42053cb7-b8b7-904f-807e-9d18b1a366fb"
         "name": "my-vm"
 
-    find_vm_error:
+    find_vm_error_response:
       type: object
       example:
         "error": "vm 'my-folder/my-vm' not found"
+
+    vm_add_role_body:
+      type: object
+      required:
+      - role_id
+      - principal
+      properties:
+        role_id:
+          type: integer
+          example: 5
+        principal:
+          type: string
+          example: "DOMAIN\\example.user"
+        datacenter:
+          type: string
+          example: "DC1"
+
+    vm_add_role_error_response:
+      type: object
+      example:
+        "error": "ServerFaultCode: The user or group named 'DOMAIN\\example.user' does not exist."
+
+
+    permissions_roles_response:
+      type: object
+      example:
+        "roles":
+        - "name": "com.vmware.Content.Admin"
+          "id": -1775269336
+          "description":
+            "label": "Content library administrator (sample)"
+            "summary": "Provides full access to Content Library service"
+        - "name": "VirtualMachineUser"
+          "id": 5,
+          "description":
+            "label": "Virtual machine user (sample)"
+            "summary": "Provides virtual machine interaction permissions"
