@@ -15,6 +15,8 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
+GOLANGCI_LINTER_VERSION = v1.9.3
+
 all: lint test docker
 
 .PHONY: docker
@@ -52,7 +54,8 @@ test:
 
 .PHONY: lint
 lint:
-	golangci-lint run
+	@echo Linting...
+	@docker run -it --rm -v $(CURDIR):/go/src/$(PROJECT) -w /go/src/$(PROJECT) golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) run
 
 .PHONY: clean
 clean:
