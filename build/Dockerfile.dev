@@ -1,5 +1,10 @@
-FROM scratch
+FROM golang:1.10.2-alpine
 
-CMD ["/janna-api"]
+RUN apk add --no-cache make git
 
-COPY janna-api /janna-api
+WORKDIR /go/src/github.com/vterdunov/janna-api
+
+RUN go get github.com/canthefason/go-watcher && \
+    go install github.com/canthefason/go-watcher/cmd/watcher
+
+CMD watcher -run cmd/janna/server.go -watch github.com/vterdunov/janna-api

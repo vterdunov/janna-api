@@ -25,6 +25,10 @@ export VMWARE_DC=DC1
 ```
 make start
 ```
+or using Docker and Docker Compose
+```
+make dc
+```
 
 ## API
 See [swagger file](https://github.com/vterdunov/janna-api/blob/master/api/swagger.yaml)
