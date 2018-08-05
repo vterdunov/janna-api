@@ -131,6 +131,14 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		options...,
 	))
 
+	// Statuses
+	r.Path("/status/{taskID}").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.TaskInfoEndpoint,
+		decodeTaskInfoRequest,
+		encodeResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -249,6 +257,15 @@ func decodeVMAddRoleRequest(_ context.Context, r *http.Request) (interface{}, er
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(err, "Could not decode request")
 	}
+
+	return req, nil
+}
+
+func decodeTaskInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.TaskInfoRequest
+
+	vars := mux.Vars(r)
+	req.TaskID = vars["taskID"]
 
 	return req, nil
 }

@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
+
+	"github.com/vterdunov/janna-api/pkg/status"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -12,6 +16,7 @@ import (
 	"github.com/vterdunov/janna-api/pkg/providers/vmware/permissions"
 	"github.com/vterdunov/janna-api/pkg/providers/vmware/vm"
 	"github.com/vterdunov/janna-api/pkg/types"
+	"github.com/vterdunov/janna-api/pkg/uuid"
 	"github.com/vterdunov/janna-api/pkg/version"
 )
 
@@ -57,13 +62,18 @@ type Service interface {
 	VMAddRole(context.Context, *types.VMAddRoleParams) error
 
 	RoleList(context.Context) ([]types.Role, error)
+
+	// TasksList(context.Context) (*status.Tasks, error)
+
+	TaskInfo(context.Context, string) (*status.Task, error)
 }
 
 // service implements our Service
 type service struct {
-	logger log.Logger
-	cfg    *config.Config
-	Client *vim25.Client
+	logger   log.Logger
+	cfg      *config.Config
+	Client   *vim25.Client
+	statuses *status.Tasks
 }
 
 // New creates a new instance of the Service with wrapped middlewares
@@ -77,10 +87,12 @@ func New(logger log.Logger, cfg *config.Config, client *vim25.Client, duration m
 
 // NewSimpleService creates a new instance of the Service with minimal preconfigured options
 func NewSimpleService(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
+	statuses := status.New()
 	return &service{
-		logger: logger,
-		cfg:    cfg,
-		Client: client,
+		logger:   logger,
+		cfg:      cfg,
+		Client:   client,
+		statuses: statuses,
 	}
 }
 
@@ -114,7 +126,14 @@ func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*type
 
 func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (int, error) {
 	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
-	// taskSatus :=
+	taskID := uuid.NewUUID()
+	s.statuses.Add(taskID, "Start deploy")
+	status := s.statuses.Get(taskID)
+	if status != nil {
+		// fmt.Println(status.Status)
+		fmt.Println(taskID)
+	}
+
 	return vm.Deploy(ctx, s.Client, params, s.logger, s.cfg)
 }
 
@@ -149,4 +168,12 @@ func (s *service) VMAddRole(ctx context.Context, params *types.VMAddRoleParams) 
 
 func (s *service) RoleList(ctx context.Context) ([]types.Role, error) {
 	return permissions.RoleList(ctx, s.Client)
+}
+
+func (s *service) TaskInfo(ctx context.Context, taskID string) (*status.Task, error) {
+	t := s.statuses.Get(taskID)
+	if t != nil {
+		return t, nil
+	}
+	return nil, errors.New("Not implemented")
 }
