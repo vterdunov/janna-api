@@ -11,8 +11,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
-	"github.com/gocraft/work"
-	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/vmware/govmomi"
@@ -27,38 +25,14 @@ import (
 	"github.com/vterdunov/janna-api/pkg/version"
 )
 
-type JobContext struct{}
-
-func (c *JobContext) DeployOVA(job *work.Job) error {
-	// c.logger.Log()
-
-	// Extract arguments:
-	addr := job.ArgString("address")
-
-	subject := job.ArgString("subject")
-	if err := job.ArgError(); err != nil {
-		fmt.Println("args error")
-		return err
-	}
-	fmt.Println("+++++++++++++++++")
-	fmt.Println(addr)
-	fmt.Println(subject)
-	fmt.Println(job.ID)
-	fmt.Println("+++++++++++++++++")
-
-	// Go ahead and send the email...
-	// sendEmailTo(addr, subject)
-
-	return nil
-}
-
-func (c *JobContext) Log(job *work.Job, next work.NextMiddlewareFunc) error {
-	fmt.Println("Starting job: ", job.Name)
-	job.Checkin("test")
-	return next()
-}
-
 func main() {
+	// t := status.New()
+	// t.Add("testKey", "TestValue")
+
+	// fmt.Println(t.Get("testKey"))
+	// time.Sleep(time.Second * 8)
+	// fmt.Println(t.Get("testKey"))
+
 	// Load ENV configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -84,35 +58,6 @@ func main() {
 		logger.Log("err", errors.Wrap(err, "Could not create Govmomi client"))
 		os.Exit(1)
 	}
-
-	// ------------------------------------------------------
-	// ------------------------------------------------------
-	// ------------------------------------------------------
-	// WORKERS
-	redisPool := &redis.Pool{
-		MaxActive: 5,
-		MaxIdle:   5,
-		Wait:      true,
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", "janna-redis:6379")
-		},
-	}
-	enqueuer := work.NewEnqueuer("janna", redisPool)
-
-	pool := work.NewWorkerPool(JobContext{}, 10, "janna", redisPool)
-	pool.Middleware((*JobContext).Log)
-	pool.Start()
-
-	pool.Job("send_email", (*JobContext).DeployOVA)
-
-	_, err = enqueuer.Enqueue("send_email", work.Q{"address": "test@example.com", "subject": "This is subject"})
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// ------------------------------------------------------
-	// ------------------------------------------------------
-	// ------------------------------------------------------
 
 	duration := prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: "http",

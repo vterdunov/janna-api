@@ -114,7 +114,7 @@ func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*type
 
 func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (int, error) {
 	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
-
+	// taskSatus :=
 	return vm.Deploy(ctx, s.Client, params, s.logger, s.cfg)
 }
 

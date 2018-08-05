@@ -34,37 +34,22 @@
   version = "v1.7.0"
 
 [[projects]]
-  name = "github.com/gocraft/work"
-  packages = ["."]
-  revision = "1d4117a214abff263b472043871c8666aedb716b"
-  version = "v0.5.1"
-
-[[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/gomodule/redigo"
-  packages = [
-    "internal",
-    "redis"
-  ]
-  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
-  version = "v2.0.0"
-
-[[projects]]
   name = "github.com/gorilla/context"
   packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
-  version = "v1.1"
+  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/gorilla/mux"
   packages = ["."]
-  revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
-  version = "v1.6.1"
+  revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
+  version = "v1.6.2"
 
 [[projects]]
   branch = "master"
@@ -75,8 +60,8 @@
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
-  revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
-  version = "v1.0.0"
+  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "v1.0.1"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -97,7 +82,7 @@
   branch = "master"
   name = "github.com/prometheus/client_model"
   packages = ["go"]
-  revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
+  revision = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f"
 
 [[projects]]
   branch = "master"
@@ -107,7 +92,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "7600349dcfe1abd18d72d3a1770870d9800a7801"
+  revision = "c7de2306084e37d54b8be01f3541a8464345e9a5"
 
 [[projects]]
   branch = "master"
@@ -118,13 +103,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "8b1c2da0d56deffdbb9e48d4414b4e674bd8083e"
-
-[[projects]]
-  name = "github.com/robfig/cron"
-  packages = ["."]
-  revision = "b41be1df696709bb6395fe435af20370037c0b4c"
-  version = "v1.1"
+  revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
 
 [[projects]]
   name = "github.com/vmware/govmomi"
@@ -154,6 +133,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ba42f0d1de5f6e48741f037fea3204c47a35e5d2d11b56e61423b3839e0e03ea"
+  inputs-digest = "f02ca5bdde5f5e62fde5f8eaf379520e0ffc2b0f556e54ad69e0794c313db28e"
   solver-name = "gps-cdcl"
   solver-version = 1
