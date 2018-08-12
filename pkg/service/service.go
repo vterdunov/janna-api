@@ -143,6 +143,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	}
 
 	if exist {
+		// nolint: golint
 		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name)
 	}
 
@@ -192,5 +193,5 @@ func (s *service) TaskInfo(ctx context.Context, taskID string) (*Task, error) {
 	if t != nil {
 		return t, nil
 	}
-	return nil, errors.New("Not implemented")
+	return nil, errors.New("not implemented")
 }
