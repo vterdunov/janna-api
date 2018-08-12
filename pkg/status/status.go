@@ -3,6 +3,8 @@ package status
 import (
 	"sync"
 	"time"
+
+	"github.com/vterdunov/janna-api/pkg/service"
 )
 
 type Tasks struct {
@@ -10,19 +12,13 @@ type Tasks struct {
 	expiration    time.Duration
 	cleanInterval time.Duration
 
-	tasks map[string]Task
-}
-
-type Task struct {
-	Status     string
-	Created    time.Time
-	Expiration int64
+	tasks map[string]service.Task
 }
 
 // New creates a new in-memory storage for tasks status information.
 // Such as current progress, created date, etc.
 func New() *Tasks {
-	emptyTasks := make(map[string]Task)
+	emptyTasks := make(map[string]service.Task)
 	expiration := time.Hour * 24
 	cleanInterval := time.Second * 10
 
@@ -43,7 +39,7 @@ func (tt *Tasks) Add(taskID, Status string) {
 	defer tt.Unlock()
 
 	expiration := time.Now().Add(tt.expiration).UnixNano()
-	tt.tasks[taskID] = Task{
+	tt.tasks[taskID] = service.Task{
 		Status:     Status,
 		Created:    time.Now(),
 		Expiration: expiration,
@@ -51,7 +47,7 @@ func (tt *Tasks) Add(taskID, Status string) {
 }
 
 // Get a task from in-memory storage
-func (tt *Tasks) Get(taskID string) *Task {
+func (tt *Tasks) Get(taskID string) *service.Task {
 	tt.RLock()
 	defer tt.RUnlock()
 

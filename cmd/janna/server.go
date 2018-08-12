@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/vterdunov/janna-api/pkg/status"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/pkg/errors"
@@ -36,7 +38,7 @@ func main() {
 	// Load ENV configuration
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Printf("Cannot read config. Err: %s\n", err)
+		fmt.Printf("Could not read config. Err: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -66,8 +68,10 @@ func main() {
 		Help:      "Total duration of requests in seconds.",
 	}, []string{"method", "success"})
 
-	// Build the layers of the service "onion" from the inside out.
-	svc := service.New(logger, cfg, client.Client, duration)
+	inMemoryStorage := status.New()
+	statusStorage := service.Statuser(inMemoryStorage)
+
+	svc := service.New(logger, cfg, client.Client, duration, statusStorage)
 
 	endpoints := endpoint.New(svc, logger)
 	httpHandler := transport.NewHTTPHandler(endpoints, logger)

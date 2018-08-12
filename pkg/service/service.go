@@ -73,12 +73,19 @@ type service struct {
 	logger   log.Logger
 	cfg      *config.Config
 	Client   *vim25.Client
-	statuses *status.Tasks
+	statuses Statuser
 }
 
 // New creates a new instance of the Service with wrapped middlewares
-func New(logger log.Logger, cfg *config.Config, client *vim25.Client, duration metrics.Histogram) Service {
-	svc := NewSimpleService(logger, cfg, client)
+func New(
+	logger log.Logger,
+	cfg *config.Config,
+	client *vim25.Client,
+	duration metrics.Histogram,
+	statuses Statuser,
+) Service {
+	// Build the layers of the service "onion" from the inside out.
+	svc := NewSimpleService(logger, cfg, client, statuses)
 	svc = NewLoggingService(log.With(logger, "component", "core"))(svc)
 	svc = NewInstrumentingService(duration)(svc)
 
@@ -86,8 +93,12 @@ func New(logger log.Logger, cfg *config.Config, client *vim25.Client, duration m
 }
 
 // NewSimpleService creates a new instance of the Service with minimal preconfigured options
-func NewSimpleService(logger log.Logger, cfg *config.Config, client *vim25.Client) Service {
-	statuses := status.New()
+func NewSimpleService(
+	logger log.Logger,
+	cfg *config.Config,
+	client *vim25.Client,
+	statuses Statuser,
+) Service {
 	return &service{
 		logger:   logger,
 		cfg:      cfg,
