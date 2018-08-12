@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/vterdunov/janna-api/pkg/status"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/vmware/govmomi/vim25"
@@ -43,7 +41,7 @@ type Service interface {
 	VMFind(context.Context, *types.VMFindParams) (*types.VMFound, error)
 
 	// VMDeploy create VM from OVA file
-	VMDeploy(context.Context, *types.VMDeployParams) (int, error)
+	VMDeploy(context.Context, *types.VMDeployParams) (string, error)
 
 	// VMSnapshotsList returns VM snapshots list
 	VMSnapshotsList(context.Context, *types.VMSnapshotsListParams) ([]types.Snapshot, error)
@@ -65,7 +63,7 @@ type Service interface {
 
 	// TasksList(context.Context) (*status.Tasks, error)
 
-	TaskInfo(context.Context, string) (*status.Task, error)
+	TaskInfo(context.Context, string) (*Task, error)
 }
 
 // service implements our Service
@@ -135,17 +133,25 @@ func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*type
 	return vm.Find(ctx, s.Client, params)
 }
 
-func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (int, error) {
+func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (string, error) {
 	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
-	taskID := uuid.NewUUID()
-	s.statuses.Add(taskID, "Start deploy")
-	status := s.statuses.Get(taskID)
-	if status != nil {
-		// fmt.Println(status.Status)
-		fmt.Println(taskID)
+
+	// predeploy checks
+	exist, err := vm.IsVMExist(ctx, s.Client, params, s.logger, s.cfg)
+	if err != nil {
+		return "", err
 	}
 
-	return vm.Deploy(ctx, s.Client, params, s.logger, s.cfg)
+	if exist {
+		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name)
+	}
+
+	taskID := uuid.NewUUID()
+	s.statuses.Add(taskID, "Start deploy")
+
+	go vm.Deploy(ctx, s.Client, params, s.logger, s.cfg)
+
+	return taskID, nil
 }
 
 func (s *service) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) ([]types.Snapshot, error) {
@@ -181,7 +187,7 @@ func (s *service) RoleList(ctx context.Context) ([]types.Role, error) {
 	return permissions.RoleList(ctx, s.Client)
 }
 
-func (s *service) TaskInfo(ctx context.Context, taskID string) (*status.Task, error) {
+func (s *service) TaskInfo(ctx context.Context, taskID string) (*Task, error) {
 	t := s.statuses.Get(taskID)
 	if t != nil {
 		return t, nil

@@ -58,7 +58,7 @@ func (mw instrumentingMiddleware) VMFind(ctx context.Context, params *types.VMFi
 	return mw.Service.VMFind(ctx, params)
 }
 
-func (mw instrumentingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeployParams) (_ int, err error) {
+func (mw instrumentingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeployParams) (_ string, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMDeploy", "success", fmt.Sprint(err == nil)}
 		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())

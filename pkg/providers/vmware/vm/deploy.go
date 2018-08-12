@@ -26,7 +26,7 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/vterdunov/janna-api/pkg/config"
-	jannatypes "github.com/vterdunov/janna-api/pkg/types"
+	jt "github.com/vterdunov/janna-api/pkg/types"
 )
 
 type deployment struct {
@@ -282,45 +282,57 @@ func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 	return &info.Entity, lease.Complete(ctx)
 }
 
-// Deploy Virtual Machine to VMWare
-func Deploy(ctx context.Context, c *vim25.Client, deployParams *jannatypes.VMDeployParams, logger log.Logger, cfg *config.Config) (int, error) { // nolint: unparam
-	// TODO: make up a metod to check deploy progress.
-	// Job ID and endpoint with status?
-	// keep HTTP connection with client and poll it?
-	var jid int
+func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, logger log.Logger, cfg *config.Config) (bool, error) {
+	f := find.NewFinder(c, false)
+	dc, err := f.DatacenterOrDefault(ctx, params.Datacenter)
+	if err != nil {
+		return false, err
+	}
+	f.SetDatacenter(dc)
 
+	_, err = f.VirtualMachine(ctx, params.Name)
+	switch err.(type) {
+	case *find.NotFoundError:
+		return false, nil
+	default:
+		return true, err
+	}
+}
+
+// Deploy Virtual Machine to VMWare
+func Deploy(ctx context.Context, c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger, cfg *config.Config) error { // nolint: unparam
 	logger.Log("msg", "Starting deploy VM", "vm", deployParams.Name)
 
 	d := newDeployment(c, deployParams, logger)
 	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose datacenter"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 
 	if err := d.ChooseDatastore(ctx, cfg.VMWare.DS); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose datastore"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 
 	if err := d.ChooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose resource pool"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 
 	if err := d.ChooseFolder(ctx, cfg.VMWare.Folder); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose folder"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 
 	if err := d.ChooseHost(ctx, cfg.VMWare.Host); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose host"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 
 	moref, err := d.Import(ctx, deployParams.OVAURL)
 	if err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not import deployement"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 
 	vm := object.NewVirtualMachine(c, *moref)
@@ -328,25 +340,25 @@ func Deploy(ctx context.Context, c *vim25.Client, deployParams *jannatypes.VMDep
 	logger.Log("msg", "Powering on...", "vm", deployParams.Name)
 	if err = powerON(ctx, vm); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not power on VM"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 
 	// WaitForIP
 	logger.Log("msg", "Waiting for ip", "vm", deployParams.Name)
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	// defer cancel()
 
 	ip, err := waitForIP(ctx, vm)
 	if err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not get IP address"), "vm", deployParams.Name)
-		return jid, err
+		return err
 	}
 	logger.Log("msg", "Received IP address", "vm", deployParams.Name, "ip", ip)
 
-	return jid, nil
+	return nil
 }
 
-func newDeployment(c *vim25.Client, deployParams *jannatypes.VMDeployParams, logger log.Logger) *deployment {
+func newDeployment(c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger) *deployment {
 	finder := find.NewFinder(c, true)
 	var nms []Network
 

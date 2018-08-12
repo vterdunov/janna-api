@@ -24,7 +24,7 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 		// TODO: Try to write middleware that will validate parameters
 		// Minimal validating incoming params
 		if req.Name == "" || req.OVAURL == "" {
-			return VMDeployResponse{JID: 0, Err: errors.New("invalid arguments. Pass reqired arguments")}, nil
+			return VMDeployResponse{JID: "", Err: errors.New("invalid arguments. Pass reqired arguments")}, nil
 		}
 
 		params := &types.VMDeployParams{
@@ -56,8 +56,8 @@ type VMDeployRequest struct {
 
 // VMDeployResponse fields
 type VMDeployResponse struct {
-	JID int   `json:"job_id,omitempty"`
-	Err error `json:"error,omitempty"`
+	JID string `json:"task_id,omitempty"`
+	Err error  `json:"error,omitempty"`
 }
 
 // Failed implements Failer
