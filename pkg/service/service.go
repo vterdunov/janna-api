@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
+	"github.com/pkg/errors"
+	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
 
 	"github.com/vterdunov/janna-api/pkg/config"
@@ -150,7 +151,35 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	taskID := uuid.NewUUID()
 	s.statuses.Add(taskID, "Start deploy")
 
-	go vm.Deploy(ctx, s.Client, params, s.logger, s.cfg)
+	taskCtx, cancel := context.WithCancel(context.Background())
+	go func() {
+		d, err := vm.NewDeployment(taskCtx, s.Client, params, s.logger, s.cfg)
+		if err != nil {
+			s.statuses.Add(taskID, err.Error())
+			cancel()
+		}
+
+		moref, err := d.Import(taskCtx, params.OVAURL)
+		if err != nil {
+			s.logger.Log("err", errors.Wrap(err, "Could not import deployement"), "vm", params.Name)
+			s.statuses.Add(taskID, err.Error())
+			cancel()
+		}
+
+		vmx := object.NewVirtualMachine(s.Client, *moref)
+
+		s.logger.Log("msg", "Powering on...", "vm", params.Name)
+		vm.PowerON(taskCtx, vmx)
+
+		ip, err := vm.WaitForIP(taskCtx, vmx)
+		if err != nil {
+			s.statuses.Add(taskID, err.Error())
+		}
+		fmt.Println("~~~~~~~~~~~~~~~~~~~")
+		fmt.Println(ip)
+		fmt.Println("~~~~~~~~~~~~~~~~~~~")
+
+	}()
 
 	return taskID, nil
 }

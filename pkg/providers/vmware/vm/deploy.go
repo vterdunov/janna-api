@@ -29,7 +29,7 @@ import (
 	jt "github.com/vterdunov/janna-api/pkg/types"
 )
 
-type deployment struct {
+type Deployment struct {
 	Client *vim25.Client
 	Finder *find.Finder
 	ovfx
@@ -54,7 +54,7 @@ type Network struct {
 	Network string
 }
 
-func (o *deployment) ChooseDatacenter(ctx context.Context, dcName string) error {
+func (o *Deployment) ChooseDatacenter(ctx context.Context, dcName string) error {
 	dc, err := o.Finder.DatacenterOrDefault(ctx, dcName)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (o *deployment) ChooseDatacenter(ctx context.Context, dcName string) error 
 	return nil
 }
 
-func (o *deployment) ChooseDatastore(ctx context.Context, dsName string) error {
+func (o *Deployment) ChooseDatastore(ctx context.Context, dsName string) error {
 	// TODO: try to use DatastoreCLuster instead of Datastore
 	//   user can choose that want to use
 	ds, err := o.Finder.DatastoreOrDefault(ctx, dsName)
@@ -75,7 +75,7 @@ func (o *deployment) ChooseDatastore(ctx context.Context, dsName string) error {
 	return nil
 }
 
-func (o *deployment) ChooseResourcePool(ctx context.Context, rpName string) error {
+func (o *Deployment) ChooseResourcePool(ctx context.Context, rpName string) error {
 	rp, err := o.Finder.ResourcePoolOrDefault(ctx, rpName)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (o *deployment) ChooseResourcePool(ctx context.Context, rpName string) erro
 	return nil
 }
 
-func (o *deployment) ChooseFolder(ctx context.Context, fName string) error {
+func (o *Deployment) ChooseFolder(ctx context.Context, fName string) error {
 	folder, err := o.Finder.FolderOrDefault(ctx, fName)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (o *deployment) ChooseFolder(ctx context.Context, fName string) error {
 	return nil
 }
 
-func (o *deployment) ChooseHost(ctx context.Context, hName string) error {
+func (o *Deployment) ChooseHost(ctx context.Context, hName string) error {
 	// Host param is optional. If we use 'nil', then vCenter will choose a host
 	// If you need a specify a cluster then specify a Resource Pool param.
 	if hName == "" {
@@ -109,7 +109,7 @@ func (o *deployment) ChooseHost(ctx context.Context, hName string) error {
 	return nil
 }
 
-func (o *deployment) NetworkMap(ctx context.Context, e *ovf.Envelope) (p []types.OvfNetworkMapping) {
+func (o *Deployment) NetworkMap(ctx context.Context, e *ovf.Envelope) (p []types.OvfNetworkMapping) {
 	networks := map[string]string{}
 
 	if e.Network != nil {
@@ -137,7 +137,7 @@ func (o *deployment) NetworkMap(ctx context.Context, e *ovf.Envelope) (p []types
 	return p
 }
 
-func (o *deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.FileItem) error {
+func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.FileItem) error {
 	file := item.Path
 
 	f, err := os.Open(file)
@@ -164,7 +164,7 @@ func (o *deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 	return lease.Upload(ctx, item, f, opts)
 }
 
-func (o *deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
+func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
 	url, err := url.Parse(OVAURL)
 	if err != nil {
 		return nil, err
@@ -299,66 +299,41 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, 
 	}
 }
 
-// Deploy Virtual Machine to VMWare
-func Deploy(ctx context.Context, c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger, cfg *config.Config) error { // nolint: unparam
+// NewDeployment create a new deployment object.
+// It choose needed resources
+func NewDeployment(ctx context.Context, c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
 	logger.Log("msg", "Starting deploy VM", "vm", deployParams.Name)
 
-	d := newDeployment(c, deployParams, logger)
+	d := newSimpleDeployment(c, deployParams, logger)
 	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose datacenter"), "vm", deployParams.Name)
-		return err
+		return nil, err
 	}
 
 	if err := d.ChooseDatastore(ctx, cfg.VMWare.DS); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose datastore"), "vm", deployParams.Name)
-		return err
+		return nil, err
 	}
 
 	if err := d.ChooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose resource pool"), "vm", deployParams.Name)
-		return err
+		return nil, err
 	}
 
 	if err := d.ChooseFolder(ctx, cfg.VMWare.Folder); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose folder"), "vm", deployParams.Name)
-		return err
+		return nil, err
 	}
 
 	if err := d.ChooseHost(ctx, cfg.VMWare.Host); err != nil {
 		logger.Log("err", errors.Wrap(err, "Could not choose host"), "vm", deployParams.Name)
-		return err
+		return nil, err
 	}
 
-	moref, err := d.Import(ctx, deployParams.OVAURL)
-	if err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not import deployement"), "vm", deployParams.Name)
-		return err
-	}
-
-	vm := object.NewVirtualMachine(c, *moref)
-
-	logger.Log("msg", "Powering on...", "vm", deployParams.Name)
-	if err = powerON(ctx, vm); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not power on VM"), "vm", deployParams.Name)
-		return err
-	}
-
-	// WaitForIP
-	logger.Log("msg", "Waiting for ip", "vm", deployParams.Name)
-	// ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
-	// defer cancel()
-
-	ip, err := waitForIP(ctx, vm)
-	if err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not get IP address"), "vm", deployParams.Name)
-		return err
-	}
-	logger.Log("msg", "Received IP address", "vm", deployParams.Name, "ip", ip)
-
-	return nil
+	return d, nil
 }
 
-func newDeployment(c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger) *deployment {
+func newSimpleDeployment(c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger) *Deployment {
 	finder := find.NewFinder(c, true)
 	var nms []Network
 
@@ -377,7 +352,7 @@ func newDeployment(c *vim25.Client, deployParams *jt.VMDeployParams, logger log.
 		NetworkMapping: nms,
 	}
 
-	d := &deployment{
+	d := &Deployment{
 		Client: c,
 		Finder: finder,
 		logger: logger,
@@ -387,7 +362,7 @@ func newDeployment(c *vim25.Client, deployParams *jt.VMDeployParams, logger log.
 	return d
 }
 
-func powerON(ctx context.Context, vm *object.VirtualMachine) error {
+func PowerON(ctx context.Context, vm *object.VirtualMachine) error {
 	task, err := vm.PowerOn(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Could not power on VM")
@@ -399,7 +374,7 @@ func powerON(ctx context.Context, vm *object.VirtualMachine) error {
 	return nil
 }
 
-func waitForIP(ctx context.Context, vm *object.VirtualMachine) (string, error) {
+func WaitForIP(ctx context.Context, vm *object.VirtualMachine) (string, error) {
 	ip, err := vm.WaitForIP(ctx)
 	if err != nil {
 		return "", err

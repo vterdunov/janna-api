@@ -19,7 +19,7 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 			return nil, errors.New("could not parse request")
 		}
 
-		logger.Log("msg", "incoming request params", "params", fmt.Sprintf("%+v", req))
+		logger.Log("msg", "incoming request params", "params", req.String())
 
 		// TODO: Try to write middleware that will validate parameters
 		// Minimal validating incoming params
@@ -52,6 +52,11 @@ type VMDeployRequest struct {
 	Datacenter string            `json:"datacenter,omitempty"`
 	Cluster    string            `json:"cluster,omitempty"`
 	Folder     string            `json:"folder,omitempty"`
+}
+
+func (r *VMDeployRequest) String() string {
+	return fmt.Sprintf("name: %s, ova_url: %s, datastores: %s, networks: %s, datacenter: %s, cluster: %s, folder: %s",
+		r.Name, r.OVAURL, r.Datastores, r.Networks, r.Datacenter, r.Cluster, r.Folder)
 }
 
 // VMDeployResponse fields
