@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/transport/http"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
@@ -138,47 +139,54 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
 
 	// predeploy checks
-	exist, err := vm.IsVMExist(ctx, s.Client, params, s.logger, s.cfg)
+	exist, err := vm.IsVMExist(ctx, s.Client, params)
 	if err != nil {
 		return "", err
 	}
 
 	if exist {
-		// nolint: golint
-		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name)
+		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) // nolint: golint
 	}
 
 	taskID := uuid.NewUUID()
 	s.statuses.Add(taskID, "Start deploy")
 
+	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	l := log.With(s.logger, "request_id", reqID)
+	l = log.With(l, "vm", params.Name)
+
 	taskCtx, cancel := context.WithCancel(context.Background())
+
 	go func() {
-		d, err := vm.NewDeployment(taskCtx, s.Client, params, s.logger, s.cfg)
+		d, err := vm.NewDeployment(taskCtx, s.Client, params, l, s.cfg)
 		if err != nil {
 			s.statuses.Add(taskID, err.Error())
 			cancel()
 		}
 
+		s.statuses.Add(taskID, "Importing OVA")
 		moref, err := d.Import(taskCtx, params.OVAURL)
 		if err != nil {
-			s.logger.Log("err", errors.Wrap(err, "Could not import deployement"), "vm", params.Name)
+			l.Log("err", errors.Wrap(err, "Could not import OVA/OVF"))
 			s.statuses.Add(taskID, err.Error())
 			cancel()
 		}
 
+		s.statuses.Add(taskID, "Creating Virtual Machine")
 		vmx := object.NewVirtualMachine(s.Client, *moref)
 
-		s.logger.Log("msg", "Powering on...", "vm", params.Name)
+		l.Log("msg", "Powering on...")
+		s.statuses.Add(taskID, "Powering on")
 		vm.PowerON(taskCtx, vmx)
 
+		s.statuses.Add(taskID, "Waiting for IP")
 		ip, err := vm.WaitForIP(taskCtx, vmx)
 		if err != nil {
 			s.statuses.Add(taskID, err.Error())
 		}
-		fmt.Println("~~~~~~~~~~~~~~~~~~~")
-		fmt.Println(ip)
-		fmt.Println("~~~~~~~~~~~~~~~~~~~")
 
+		l.Log("msg", "done", "ip", ip)
+		s.statuses.Add(taskID, fmt.Sprintf("Done, IP: %s", ip))
 	}()
 
 	return taskID, nil

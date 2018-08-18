@@ -165,6 +165,8 @@ func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 }
 
 func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
+	// FIXME: logger is nil
+	o.logger.Log("test", "test")
 	url, err := url.Parse(OVAURL)
 	if err != nil {
 		return nil, err
@@ -282,7 +284,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 	return &info.Entity, lease.Complete(ctx)
 }
 
-func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, logger log.Logger, cfg *config.Config) (bool, error) {
+func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) (bool, error) {
 	f := find.NewFinder(c, false)
 	dc, err := f.DatacenterOrDefault(ctx, params.Datacenter)
 	if err != nil {
@@ -301,32 +303,30 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, 
 
 // NewDeployment create a new deployment object.
 // It choose needed resources
-func NewDeployment(ctx context.Context, c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
-	logger.Log("msg", "Starting deploy VM", "vm", deployParams.Name)
-
-	d := newSimpleDeployment(c, deployParams, logger)
+func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
+	d := newSimpleDeployment(c, params, l)
 	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose datacenter"), "vm", deployParams.Name)
+		l.Log("err", errors.Wrap(err, "Could not choose datacenter"))
 		return nil, err
 	}
 
 	if err := d.ChooseDatastore(ctx, cfg.VMWare.DS); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose datastore"), "vm", deployParams.Name)
+		l.Log("err", errors.Wrap(err, "Could not choose datastore"))
 		return nil, err
 	}
 
 	if err := d.ChooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose resource pool"), "vm", deployParams.Name)
+		l.Log("err", errors.Wrap(err, "Could not choose resource pool"))
 		return nil, err
 	}
 
 	if err := d.ChooseFolder(ctx, cfg.VMWare.Folder); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose folder"), "vm", deployParams.Name)
+		l.Log("err", errors.Wrap(err, "Could not choose folder"))
 		return nil, err
 	}
 
 	if err := d.ChooseHost(ctx, cfg.VMWare.Host); err != nil {
-		logger.Log("err", errors.Wrap(err, "Could not choose host"), "vm", deployParams.Name)
+		l.Log("err", errors.Wrap(err, "Could not choose host"))
 		return nil, err
 	}
 
