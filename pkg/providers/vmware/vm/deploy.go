@@ -54,7 +54,7 @@ type Network struct {
 	Network string
 }
 
-func (o *Deployment) ChooseDatacenter(ctx context.Context, dcName string) error {
+func (o *Deployment) chooseDatacenter(ctx context.Context, dcName string) error {
 	dc, err := o.Finder.DatacenterOrDefault(ctx, dcName)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (o *Deployment) ChooseDatacenter(ctx context.Context, dcName string) error 
 	return nil
 }
 
-func (o *Deployment) ChooseDatastore(ctx context.Context, dsName string) error {
+func (o *Deployment) chooseDatastore(ctx context.Context, dsName string) error {
 	// TODO: try to use DatastoreCLuster instead of Datastore
 	//   user can choose that want to use
 	ds, err := o.Finder.DatastoreOrDefault(ctx, dsName)
@@ -75,7 +75,7 @@ func (o *Deployment) ChooseDatastore(ctx context.Context, dsName string) error {
 	return nil
 }
 
-func (o *Deployment) ChooseResourcePool(ctx context.Context, rpName string) error {
+func (o *Deployment) chooseResourcePool(ctx context.Context, rpName string) error {
 	rp, err := o.Finder.ResourcePoolOrDefault(ctx, rpName)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (o *Deployment) ChooseResourcePool(ctx context.Context, rpName string) erro
 	return nil
 }
 
-func (o *Deployment) ChooseFolder(ctx context.Context, fName string) error {
+func (o *Deployment) chooseFolder(ctx context.Context, fName string) error {
 	folder, err := o.Finder.FolderOrDefault(ctx, fName)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (o *Deployment) ChooseFolder(ctx context.Context, fName string) error {
 	return nil
 }
 
-func (o *Deployment) ChooseHost(ctx context.Context, hName string) error {
+func (o *Deployment) chooseHost(ctx context.Context, hName string) error {
 	// Host param is optional. If we use 'nil', then vCenter will choose a host
 	// If you need a specify a cluster then specify a Resource Pool param.
 	if hName == "" {
@@ -109,7 +109,7 @@ func (o *Deployment) ChooseHost(ctx context.Context, hName string) error {
 	return nil
 }
 
-func (o *Deployment) NetworkMap(ctx context.Context, e *ovf.Envelope) (p []types.OvfNetworkMapping) {
+func (o *Deployment) networkMap(ctx context.Context, e *ovf.Envelope) (p []types.OvfNetworkMapping) {
 	networks := map[string]string{}
 
 	if e.Network != nil {
@@ -237,7 +237,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 		// TODO: get form params
 		DiskProvisioning: "thin",
 		EntityName:       name,
-		NetworkMapping:   o.NetworkMap(ctx, e),
+		NetworkMapping:   o.networkMap(ctx, e),
 	}
 
 	m := ovf.NewManager(o.Client)
@@ -305,27 +305,27 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) 
 // It choose needed resources
 func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
 	d := newSimpleDeployment(c, params, l)
-	if err := d.ChooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
+	if err := d.chooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
 		l.Log("err", errors.Wrap(err, "Could not choose datacenter"))
 		return nil, err
 	}
 
-	if err := d.ChooseDatastore(ctx, cfg.VMWare.DS); err != nil {
+	if err := d.chooseDatastore(ctx, cfg.VMWare.DS); err != nil {
 		l.Log("err", errors.Wrap(err, "Could not choose datastore"))
 		return nil, err
 	}
 
-	if err := d.ChooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
+	if err := d.chooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
 		l.Log("err", errors.Wrap(err, "Could not choose resource pool"))
 		return nil, err
 	}
 
-	if err := d.ChooseFolder(ctx, cfg.VMWare.Folder); err != nil {
+	if err := d.chooseFolder(ctx, cfg.VMWare.Folder); err != nil {
 		l.Log("err", errors.Wrap(err, "Could not choose folder"))
 		return nil, err
 	}
 
-	if err := d.ChooseHost(ctx, cfg.VMWare.Host); err != nil {
+	if err := d.chooseHost(ctx, cfg.VMWare.Host); err != nil {
 		l.Log("err", errors.Wrap(err, "Could not choose host"))
 		return nil, err
 	}
