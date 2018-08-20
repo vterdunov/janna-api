@@ -165,8 +165,6 @@ func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 }
 
 func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
-	// FIXME: logger is nil
-	o.logger.Log("test", "test")
 	url, err := url.Parse(OVAURL)
 	if err != nil {
 		return nil, err
@@ -278,9 +276,36 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 	os.Chdir(td)
 	for _, item := range info.Items {
 		if err = o.Upload(ctx, lease, item); err != nil {
+			// fmt.Println("--------------------------------")
+			// var fault types.LocalizedMethodFault
+			// fault.LocalizedMessage = "Cancellllled"
+			// lease.Abort(ctx, &fault)
 			return nil, errors.Wrap(err, "Could not upload disks to VMWare")
 		}
 	}
+	// fmt.Println("-------->HERE")
+	// go func() {
+	// fmt.Println("-------->START WATCH CANCEL")
+	// for {
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		fmt.Println("-------->ABORTING TASK")
+	// 		var fault types.LocalizedMethodFault
+	// 		fault.LocalizedMessage = "Cancellllled"
+	// 		if err := lease.Abort(ctx, &fault); err != nil {
+	// 			fmt.Println("!!!!!!!!!!!!!!!!!!!!")
+	// 			fmt.Println(err.Error())
+	// 			fmt.Println("!!!!!!!!!!!!!!!!!!!!")
+	// 		}
+	// 		if err := lease.Complete(ctx); err != nil {
+	// 			fmt.Println("================")
+	// 			fmt.Println(err.Error())
+	// 			fmt.Println("================")
+	// 		}
+	// 		// return
+	// 	}
+	// }
+	// }()
 	return &info.Entity, lease.Complete(ctx)
 }
 
@@ -306,27 +331,32 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) 
 func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
 	d := newSimpleDeployment(c, params, l)
 	if err := d.chooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
-		l.Log("err", errors.Wrap(err, "Could not choose datacenter"))
+		err = errors.Wrap(err, "Could not choose datacenter")
+		l.Log("err", err)
 		return nil, err
 	}
 
 	if err := d.chooseDatastore(ctx, cfg.VMWare.DS); err != nil {
-		l.Log("err", errors.Wrap(err, "Could not choose datastore"))
+		err = errors.Wrap(err, "Could not choose datastore")
+		l.Log("err", err)
 		return nil, err
 	}
 
 	if err := d.chooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
-		l.Log("err", errors.Wrap(err, "Could not choose resource pool"))
+		err = errors.Wrap(err, "Could not choose resource pool")
+		l.Log("err", err)
 		return nil, err
 	}
 
 	if err := d.chooseFolder(ctx, cfg.VMWare.Folder); err != nil {
-		l.Log("err", errors.Wrap(err, "Could not choose folder"))
+		err = errors.Wrap(err, "Could not choose folder")
+		l.Log("err", err)
 		return nil, err
 	}
 
 	if err := d.chooseHost(ctx, cfg.VMWare.Host); err != nil {
-		l.Log("err", errors.Wrap(err, "Could not choose host"))
+		err = errors.Wrap(err, "Could not choose host")
+		l.Log("err", err)
 		return nil, err
 	}
 

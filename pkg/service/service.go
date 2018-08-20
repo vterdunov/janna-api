@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -155,13 +156,15 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	l := log.With(s.logger, "request_id", reqID)
 	l = log.With(l, "vm", params.Name)
 
-	taskCtx, cancel := context.WithCancel(context.Background())
+	taskCtx, cancel := context.WithTimeout(context.Background(), time.Second*50)
 
 	go func() {
+		defer cancel()
 		d, err := vm.NewDeployment(taskCtx, s.Client, params, l, s.cfg)
 		if err != nil {
 			s.statuses.Add(taskID, err.Error())
 			cancel()
+			return
 		}
 
 		s.statuses.Add(taskID, "Importing OVA")
@@ -170,6 +173,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 			l.Log("err", errors.Wrap(err, "Could not import OVA/OVF"))
 			s.statuses.Add(taskID, err.Error())
 			cancel()
+			return
 		}
 
 		s.statuses.Add(taskID, "Creating Virtual Machine")
@@ -183,6 +187,8 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		ip, err := vm.WaitForIP(taskCtx, vmx)
 		if err != nil {
 			s.statuses.Add(taskID, err.Error())
+			cancel()
+			return
 		}
 
 		l.Log("msg", "done", "ip", ip)
