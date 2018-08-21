@@ -28,13 +28,6 @@ import (
 )
 
 func main() {
-	// t := status.New()
-	// t.Add("testKey", "TestValue")
-
-	// fmt.Println(t.Get("testKey"))
-	// time.Sleep(time.Second * 8)
-	// fmt.Println(t.Get("testKey"))
-
 	// Load ENV configuration
 	cfg, err := config.Load()
 	if err != nil {
