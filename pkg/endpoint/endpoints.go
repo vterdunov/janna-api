@@ -29,6 +29,8 @@ type Endpoints struct {
 	VMAddRoleEndpoint   endpoint.Endpoint
 
 	RoleListEndpoint endpoint.Endpoint
+
+	TaskInfoEndpoint endpoint.Endpoint
 }
 
 // New returns an Endpoints struct where each endpoint invokes
@@ -74,6 +76,9 @@ func New(s service.Service, logger log.Logger) Endpoints {
 	roleListEndpoint := MakeRolesListEndpoint(s)
 	roleListEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "RoleListEndpoint"))(roleListEndpoint)
 
+	taskInfoEndpoint := MakeTaskInfoEndpoint(s)
+	taskInfoEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "TaskInfoEndpoint"))(taskInfoEndpoint)
+
 	return Endpoints{
 		InfoEndpoint: infoEndpoint,
 
@@ -95,6 +100,8 @@ func New(s service.Service, logger log.Logger) Endpoints {
 		VMAddRoleEndpoint:   vmAddROleEndpoint,
 
 		RoleListEndpoint: roleListEndpoint,
+
+		TaskInfoEndpoint: taskInfoEndpoint,
 	}
 }
 

@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"os"
+	"strconv"
+	"time"
 )
 
 // Config provide configuration to the application
@@ -10,6 +12,7 @@ type Config struct {
 	Protocols protocols
 	Debug     bool
 	VMWare    resources
+	TaskTTL   time.Duration
 }
 
 type resources struct {
@@ -103,6 +106,16 @@ func Load() (*Config, error) {
 		config.VMWare.Host = ""
 	} else {
 		config.VMWare.Host = vmwareHost
+	}
+
+	// Background jobs time to live
+	defaultTTL := time.Minute * 30
+	taskTTL, exist := os.LookupEnv("TASKS_TTL")
+	minutes, err := strconv.Atoi(taskTTL)
+	if err != nil || !exist {
+		config.TaskTTL = defaultTTL
+	} else {
+		config.TaskTTL = time.Minute * time.Duration(minutes)
 	}
 
 	return config, nil

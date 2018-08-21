@@ -19,12 +19,12 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 			return nil, errors.New("could not parse request")
 		}
 
-		logger.Log("msg", "incoming request params", "params", fmt.Sprintf("%+v", req))
+		logger.Log("msg", "incoming request params", "params", req.String())
 
 		// TODO: Try to write middleware that will validate parameters
 		// Minimal validating incoming params
 		if req.Name == "" || req.OVAURL == "" {
-			return VMDeployResponse{JID: 0, Err: errors.New("invalid arguments. Pass reqired arguments")}, nil
+			return VMDeployResponse{JID: "", Err: errors.New("invalid arguments. Pass reqired arguments")}, nil
 		}
 
 		params := &types.VMDeployParams{
@@ -54,10 +54,15 @@ type VMDeployRequest struct {
 	Folder     string            `json:"folder,omitempty"`
 }
 
+func (r *VMDeployRequest) String() string {
+	return fmt.Sprintf("name: %s, ova_url: %s, datastores: %s, networks: %s, datacenter: %s, cluster: %s, folder: %s",
+		r.Name, r.OVAURL, r.Datastores, r.Networks, r.Datacenter, r.Cluster, r.Folder)
+}
+
 // VMDeployResponse fields
 type VMDeployResponse struct {
-	JID int   `json:"job_id,omitempty"`
-	Err error `json:"error,omitempty"`
+	JID string `json:"task_id,omitempty"`
+	Err error  `json:"error,omitempty"`
 }
 
 // Failed implements Failer

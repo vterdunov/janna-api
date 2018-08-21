@@ -42,7 +42,7 @@ cgo-compile: clean
 
 .PHONY: start
 start:
-	@env `cat .env | grep -v ^# | xargs` go run ./cmd/janna/server.go
+	@env `cat .env | grep -v ^# | xargs` go run -race ./cmd/janna/server.go
 
 .PHONY: dc
 dc: dc-clean

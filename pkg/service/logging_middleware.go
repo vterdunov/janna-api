@@ -75,8 +75,8 @@ func (s *loggingMiddleware) VMFind(ctx context.Context, params *types.VMFindPara
 	return s.Service.VMFind(ctx, params)
 }
 
-func (s *loggingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeployParams) (_ int, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+func (s *loggingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeployParams) (_ string, err error) {
+	reqID := ctx.Value(http.ContextKeyRequestXRequestID).(string)
 	defer func() {
 		s.logger.Log(
 			"method", "VMDeploy",
