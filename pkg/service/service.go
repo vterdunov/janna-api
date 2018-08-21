@@ -185,7 +185,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 
 		l.Log("msg", "Powering on...")
 		s.statuses.Add(taskID, "Powering on")
-		if err := vm.PowerON(taskCtx, vmx); err != nil {
+		if err = vm.PowerON(taskCtx, vmx); err != nil {
 			err = errors.Wrap(err, "Could not Virtual Machine power on")
 			l.Log("err", err)
 			s.statuses.Add(taskID, err.Error())
@@ -248,5 +248,5 @@ func (s *service) TaskInfo(ctx context.Context, taskID string) (*Task, error) {
 	if t != nil {
 		return t, nil
 	}
-	return nil, errors.New("not implemented")
+	return nil, errors.New("task not found")
 }

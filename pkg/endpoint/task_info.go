@@ -17,6 +17,10 @@ func MakeTaskInfoEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
 		}
 
 		info, err := s.TaskInfo(ctx, req.TaskID)
+		if err != nil {
+			return TaskInfoResponse{Status: "", Err: err}, nil
+		}
+
 		status := info.Status
 
 		return TaskInfoResponse{Status: status, Err: err}, nil
