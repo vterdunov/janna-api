@@ -276,36 +276,10 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 	os.Chdir(td)
 	for _, item := range info.Items {
 		if err = o.Upload(ctx, lease, item); err != nil {
-			// fmt.Println("--------------------------------")
-			// var fault types.LocalizedMethodFault
-			// fault.LocalizedMessage = "Cancellllled"
-			// lease.Abort(ctx, &fault)
 			return nil, errors.Wrap(err, "Could not upload disks to VMWare")
 		}
 	}
-	// fmt.Println("-------->HERE")
-	// go func() {
-	// fmt.Println("-------->START WATCH CANCEL")
-	// for {
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		fmt.Println("-------->ABORTING TASK")
-	// 		var fault types.LocalizedMethodFault
-	// 		fault.LocalizedMessage = "Cancellllled"
-	// 		if err := lease.Abort(ctx, &fault); err != nil {
-	// 			fmt.Println("!!!!!!!!!!!!!!!!!!!!")
-	// 			fmt.Println(err.Error())
-	// 			fmt.Println("!!!!!!!!!!!!!!!!!!!!")
-	// 		}
-	// 		if err := lease.Complete(ctx); err != nil {
-	// 			fmt.Println("================")
-	// 			fmt.Println(err.Error())
-	// 			fmt.Println("================")
-	// 		}
-	// 		// return
-	// 	}
-	// }
-	// }()
+
 	return &info.Entity, lease.Complete(ctx)
 }
 

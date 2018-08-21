@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -138,6 +137,7 @@ func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*type
 
 func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (string, error) {
 	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
+	// use Endpoint middleware
 
 	// predeploy checks
 	exist, err := vm.IsVMExist(ctx, s.Client, params)
@@ -156,12 +156,15 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	l := log.With(s.logger, "request_id", reqID)
 	l = log.With(l, "vm", params.Name)
 
-	taskCtx, cancel := context.WithTimeout(context.Background(), time.Second*50)
+	taskCtx, cancel := context.WithTimeout(context.Background(), s.cfg.TaskTTL)
 
+	// Start deploy in background
 	go func() {
 		defer cancel()
 		d, err := vm.NewDeployment(taskCtx, s.Client, params, l, s.cfg)
 		if err != nil {
+			err = errors.Wrap(err, "Could not create deployment object")
+			l.Log("err", err)
 			s.statuses.Add(taskID, err.Error())
 			cancel()
 			return
@@ -170,7 +173,8 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		s.statuses.Add(taskID, "Importing OVA")
 		moref, err := d.Import(taskCtx, params.OVAURL)
 		if err != nil {
-			l.Log("err", errors.Wrap(err, "Could not import OVA/OVF"))
+			err = errors.Wrap(err, "Could not import OVA/OVF")
+			l.Log("err", err)
 			s.statuses.Add(taskID, err.Error())
 			cancel()
 			return
@@ -181,17 +185,25 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 
 		l.Log("msg", "Powering on...")
 		s.statuses.Add(taskID, "Powering on")
-		vm.PowerON(taskCtx, vmx)
-
-		s.statuses.Add(taskID, "Waiting for IP")
-		ip, err := vm.WaitForIP(taskCtx, vmx)
-		if err != nil {
+		if err := vm.PowerON(taskCtx, vmx); err != nil {
+			err = errors.Wrap(err, "Could not Virtual Machine power on")
+			l.Log("err", err)
 			s.statuses.Add(taskID, err.Error())
 			cancel()
 			return
 		}
 
-		l.Log("msg", "done", "ip", ip)
+		s.statuses.Add(taskID, "Waiting for IP")
+		ip, err := vm.WaitForIP(taskCtx, vmx)
+		if err != nil {
+			err = errors.Wrap(err, "error getting IP address")
+			l.Log("err", err)
+			s.statuses.Add(taskID, err.Error())
+			cancel()
+			return
+		}
+
+		l.Log("msg", "Successful deploy", "ip", ip)
 		s.statuses.Add(taskID, fmt.Sprintf("Done, IP: %s", ip))
 	}()
 
