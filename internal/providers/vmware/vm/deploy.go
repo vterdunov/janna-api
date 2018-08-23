@@ -32,8 +32,9 @@ import (
 type Deployment struct {
 	Client *vim25.Client
 	Finder *find.Finder
-	ovfx
 	logger log.Logger
+
+	ovfx
 }
 
 type ovfx struct {
@@ -42,9 +43,9 @@ type ovfx struct {
 	Datastore      *object.Datastore
 	ResourcePool   *object.ResourcePool
 	Folder         *object.Folder
-	Cluster        *object.ClusterComputeResource
 	Host           *object.HostSystem
 	NetworkMapping []Network
+	Annotation     string
 }
 
 // Network represent mapping between OVF network and ESXi system network.
@@ -164,7 +165,7 @@ func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 	return lease.Upload(ctx, item, f, opts)
 }
 
-func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
+func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*types.ManagedObjectReference, error) {
 	url, err := url.Parse(OVAURL)
 	if err != nil {
 		return nil, err
@@ -246,11 +247,10 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 		return nil, errors.Wrap(err, "Could not create VM spec")
 	}
 	if spec.Error != nil {
+		o.logger.Log("err", spec.Error[0].LocalizedMessage)
 		return nil, errors.New(spec.Error[0].LocalizedMessage)
 	}
 
-	// TODO: get from params
-	anno := "Test annotations"
 	if anno != "" {
 		switch s := spec.ImportSpec.(type) {
 		case *types.VirtualMachineImportSpec:
@@ -262,11 +262,15 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 
 	lease, err := rp.ImportVApp(ctx, spec.ImportSpec, o.Folder, o.Host)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not import Virtual Appliance")
+		err = errors.Wrap(err, "Could not import Virtual Appliance")
+		o.logger.Log("err", err)
+		return nil, err
 	}
 
 	info, err := lease.Wait(ctx, spec.FileItem)
 	if err != nil {
+		err = errors.Wrap(err, "error while waiting lease")
+		o.logger.Log("err", err)
 		return nil, err
 	}
 
@@ -304,32 +308,59 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) 
 // It choose needed resources
 func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
 	d := newSimpleDeployment(c, params, l)
-	if err := d.chooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
+
+	// step 1. choose Datacenter and folder
+	if err := d.chooseDatacenter(ctx, params.Datacenter); err != nil {
 		err = errors.Wrap(err, "Could not choose datacenter")
 		l.Log("err", err)
 		return nil, err
 	}
 
-	if err := d.chooseDatastore(ctx, cfg.VMWare.DS); err != nil {
-		err = errors.Wrap(err, "Could not choose datastore")
-		l.Log("err", err)
-		return nil, err
+	crl, _ := d.Finder.ClusterComputeResourceList(ctx, "*")
+	fmt.Println("")
+	fmt.Println("ClusterComputeResourceList")
+	fmt.Println("")
+	for _, r := range crl {
+		fmt.Println(r)
 	}
 
-	if err := d.chooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
-		err = errors.Wrap(err, "Could not choose resource pool")
-		l.Log("err", err)
-		return nil, err
+	comrl, _ := d.Finder.ComputeResourceList(ctx, "*")
+	fmt.Println("")
+	fmt.Println("ComputeResourceList")
+	fmt.Println("")
+	for _, r := range comrl {
+		fmt.Println(r)
 	}
 
-	if err := d.chooseFolder(ctx, cfg.VMWare.Folder); err != nil {
+	// hsl, _ := d.Finder.HostSystemList(ctx, "*")
+	// fmt.Println("HostSystemList")
+	// for _, r := range hsl {
+	// 	fmt.Println(r)
+	// }
+
+	fmt.Println("--------------")
+	if err := d.chooseFolder(ctx, params.Folder); err != nil {
 		err = errors.Wrap(err, "Could not choose folder")
 		l.Log("err", err)
 		return nil, err
 	}
 
-	if err := d.chooseHost(ctx, cfg.VMWare.Host); err != nil {
+	// step 2. choose computer resource
+	if err := d.chooseResourcePool(ctx, params.ResourcePool); err != nil {
+		err = errors.Wrap(err, "Could not choose resource pool")
+		l.Log("err", err)
+		return nil, err
+	}
+
+	if err := d.chooseHost(ctx, params.Host); err != nil {
 		err = errors.Wrap(err, "Could not choose host")
+		l.Log("err", err)
+		return nil, err
+	}
+
+	// step 3. Choose datastore
+	if err := d.chooseDatastore(ctx, params.Datastores[0]); err != nil {
+		err = errors.Wrap(err, "Could not choose datastore")
 		l.Log("err", err)
 		return nil, err
 	}

@@ -94,17 +94,13 @@ func Load() (*Config, error) {
 
 	// VMWare VM Folder
 	vmwareFolder, exist := os.LookupEnv("VMWARE_FOLDER")
-	if !exist {
-		config.VMWare.Folder = ""
-	} else {
+	if exist {
 		config.VMWare.Folder = vmwareFolder
 	}
 
 	// VMWare ESXi Host
 	vmwareHost, exist := os.LookupEnv("VMWARE_HOST")
-	if !exist {
-		config.VMWare.Host = ""
-	} else {
+	if exist {
 		config.VMWare.Host = vmwareHost
 	}
 

@@ -171,7 +171,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		}
 
 		s.statuses.Add(taskID, "Importing OVA")
-		moref, err := d.Import(taskCtx, params.OVAURL)
+		moref, err := d.Import(taskCtx, params.OVAURL, params.Annotation)
 		if err != nil {
 			err = errors.Wrap(err, "Could not import OVA/OVF")
 			l.Log("err", err)

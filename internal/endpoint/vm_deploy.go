@@ -28,14 +28,18 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 		}
 
 		params := &types.VMDeployParams{
-			Name:       req.Name,
-			OVAURL:     req.OVAURL,
-			Datastores: req.Datastores,
-			Networks:   req.Networks,
-			Datacenter: req.Datacenter,
-			Cluster:    req.Cluster,
-			Folder:     req.Folder,
+			Name:         req.Name,
+			OVAURL:       req.OVAURL,
+			Datastores:   req.Datastores,
+			Networks:     req.Networks,
+			Datacenter:   req.Datacenter,
+			Host:         req.Host,
+			ResourcePool: req.ResourcePool,
+			Folder:       req.Folder,
+			Annotation:   req.Annotation,
 		}
+
+		params.FillEmptyFields(s.GetConfig())
 
 		jid, err := s.VMDeploy(ctx, params)
 
@@ -45,18 +49,20 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 
 // VMDeployRequest collects the request parameters for the VMDeploy method
 type VMDeployRequest struct {
-	Name       string            `json:"name"`
-	OVAURL     string            `json:"ova_url"`
-	Datastores []string          `json:"datastores,omitempty"`
-	Networks   map[string]string `json:"networks,omitempty"`
-	Datacenter string            `json:"datacenter,omitempty"`
-	Cluster    string            `json:"cluster,omitempty"`
-	Folder     string            `json:"folder,omitempty"`
+	Name         string            `json:"name"`
+	OVAURL       string            `json:"ova_url"`
+	Datastores   []string          `json:"datastores,omitempty"`
+	Networks     map[string]string `json:"networks,omitempty"`
+	Datacenter   string            `json:"datacenter,omitempty"`
+	Host         string            `json:"host,omitempty"`
+	ResourcePool string            `json:"resource_pool,omitempty"`
+	Folder       string            `json:"folder,omitempty"`
+	Annotation   string            `json:"annotation"`
 }
 
 func (r *VMDeployRequest) String() string {
-	return fmt.Sprintf("name: %s, ova_url: %s, datastores: %s, networks: %s, datacenter: %s, cluster: %s, folder: %s",
-		r.Name, r.OVAURL, r.Datastores, r.Networks, r.Datacenter, r.Cluster, r.Folder)
+	return fmt.Sprintf("name: %s, ova_url: %s, datastores: %s, networks: %s, datacenter: %s, host: %s, resource_pool: %s, folder: %s, annotation: %s",
+		r.Name, r.OVAURL, r.Datastores, r.Networks, r.Datacenter, r.Host, r.ResourcePool, r.Folder, r.Annotation)
 }
 
 // VMDeployResponse fields
