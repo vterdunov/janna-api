@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/vterdunov/janna-api/pkg/status"
+	"github.com/vterdunov/janna-api/internal/status"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -20,11 +20,11 @@ import (
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
 
-	"github.com/vterdunov/janna-api/pkg/config"
-	"github.com/vterdunov/janna-api/pkg/endpoint"
-	"github.com/vterdunov/janna-api/pkg/service"
-	"github.com/vterdunov/janna-api/pkg/transport"
-	"github.com/vterdunov/janna-api/pkg/version"
+	"github.com/vterdunov/janna-api/internal/config"
+	"github.com/vterdunov/janna-api/internal/endpoint"
+	"github.com/vterdunov/janna-api/internal/service"
+	"github.com/vterdunov/janna-api/internal/transport"
+	"github.com/vterdunov/janna-api/internal/version"
 )
 
 func main() {
