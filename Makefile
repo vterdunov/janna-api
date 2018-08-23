@@ -9,8 +9,8 @@ PROJECT ?= github.com/vterdunov/${PROG_NAME}
 GO_VARS=CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 GO_LDFLAGS :="
 GO_LDFLAGS += -s -w
-GO_LDFLAGS += -X ${PROJECT}/pkg/version.Commit=${COMMIT}
-GO_LDFLAGS += -X ${PROJECT}/pkg/version.BuildTime=${BUILD_TIME}
+GO_LDFLAGS += -X ${PROJECT}/internal/version.Commit=${COMMIT}
+GO_LDFLAGS += -X ${PROJECT}/internal/version.BuildTime=${BUILD_TIME}
 GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
@@ -43,6 +43,9 @@ cgo-compile: clean
 .PHONY: start
 start:
 	@env `cat .env | grep -v ^# | xargs` go run -race ./cmd/janna/server.go
+
+start-binary: compile
+	@env `cat .env | grep -v ^# | xargs` ./janna-api
 
 .PHONY: dc
 dc: dc-clean
