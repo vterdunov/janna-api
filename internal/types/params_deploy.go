@@ -1,9 +1,6 @@
 package types
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/vterdunov/janna-api/internal/config"
 )
 
@@ -13,12 +10,15 @@ type VMDeployParams struct {
 	OVAURL            string
 	Datacenter        string
 	Folder            string
-	Datastores        []string
 	Annotation        string
 	Networks          map[string]string
 	ComputerResources struct {
 		Path string
 		Type string
+	}
+	Datastores struct {
+		Type  string
+		Names []string
 	}
 }
 
@@ -32,17 +32,4 @@ func (p *VMDeployParams) FillEmptyFields(cfg *config.Config) {
 		p.Folder = cfg.VMWare.Folder
 	}
 
-	if p.Datastores == nil {
-		str := cfg.VMWare.DS
-		ds := []string{}
-		stores := strings.Split(str, ",")
-		for _, store := range stores {
-			ds = append(ds, strings.Trim(store, " "))
-		}
-
-		fmt.Println("--------------------")
-		fmt.Println(ds)
-		fmt.Println("--------------------")
-		p.Datastores = ds
-	}
 }

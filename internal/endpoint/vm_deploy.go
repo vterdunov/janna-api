@@ -32,9 +32,15 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 			OVAURL:     req.OVAURL,
 			Datacenter: req.Datacenter,
 			Folder:     req.Folder,
-			Datastores: req.Datastores,
 			Annotation: req.Annotation,
 			Networks:   req.Networks,
+			Datastores: struct {
+				Type  string
+				Names []string
+			}{
+				Type:  req.Datastores.Type,
+				Names: req.Datastores.Names,
+			},
 			ComputerResources: struct {
 				Path string
 				Type string
@@ -58,10 +64,15 @@ type VMDeployRequest struct {
 	OVAURL            string            `json:"ova_url"`
 	Datacenter        string            `json:"datacenter,omitempty"`
 	Folder            string            `json:"folder,omitempty"`
-	Datastores        []string          `json:"datastores,omitempty"`
 	Annotation        string            `json:"annotation"`
 	Networks          map[string]string `json:"networks,omitempty"`
+	Datastores        `json:"datastores"`
 	ComputerResources `json:"computer_resources"`
+}
+
+type Datastores struct {
+	Type  string
+	Names []string
 }
 
 type ComputerResources struct {

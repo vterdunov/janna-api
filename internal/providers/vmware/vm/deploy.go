@@ -7,12 +7,17 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
+
+	"github.com/vmware/govmomi/vim25/mo"
 
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -41,9 +46,9 @@ type ovfx struct {
 	// Name is the Virtual Machine name
 	Name         string
 	Datacenter   *object.Datacenter
-	Datastore    *object.Datastore
-	ResourcePool *object.ResourcePool
+	Datastore    mo.Reference
 	Folder       *object.Folder
+	ResourcePool *object.ResourcePool
 	Host         *object.HostSystem
 
 	// NetworkMapping defines a mapping from each network inside the OVF
@@ -69,15 +74,56 @@ func (o *Deployment) chooseDatacenter(ctx context.Context, dcName string) error 
 	return nil
 }
 
-func (o *Deployment) chooseDatastore(ctx context.Context, dsName string) error {
-	// TODO: try to use DatastoreCLuster instead of Datastore
-	//   user can choose that want to use
-	ds, err := o.Finder.DatastoreOrDefault(ctx, dsName)
+func (o *Deployment) chooseDatastore(ctx context.Context, dsType string, names []string) error {
+	switch dsType {
+	case "cluster":
+		if err := o.chooseDatastoreWithCluster(ctx, names); err != nil {
+			return err
+		}
+	case "datastore":
+		if err := o.chooseDatastoreWithDatastore(ctx, names); err != nil {
+			return err
+		}
+	default:
+		errors.New("could not recognize datastore type. Possible values are 'cluster', 'datastore'")
+	}
+	return nil
+}
+
+func (o *Deployment) chooseDatastoreWithCluster(ctx context.Context, names []string) error {
+	cluster, err := o.Finder.DatastoreClusterOrDefault(ctx, pickRandom(names))
 	if err != nil {
 		return err
 	}
-	o.Datastore = ds
+
+	cc, err := cluster.Children(ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("------------")
+	for _, c := range cc {
+		spew.Dump(c)
+	}
+	fmt.Println("------------")
+
+	o.Datastore = cluster.Reference()
 	return nil
+}
+
+func (o *Deployment) chooseDatastoreWithDatastore(ctx context.Context, names []string) error {
+	ds, err := o.Finder.DatastoreOrDefault(ctx, pickRandom(names))
+	if err != nil {
+		return err
+	}
+
+	o.Datastore = ds.Reference()
+	return nil
+}
+
+func pickRandom(slice []string) string {
+	rand.Seed(time.Now().Unix())
+	return slice[rand.Intn(len(slice))]
 }
 
 func (o *Deployment) chooseFolder(ctx context.Context, fName string) error {
@@ -290,6 +336,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 	ovfContent := string(b)
 	rp := o.ResourcePool
 	ds := o.Datastore
+	spew.Dump(ds.Reference())
 	spec, err := m.CreateImportSpec(ctx, ovfContent, rp, ds, cisp)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create VM spec")
@@ -379,8 +426,10 @@ func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployPara
 		return nil, err
 	}
 
-	// step 3. Choose datastore
-	if err := d.chooseDatastore(ctx, params.Datastores[0]); err != nil {
+	// step 3. Choose datastore cluster or single datastore
+	dsType := params.Datastores.Type
+	dsNames := params.Datastores.Names
+	if err := d.chooseDatastore(ctx, dsType, dsNames); err != nil {
 		err = errors.Wrap(err, "Could not choose datastore")
 		l.Log("err", err)
 		return nil, err
