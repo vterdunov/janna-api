@@ -15,7 +15,7 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-GOLANGCI_LINTER_VERSION = v1.9.3
+GOLANGCI_LINTER_VERSION = v1.10
 
 all: lint test docker
 

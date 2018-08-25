@@ -15,17 +15,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
-	"github.com/vmware/govmomi/vim25/mo"
-
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/nfc"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
+	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/progress"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
@@ -46,7 +44,7 @@ type ovfx struct {
 	// Name is the Virtual Machine name
 	Name         string
 	Datacenter   *object.Datacenter
-	Datastore    mo.Reference
+	Datastore    *object.Datastore
 	Folder       *object.Folder
 	ResourcePool *object.ResourcePool
 	Host         *object.HostSystem
@@ -91,24 +89,71 @@ func (o *Deployment) chooseDatastore(ctx context.Context, dsType string, names [
 }
 
 func (o *Deployment) chooseDatastoreWithCluster(ctx context.Context, names []string) error {
-	cluster, err := o.Finder.DatastoreClusterOrDefault(ctx, pickRandom(names))
+	pod, err := o.Finder.DatastoreClusterOrDefault(ctx, pickRandom(names))
 	if err != nil {
 		return err
 	}
 
-	cc, err := cluster.Children(ctx)
+	drsEnabled, err := isStorageDRSEnabled(ctx, pod)
+	if err != nil {
+		return err
+	}
+	if !drsEnabled {
+		return errors.New("storage DRS is not enabled on datastore cluster")
+	}
+
+	var vmSpec types.VirtualMachineConfigSpec
+	sps := types.StoragePlacementSpec{
+		Type:         string(types.StoragePlacementSpecPlacementTypeCreate),
+		ResourcePool: types.NewReference(o.ResourcePool.Reference()),
+		PodSelectionSpec: types.StorageDrsPodSelectionSpec{
+			StoragePod: types.NewReference(pod.Reference()),
+		},
+		Folder:     types.NewReference(o.Folder.Reference()),
+		ConfigSpec: &vmSpec,
+	}
+
+	o.logger.Log("msg", "Acquiring Storage DRS recommendations")
+	srm := object.NewStorageResourceManager(o.Client)
+	placement, err := srm.RecommendDatastores(ctx, sps)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("------------")
-	for _, c := range cc {
-		spew.Dump(c)
+	recs := placement.Recommendations
+	if len(recs) < 1 {
+		return errors.New("no storage DRS recommendations were found for the requested action")
 	}
-	fmt.Println("------------")
 
-	o.Datastore = cluster.Reference()
+	spa, ok := recs[0].Action[0].(*types.StoragePlacementAction)
+	if !ok {
+		return errors.New("could not get datastore from DRS recomendation")
+	}
+
+	ds := spa.Destination
+	var mds mo.Datastore
+	err = property.DefaultCollector(o.Client).RetrieveOne(ctx, ds, []string{"name"}, &mds)
+	if err != nil {
+		return err
+	}
+
+	datastore := object.NewDatastore(o.Client, ds)
+
+	o.Datastore = datastore
 	return nil
+}
+
+func isStorageDRSEnabled(ctx context.Context, pod *object.StoragePod) (bool, error) {
+	var props mo.StoragePod
+	if err := pod.Properties(ctx, pod.Reference(), nil, &props); err != nil {
+		return false, err
+	}
+
+	if props.PodStorageDrsEntry == nil {
+		return false, nil
+	}
+
+	return props.PodStorageDrsEntry.StorageDrsConfig.PodConfig.Enabled, nil
 }
 
 func (o *Deployment) chooseDatastoreWithDatastore(ctx context.Context, names []string) error {
@@ -117,7 +162,7 @@ func (o *Deployment) chooseDatastoreWithDatastore(ctx context.Context, names []s
 		return err
 	}
 
-	o.Datastore = ds.Reference()
+	o.Datastore = ds
 	return nil
 }
 
@@ -336,7 +381,6 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 	ovfContent := string(b)
 	rp := o.ResourcePool
 	ds := o.Datastore
-	spew.Dump(ds.Reference())
 	spec, err := m.CreateImportSpec(ctx, ovfContent, rp, ds, cisp)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create VM spec")
