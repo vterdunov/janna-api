@@ -72,25 +72,18 @@ func Load() (*Config, error) {
 	config.VMWare.URL = vmwareURL
 
 	// VMWare Datacenter
-	vmwareDC, ok := os.LookupEnv("VMWARE_DC")
+	vmwareDC, ok := os.LookupEnv("VMWARE_DATACENTER")
 	if !ok {
-		return nil, errors.New("provide 'VMWARE_DC' environment variable")
+		return nil, errors.New("provide 'VMWARE_DATACENTER' environment variable")
 	}
 	config.VMWare.DC = vmwareDC
 
-	// VMWare Datastore
-	vmwareDS, exist := os.LookupEnv("VMWARE_DS")
+	// VMWare Datastores
+	vmwareDS, exist := os.LookupEnv("VMWARE_DATASTORES")
 	if !exist {
-		return nil, errors.New("provide 'VMWARE_DS' environment variable")
+		return nil, errors.New("provide 'VMWARE_DATASTORES' environment variable")
 	}
 	config.VMWare.DS = vmwareDS
-
-	// VMWare Resource Pool
-	vmwareRP, exist := os.LookupEnv("VMWARE_RP")
-	if !exist {
-		return nil, errors.New("provide 'VMWARE_RP' environment variable")
-	}
-	config.VMWare.RP = vmwareRP
 
 	// VMWare VM Folder
 	vmwareFolder, exist := os.LookupEnv("VMWARE_FOLDER")

@@ -28,15 +28,20 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 		}
 
 		params := &types.VMDeployParams{
-			Name:         req.Name,
-			OVAURL:       req.OVAURL,
-			Datastores:   req.Datastores,
-			Networks:     req.Networks,
-			Datacenter:   req.Datacenter,
-			Host:         req.Host,
-			ResourcePool: req.ResourcePool,
-			Folder:       req.Folder,
-			Annotation:   req.Annotation,
+			Name:       req.Name,
+			OVAURL:     req.OVAURL,
+			Datacenter: req.Datacenter,
+			Folder:     req.Folder,
+			Datastores: req.Datastores,
+			Annotation: req.Annotation,
+			Networks:   req.Networks,
+			ComputerResources: struct {
+				Path string
+				Type string
+			}{
+				Path: req.ComputerResources.Path,
+				Type: req.ComputerResources.Type,
+			},
 		}
 
 		params.FillEmptyFields(s.GetConfig())
@@ -49,20 +54,24 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 
 // VMDeployRequest collects the request parameters for the VMDeploy method
 type VMDeployRequest struct {
-	Name         string            `json:"name"`
-	OVAURL       string            `json:"ova_url"`
-	Datastores   []string          `json:"datastores,omitempty"`
-	Networks     map[string]string `json:"networks,omitempty"`
-	Datacenter   string            `json:"datacenter,omitempty"`
-	Host         string            `json:"host,omitempty"`
-	ResourcePool string            `json:"resource_pool,omitempty"`
-	Folder       string            `json:"folder,omitempty"`
-	Annotation   string            `json:"annotation"`
+	Name              string            `json:"name"`
+	OVAURL            string            `json:"ova_url"`
+	Datacenter        string            `json:"datacenter,omitempty"`
+	Folder            string            `json:"folder,omitempty"`
+	Datastores        []string          `json:"datastores,omitempty"`
+	Annotation        string            `json:"annotation"`
+	Networks          map[string]string `json:"networks,omitempty"`
+	ComputerResources `json:"computer_resources"`
+}
+
+type ComputerResources struct {
+	Path string `json:"path"`
+	Type string `json:"type"`
 }
 
 func (r *VMDeployRequest) String() string {
-	return fmt.Sprintf("name: %s, ova_url: %s, datastores: %s, networks: %s, datacenter: %s, host: %s, resource_pool: %s, folder: %s, annotation: %s",
-		r.Name, r.OVAURL, r.Datastores, r.Networks, r.Datacenter, r.Host, r.ResourcePool, r.Folder, r.Annotation)
+	return fmt.Sprintf("name: %s, ova_url: %s, datastores: %s, networks: %s, datacenter: %s, computer_resources: %s, folder: %s, annotation: %s",
+		r.Name, r.OVAURL, r.Datastores, r.Networks, r.Datacenter, r.ComputerResources, r.Folder, r.Annotation)
 }
 
 // VMDeployResponse fields

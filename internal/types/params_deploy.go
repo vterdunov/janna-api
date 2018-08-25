@@ -9,33 +9,27 @@ import (
 
 // VMDeployParams stores user request params
 type VMDeployParams struct {
-	Name         string
-	OVAURL       string
-	Datastores   []string
-	Networks     map[string]string
-	Datacenter   string
-	Host         string
-	ResourcePool string
-	Folder       string
-	Annotation   string
+	Name              string
+	OVAURL            string
+	Datacenter        string
+	Folder            string
+	Datastores        []string
+	Annotation        string
+	Networks          map[string]string
+	ComputerResources struct {
+		Path string
+		Type string
+	}
 }
 
 // FillEmptyFields stores default parameters to the struct if some fields was empty
 func (p *VMDeployParams) FillEmptyFields(cfg *config.Config) {
-	fmt.Println("----->HERE")
-	fmt.Println(p.Datastores)
-	fmt.Println(cfg.VMWare.DS)
-
 	if p.Datacenter == "" {
 		p.Datacenter = cfg.VMWare.DC
 	}
 
 	if p.Folder == "" {
 		p.Folder = cfg.VMWare.Folder
-	}
-
-	if p.ResourcePool == "" {
-		p.ResourcePool = cfg.VMWare.RP
 	}
 
 	if p.Datastores == nil {

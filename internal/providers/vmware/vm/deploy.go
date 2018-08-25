@@ -38,12 +38,16 @@ type Deployment struct {
 }
 
 type ovfx struct {
-	Name           string
-	Datacenter     *object.Datacenter
-	Datastore      *object.Datastore
-	ResourcePool   *object.ResourcePool
-	Folder         *object.Folder
-	Host           *object.HostSystem
+	// Name is the Virtual Machine name
+	Name         string
+	Datacenter   *object.Datacenter
+	Datastore    *object.Datastore
+	ResourcePool *object.ResourcePool
+	Folder       *object.Folder
+	Host         *object.HostSystem
+
+	// NetworkMapping defines a mapping from each network inside the OVF
+	// to a ESXi network. The networks must be presented on the ESXi host.
 	NetworkMapping []Network
 	Annotation     string
 }
@@ -76,15 +80,6 @@ func (o *Deployment) chooseDatastore(ctx context.Context, dsName string) error {
 	return nil
 }
 
-func (o *Deployment) chooseResourcePool(ctx context.Context, rpName string) error {
-	rp, err := o.Finder.ResourcePoolOrDefault(ctx, rpName)
-	if err != nil {
-		return err
-	}
-	o.ResourcePool = rp
-	return nil
-}
-
 func (o *Deployment) chooseFolder(ctx context.Context, fName string) error {
 	folder, err := o.Finder.FolderOrDefault(ctx, fName)
 	if err != nil {
@@ -94,19 +89,71 @@ func (o *Deployment) chooseFolder(ctx context.Context, fName string) error {
 	return nil
 }
 
-func (o *Deployment) chooseHost(ctx context.Context, hName string) error {
-	// Host param is optional. If we use 'nil', then vCenter will choose a host
-	// If you need a specify a cluster then specify a Resource Pool param.
-	if hName == "" {
-		o.Host = nil
-		return nil
+func (o *Deployment) chooseComputerResource(ctx context.Context, resType, path string) error {
+	switch resType {
+	case "host":
+		if err := o.computerResourceWithHost(ctx, path); err != nil {
+			return err
+		}
+	case "cluster":
+		if err := o.computerResourceWithCluster(ctx, path); err != nil {
+			return err
+		}
+	case "rp":
+		if err := o.computerResourceWithResourcePool(ctx, path); err != nil {
+			return err
+		}
+	default:
+		return errors.New("could not recognize computer resource type. Possible types are 'host', 'cluster', 'rp'")
 	}
 
-	host, err := o.Finder.HostSystem(ctx, hName)
+	return nil
+}
+
+func (o *Deployment) computerResourceWithHost(ctx context.Context, path string) error {
+	host, err := o.Finder.HostSystemOrDefault(ctx, path)
 	if err != nil {
 		return err
 	}
+
+	rp, err := host.ResourcePool(ctx)
+	if err != nil {
+		return err
+	}
+
 	o.Host = host
+	o.ResourcePool = rp
+	return nil
+}
+
+func (o *Deployment) computerResourceWithCluster(ctx context.Context, path string) error {
+	cluster, err := o.Finder.ClusterComputeResourceOrDefault(ctx, path)
+	if err != nil {
+		return err
+	}
+
+	rp, err := cluster.ResourcePool(ctx)
+	if err != nil {
+		return err
+	}
+
+	o.ResourcePool = rp
+
+	// vCenter will choose a host
+	o.Host = nil
+	return nil
+}
+
+func (o *Deployment) computerResourceWithResourcePool(ctx context.Context, rpName string) error {
+	rp, err := o.Finder.ResourcePoolOrDefault(ctx, rpName)
+	if err != nil {
+		return err
+	}
+
+	o.ResourcePool = rp
+
+	// vCenter will choose a host
+	o.Host = nil
 	return nil
 }
 
@@ -240,9 +287,10 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 	}
 
 	m := ovf.NewManager(o.Client)
+	ovfContent := string(b)
 	rp := o.ResourcePool
 	ds := o.Datastore
-	spec, err := m.CreateImportSpec(ctx, string(b), rp, ds, cisp)
+	spec, err := m.CreateImportSpec(ctx, ovfContent, rp, ds, cisp)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create VM spec")
 	}
@@ -316,29 +364,6 @@ func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployPara
 		return nil, err
 	}
 
-	crl, _ := d.Finder.ClusterComputeResourceList(ctx, "*")
-	fmt.Println("")
-	fmt.Println("ClusterComputeResourceList")
-	fmt.Println("")
-	for _, r := range crl {
-		fmt.Println(r)
-	}
-
-	comrl, _ := d.Finder.ComputeResourceList(ctx, "*")
-	fmt.Println("")
-	fmt.Println("ComputeResourceList")
-	fmt.Println("")
-	for _, r := range comrl {
-		fmt.Println(r)
-	}
-
-	// hsl, _ := d.Finder.HostSystemList(ctx, "*")
-	// fmt.Println("HostSystemList")
-	// for _, r := range hsl {
-	// 	fmt.Println(r)
-	// }
-
-	fmt.Println("--------------")
 	if err := d.chooseFolder(ctx, params.Folder); err != nil {
 		err = errors.Wrap(err, "Could not choose folder")
 		l.Log("err", err)
@@ -346,14 +371,10 @@ func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployPara
 	}
 
 	// step 2. choose computer resource
-	if err := d.chooseResourcePool(ctx, params.ResourcePool); err != nil {
-		err = errors.Wrap(err, "Could not choose resource pool")
-		l.Log("err", err)
-		return nil, err
-	}
-
-	if err := d.chooseHost(ctx, params.Host); err != nil {
-		err = errors.Wrap(err, "Could not choose host")
+	resType := params.ComputerResources.Type
+	resPath := params.ComputerResources.Path
+	if err := d.chooseComputerResource(ctx, resType, resPath); err != nil {
+		err = errors.Wrap(err, "Could not choose Computer Resource")
 		l.Log("err", err)
 		return nil, err
 	}
@@ -459,10 +480,11 @@ func (p *progressLogger) loopA() {
 		}
 	}
 
-	// TODO: change to using logger
 	if err != nil && err != io.EOF {
 		p.logger.Log("err", errors.Wrap(err, "Error with disks uploading"), "file", p.prefix)
-	} else if called {
+	}
+
+	if called {
 		p.logger.Log("msg", "uploaded", "file", p.prefix)
 	}
 }
