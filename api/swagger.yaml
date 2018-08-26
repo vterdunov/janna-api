@@ -94,7 +94,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/vm_list_response"
-
     post:
       summary: Deploy OVA file
       description: Deploy OVA file
@@ -112,19 +111,13 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/deploy_ova_body'
-
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  task_id:
-                    type: string
-              example:
-                "task_id": "548f65e9-2f79-2af9-8641-be75088f43c5"
+                $ref: "#/components/schemas/with_task_id_response"
 
   /vm/{vm_uuid}:
     get:
@@ -156,6 +149,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/vm_info_response"
+    delete:
+      summary: Delete Virtual Machine
+      tags:
+      - Virtual Machines
+      parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
+      - name: vm_uuid
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          format: uuid
+          minimum: 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                datacenter:
+                  type: string
+                  example: DC1
+      responses:
+        '200':
+          description: OK
 
   /vm/{vm_uuid}/snapshots:
     get:
@@ -636,3 +659,12 @@ components:
       required:
         - name
         - ova_url
+
+    with_task_id_response:
+      type: object
+      properties:
+        task_id:
+          type: string
+          format: uuid
+      example:
+        "task_id": "548f65e9-2f79-2af9-8641-be75088f43c5"

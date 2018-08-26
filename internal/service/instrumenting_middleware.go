@@ -50,6 +50,14 @@ func (mw instrumentingMiddleware) VMInfo(ctx context.Context, params *types.VMIn
 	return mw.Service.VMInfo(ctx, params)
 }
 
+func (mw instrumentingMiddleware) VMDelete(ctx context.Context, params *types.VMDeleteParams) (err error) {
+	defer func(begin time.Time) {
+		lvs := []string{"method", "VMDelete", "success", fmt.Sprint(err == nil)}
+		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mw.Service.VMDelete(ctx, params)
+}
+
 func (mw instrumentingMiddleware) VMFind(ctx context.Context, params *types.VMFindParams) (_ *types.VMFound, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMFind", "success", fmt.Sprint(err == nil)}

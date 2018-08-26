@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -66,6 +67,13 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r.Path("/vm/{vm}").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMInfoEndpoint,
 		decodeVMInfoRequest,
+		encodeResponse,
+		options...,
+	))
+
+	r.Path("/vm/{vm}").Methods("DELETE").Handler(httptransport.NewServer(
+		endpoints.VMDeleteEndpoint,
+		decodeVMDeleteRequest,
 		encodeResponse,
 		options...,
 	))
@@ -168,6 +176,22 @@ func decodeVMInfoRequest(_ context.Context, r *http.Request) (interface{}, error
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]
 	req.Datacenter = r.URL.Query().Get("datacenter")
+
+	return req, nil
+}
+
+func decodeVMDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMDeleteRequest
+
+	vars := mux.Vars(r)
+	req.UUID = vars["vm"]
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
+		// Empty body. No operation.
+	case err != nil:
+		return nil, errors.Wrap(err, "Could not decode request")
+	}
 
 	return req, nil
 }

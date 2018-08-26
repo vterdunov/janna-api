@@ -24,6 +24,9 @@ func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint { // nolint:dupl
 		params.FillEmptyFields(s.GetConfig())
 
 		vm, err := s.VMFind(ctx, params)
+		if err != nil {
+			return VMFindResponse{Err: err}, nil
+		}
 
 		return VMFindResponse{
 			VMFound: &types.VMFound{

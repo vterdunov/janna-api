@@ -14,9 +14,10 @@ type Endpoints struct {
 	HealthzEndpoint endpoint.Endpoint
 	ReadyzEndpoint  endpoint.Endpoint
 
-	VMListEndpoint endpoint.Endpoint
-	VMInfoEndpoint endpoint.Endpoint
-	VMFindEndpoint endpoint.Endpoint
+	VMListEndpoint   endpoint.Endpoint
+	VMInfoEndpoint   endpoint.Endpoint
+	VMDeleteEndpoint endpoint.Endpoint
+	VMFindEndpoint   endpoint.Endpoint
 
 	VMDeployEndpoint endpoint.Endpoint
 
@@ -48,6 +49,9 @@ func New(s service.Service, logger log.Logger) Endpoints {
 
 	vmInfoEndpoint := MakeVMInfoEndpoint(s)
 	vmInfoEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMInfo"))(vmInfoEndpoint)
+
+	vmDeleteEndpoint := MakeVMDeleteEndpoint(s)
+	vmDeleteEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMDelete"))(vmDeleteEndpoint)
 
 	vmFindEndpoint := MakeVMFindEndpoint(s)
 	vmFindEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMFind"))(vmFindEndpoint)
@@ -85,9 +89,10 @@ func New(s service.Service, logger log.Logger) Endpoints {
 		HealthzEndpoint: healthzEndpoint,
 		ReadyzEndpoint:  readyzEndpoint,
 
-		VMListEndpoint: vmListEndpoint,
-		VMInfoEndpoint: vmInfoEndpoint,
-		VMFindEndpoint: vmFindEndpoint,
+		VMListEndpoint:   vmListEndpoint,
+		VMInfoEndpoint:   vmInfoEndpoint,
+		VMDeleteEndpoint: vmDeleteEndpoint,
+		VMFindEndpoint:   vmFindEndpoint,
 
 		VMDeployEndpoint: vmDeployEndpoint,
 

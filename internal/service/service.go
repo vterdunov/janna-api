@@ -39,6 +39,9 @@ type Service interface {
 	// VMInfo provide summary information about VM
 	VMInfo(context.Context, *types.VMInfoParams) (*types.VMSummary, error)
 
+	// VMDelete destroys a Virtual Machine
+	VMDelete(context.Context, *types.VMDeleteParams) error
+
 	// VMFind find VM by path and return its UUID
 	VMFind(context.Context, *types.VMFindParams) (*types.VMFound, error)
 
@@ -129,6 +132,10 @@ func (s *service) VMList(ctx context.Context, params *types.VMListParams) (map[s
 
 func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*types.VMSummary, error) {
 	return vm.Info(ctx, s.Client, params)
+}
+
+func (s *service) VMDelete(ctx context.Context, params *types.VMDeleteParams) error {
+	return vm.Delete(ctx, s.Client, params)
 }
 
 func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*types.VMFound, error) {

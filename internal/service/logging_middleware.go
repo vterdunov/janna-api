@@ -75,6 +75,20 @@ func (s *loggingMiddleware) VMFind(ctx context.Context, params *types.VMFindPara
 	return s.Service.VMFind(ctx, params)
 }
 
+func (s *loggingMiddleware) VMDelete(ctx context.Context, params *types.VMDeleteParams) (err error) {
+	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	defer func() {
+		s.logger.Log(
+			"method", "VMDelete",
+			"request_id", reqID,
+			"params", fmt.Sprintf("%+v", params),
+			"err", err,
+		)
+	}()
+
+	return s.Service.VMDelete(ctx, params)
+}
+
 func (s *loggingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeployParams) (_ string, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID).(string)
 	defer func() {
