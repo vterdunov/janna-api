@@ -22,28 +22,6 @@ func (p *VMListParams) FillEmptyFields(cfg *config.Config) {
 	}
 }
 
-// VMDeployParams stores user request params
-type VMDeployParams struct {
-	Name       string
-	OVAURL     string
-	Datastores []string
-	Networks   map[string]string
-	Datacenter string
-	Cluster    string
-	Folder     string
-}
-
-// FillEmptyFields stores default parameters to the struct if some fields was empty
-func (p *VMDeployParams) FillEmptyFields(cfg *config.Config) {
-	if p.Datacenter == "" {
-		p.Datacenter = cfg.VMWare.DC
-	}
-
-	// TODO: add default datastores
-	// if p.Datastores == nil {
-	// }
-}
-
 // SnapshotCreateParams stores user request params
 type SnapshotCreateParams struct {
 	UUID        string

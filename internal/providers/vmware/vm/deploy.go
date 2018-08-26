@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/url"
 	"os"
 	"path"
@@ -20,7 +21,9 @@ import (
 	"github.com/vmware/govmomi/nfc"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
+	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/progress"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
@@ -32,23 +35,25 @@ import (
 type Deployment struct {
 	Client *vim25.Client
 	Finder *find.Finder
-	ovfx
 	logger log.Logger
+
+	ovfx
 }
 
 type ovfx struct {
+	// Name is the Virtual Machine name
 	Name           string
 	Datacenter     *object.Datacenter
 	Datastore      *object.Datastore
-	ResourcePool   *object.ResourcePool
 	Folder         *object.Folder
-	Cluster        *object.ClusterComputeResource
+	ResourcePool   *object.ResourcePool
 	Host           *object.HostSystem
 	NetworkMapping []Network
+	Annotation     string
 }
 
-// Network represent mapping between OVF network and ESXi system network.
-// 'OVF-VM-Network-Name' -> 'Yours-ESXi-VM-Network-Name'
+// Network defines a mapping from each network inside the OVF
+// to a ESXi network. The networks must be presented on the ESXi host.
 type Network struct {
 	Name    string
 	Network string
@@ -64,24 +69,103 @@ func (o *Deployment) chooseDatacenter(ctx context.Context, dcName string) error 
 	return nil
 }
 
-func (o *Deployment) chooseDatastore(ctx context.Context, dsName string) error {
-	// TODO: try to use DatastoreCLuster instead of Datastore
-	//   user can choose that want to use
-	ds, err := o.Finder.DatastoreOrDefault(ctx, dsName)
+func (o *Deployment) chooseDatastore(ctx context.Context, dsType string, names []string) error {
+	switch dsType {
+	case "cluster":
+		if err := o.chooseDatastoreWithCluster(ctx, names); err != nil {
+			return err
+		}
+	case "datastore":
+		if err := o.chooseDatastoreWithDatastore(ctx, names); err != nil {
+			return err
+		}
+	default:
+		errors.New("could not recognize datastore type. Possible values are 'cluster', 'datastore'")
+	}
+	return nil
+}
+
+func (o *Deployment) chooseDatastoreWithCluster(ctx context.Context, names []string) error {
+	pod, err := o.Finder.DatastoreClusterOrDefault(ctx, pickRandom(names))
 	if err != nil {
 		return err
 	}
+
+	drsEnabled, err := isStorageDRSEnabled(ctx, pod)
+	if err != nil {
+		return err
+	}
+	if !drsEnabled {
+		return errors.New("storage DRS is not enabled on datastore cluster")
+	}
+
+	var vmSpec types.VirtualMachineConfigSpec
+	sps := types.StoragePlacementSpec{
+		Type:         string(types.StoragePlacementSpecPlacementTypeCreate),
+		ResourcePool: types.NewReference(o.ResourcePool.Reference()),
+		PodSelectionSpec: types.StorageDrsPodSelectionSpec{
+			StoragePod: types.NewReference(pod.Reference()),
+		},
+		Folder:     types.NewReference(o.Folder.Reference()),
+		ConfigSpec: &vmSpec,
+	}
+
+	o.logger.Log("msg", "Acquiring Storage DRS recommendations")
+	srm := object.NewStorageResourceManager(o.Client)
+	placement, err := srm.RecommendDatastores(ctx, sps)
+	if err != nil {
+		return err
+	}
+
+	recs := placement.Recommendations
+	if len(recs) < 1 {
+		return errors.New("no storage DRS recommendations were found for the requested action")
+	}
+
+	spa, ok := recs[0].Action[0].(*types.StoragePlacementAction)
+	if !ok {
+		return errors.New("could not get datastore from DRS recomendation")
+	}
+
+	ds := spa.Destination
+	var mds mo.Datastore
+	err = property.DefaultCollector(o.Client).RetrieveOne(ctx, ds, []string{"name"}, &mds)
+	if err != nil {
+		return err
+	}
+
+	datastore := object.NewDatastore(o.Client, ds)
+
+	o.Datastore = datastore
+	return nil
+}
+
+func isStorageDRSEnabled(ctx context.Context, pod *object.StoragePod) (bool, error) {
+	var props mo.StoragePod
+	if err := pod.Properties(ctx, pod.Reference(), nil, &props); err != nil {
+		return false, err
+	}
+
+	if props.PodStorageDrsEntry == nil {
+		return false, nil
+	}
+
+	return props.PodStorageDrsEntry.StorageDrsConfig.PodConfig.Enabled, nil
+}
+
+func (o *Deployment) chooseDatastoreWithDatastore(ctx context.Context, names []string) error {
+	ds, err := o.Finder.DatastoreOrDefault(ctx, pickRandom(names))
+	if err != nil {
+		return err
+	}
+
 	o.Datastore = ds
 	return nil
 }
 
-func (o *Deployment) chooseResourcePool(ctx context.Context, rpName string) error {
-	rp, err := o.Finder.ResourcePoolOrDefault(ctx, rpName)
-	if err != nil {
-		return err
-	}
-	o.ResourcePool = rp
-	return nil
+func pickRandom(slice []string) string {
+	rand.Seed(time.Now().Unix())
+	return slice[rand.Intn(len(slice))]
 }
 
 func (o *Deployment) chooseFolder(ctx context.Context, fName string) error {
@@ -93,19 +177,71 @@ func (o *Deployment) chooseFolder(ctx context.Context, fName string) error {
 	return nil
 }
 
-func (o *Deployment) chooseHost(ctx context.Context, hName string) error {
-	// Host param is optional. If we use 'nil', then vCenter will choose a host
-	// If you need a specify a cluster then specify a Resource Pool param.
-	if hName == "" {
-		o.Host = nil
-		return nil
+func (o *Deployment) chooseComputerResource(ctx context.Context, resType, path string) error {
+	switch resType {
+	case "host":
+		if err := o.computerResourceWithHost(ctx, path); err != nil {
+			return err
+		}
+	case "cluster":
+		if err := o.computerResourceWithCluster(ctx, path); err != nil {
+			return err
+		}
+	case "rp":
+		if err := o.computerResourceWithResourcePool(ctx, path); err != nil {
+			return err
+		}
+	default:
+		return errors.New("could not recognize computer resource type. Possible types are 'host', 'cluster', 'rp'")
 	}
 
-	host, err := o.Finder.HostSystem(ctx, hName)
+	return nil
+}
+
+func (o *Deployment) computerResourceWithHost(ctx context.Context, path string) error {
+	host, err := o.Finder.HostSystemOrDefault(ctx, path)
 	if err != nil {
 		return err
 	}
+
+	rp, err := host.ResourcePool(ctx)
+	if err != nil {
+		return err
+	}
+
 	o.Host = host
+	o.ResourcePool = rp
+	return nil
+}
+
+func (o *Deployment) computerResourceWithCluster(ctx context.Context, path string) error {
+	cluster, err := o.Finder.ClusterComputeResourceOrDefault(ctx, path)
+	if err != nil {
+		return err
+	}
+
+	rp, err := cluster.ResourcePool(ctx)
+	if err != nil {
+		return err
+	}
+
+	o.ResourcePool = rp
+
+	// vCenter will choose a host
+	o.Host = nil
+	return nil
+}
+
+func (o *Deployment) computerResourceWithResourcePool(ctx context.Context, rpName string) error {
+	rp, err := o.Finder.ResourcePoolOrDefault(ctx, rpName)
+	if err != nil {
+		return err
+	}
+
+	o.ResourcePool = rp
+
+	// vCenter will choose a host
+	o.Host = nil
 	return nil
 }
 
@@ -164,7 +300,7 @@ func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 	return lease.Upload(ctx, item, f, opts)
 }
 
-func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedObjectReference, error) {
+func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*types.ManagedObjectReference, error) {
 	url, err := url.Parse(OVAURL)
 	if err != nil {
 		return nil, err
@@ -239,18 +375,18 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 	}
 
 	m := ovf.NewManager(o.Client)
+	ovfContent := string(b)
 	rp := o.ResourcePool
 	ds := o.Datastore
-	spec, err := m.CreateImportSpec(ctx, string(b), rp, ds, cisp)
+	spec, err := m.CreateImportSpec(ctx, ovfContent, rp, ds, cisp)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create VM spec")
 	}
 	if spec.Error != nil {
+		o.logger.Log("err", spec.Error[0].LocalizedMessage)
 		return nil, errors.New(spec.Error[0].LocalizedMessage)
 	}
 
-	// TODO: get from params
-	anno := "Test annotations"
 	if anno != "" {
 		switch s := spec.ImportSpec.(type) {
 		case *types.VirtualMachineImportSpec:
@@ -262,11 +398,15 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string) (*types.ManagedO
 
 	lease, err := rp.ImportVApp(ctx, spec.ImportSpec, o.Folder, o.Host)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not import Virtual Appliance")
+		err = errors.Wrap(err, "Could not import Virtual Appliance")
+		o.logger.Log("err", err)
+		return nil, err
 	}
 
 	info, err := lease.Wait(ctx, spec.FileItem)
 	if err != nil {
+		err = errors.Wrap(err, "error while waiting lease")
+		o.logger.Log("err", err)
 		return nil, err
 	}
 
@@ -304,32 +444,34 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) 
 // It choose needed resources
 func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
 	d := newSimpleDeployment(c, params, l)
-	if err := d.chooseDatacenter(ctx, cfg.VMWare.DC); err != nil {
+
+	// step 1. choose Datacenter and folder
+	if err := d.chooseDatacenter(ctx, params.Datacenter); err != nil {
 		err = errors.Wrap(err, "Could not choose datacenter")
 		l.Log("err", err)
 		return nil, err
 	}
 
-	if err := d.chooseDatastore(ctx, cfg.VMWare.DS); err != nil {
-		err = errors.Wrap(err, "Could not choose datastore")
-		l.Log("err", err)
-		return nil, err
-	}
-
-	if err := d.chooseResourcePool(ctx, cfg.VMWare.RP); err != nil {
-		err = errors.Wrap(err, "Could not choose resource pool")
-		l.Log("err", err)
-		return nil, err
-	}
-
-	if err := d.chooseFolder(ctx, cfg.VMWare.Folder); err != nil {
+	if err := d.chooseFolder(ctx, params.Folder); err != nil {
 		err = errors.Wrap(err, "Could not choose folder")
 		l.Log("err", err)
 		return nil, err
 	}
 
-	if err := d.chooseHost(ctx, cfg.VMWare.Host); err != nil {
-		err = errors.Wrap(err, "Could not choose host")
+	// step 2. choose computer resource
+	resType := params.ComputerResources.Type
+	resPath := params.ComputerResources.Path
+	if err := d.chooseComputerResource(ctx, resType, resPath); err != nil {
+		err = errors.Wrap(err, "Could not choose Computer Resource")
+		l.Log("err", err)
+		return nil, err
+	}
+
+	// step 3. Choose datastore cluster or single datastore
+	dsType := params.Datastores.Type
+	dsNames := params.Datastores.Names
+	if err := d.chooseDatastore(ctx, dsType, dsNames); err != nil {
+		err = errors.Wrap(err, "Could not choose datastore")
 		l.Log("err", err)
 		return nil, err
 	}
@@ -428,10 +570,11 @@ func (p *progressLogger) loopA() {
 		}
 	}
 
-	// TODO: change to using logger
 	if err != nil && err != io.EOF {
 		p.logger.Log("err", errors.Wrap(err, "Error with disks uploading"), "file", p.prefix)
-	} else if called {
+	}
+
+	if called {
 		p.logger.Log("msg", "uploaded", "file", p.prefix)
 	}
 }

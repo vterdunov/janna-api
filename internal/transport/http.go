@@ -131,8 +131,8 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		options...,
 	))
 
-	// Statuses
-	r.Path("/status/{taskID}").Methods("GET").Handler(httptransport.NewServer(
+	// Tasks statuses
+	r.Path("/tasks/{taskID}").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.TaskInfoEndpoint,
 		decodeTaskInfoRequest,
 		encodeResponse,
