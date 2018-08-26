@@ -14,3 +14,4 @@ vendor/**/*
 !vendor/**/LICENSE*
 !vendor/**/COPYING*
 vendor/**/*_test.go
+api/openapi.json

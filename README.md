@@ -32,4 +32,4 @@ make dc
 ```
 
 ## API docs
-See [swagger file](https://github.com/vterdunov/janna-api/blob/master/api/swagger.yaml)
+See [OpenAPI file](https://github.com/vterdunov/janna-api/blob/master/api/openapi.yaml)

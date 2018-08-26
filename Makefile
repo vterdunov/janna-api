@@ -16,8 +16,9 @@ GO_LDFLAGS +="
 TAG ?= $(COMMIT)
 
 GOLANGCI_LINTER_VERSION = v1.10
+OPENAPI_GENERATOR_CLI_VERSION = v3.2.2
 
-all: lint test docker
+all: lint test api-doc-convert docker
 
 .PHONY: docker
 docker:
@@ -66,3 +67,29 @@ lint:
 .PHONY: clean
 clean:
 	@rm -f ${PROG_NAME}
+
+api-doc-validate:
+	@docker run \
+		--rm \
+		--entrypoint='' \
+		-u $(shell id -u):$(shell id -g) \
+		-v $(CURDIR):/local \
+			openapitools/openapi-generator-cli:$(OPENAPI_GENERATOR_CLI_VERSION) \
+			/bin/sh -c '\
+				java -jar /opt/openapi-generator-cli/openapi-generator-cli.jar \
+					validate \
+					--input-spec /local/api/openapi.yaml'
+
+api-doc-convert:
+	@docker run \
+		--rm \
+		--entrypoint='' \
+		-u $(shell id -u):$(shell id -g) \
+		-v $(CURDIR):/local \
+			openapitools/openapi-generator-cli:$(OPENAPI_GENERATOR_CLI_VERSION) \
+			/bin/sh -c '\
+				java -jar /opt/openapi-generator-cli/openapi-generator-cli.jar \
+					generate \
+					--input-spec /local/api/openapi.yaml \
+					--generator-name openapi --output /tmp/api/ && \
+				cp /tmp/api/openapi.json /local/api'
