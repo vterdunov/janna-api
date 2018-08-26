@@ -580,4 +580,3 @@ components:
       required:
         - name
         - ova_url
-        - datacenter

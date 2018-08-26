@@ -19,10 +19,7 @@ type resources struct {
 	URL      string
 	Insecure bool
 	DC       string
-	DS       string
-	RP       string
 	Folder   string
-	Host     string
 }
 
 type protocols struct {
@@ -78,23 +75,10 @@ func Load() (*Config, error) {
 	}
 	config.VMWare.DC = vmwareDC
 
-	// VMWare Datastores
-	vmwareDS, exist := os.LookupEnv("VMWARE_DATASTORES")
-	if !exist {
-		return nil, errors.New("provide 'VMWARE_DATASTORES' environment variable")
-	}
-	config.VMWare.DS = vmwareDS
-
 	// VMWare VM Folder
 	vmwareFolder, exist := os.LookupEnv("VMWARE_FOLDER")
 	if exist {
 		config.VMWare.Folder = vmwareFolder
-	}
-
-	// VMWare ESXi Host
-	vmwareHost, exist := os.LookupEnv("VMWARE_HOST")
-	if exist {
-		config.VMWare.Host = vmwareHost
 	}
 
 	// Background jobs time to live
