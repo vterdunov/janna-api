@@ -65,6 +65,11 @@ paths:
       tags:
       - Virtual Machines
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: datacenter
         in: query
         description: Datacenter name
@@ -95,6 +100,12 @@ paths:
       description: Deploy OVA file
       tags:
       - Virtual Machines
+      parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
@@ -121,6 +132,11 @@ paths:
       tags:
       - Virtual Machines
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: vm_uuid
         in: path
         required: true
@@ -148,6 +164,11 @@ paths:
       - Virtual Machines
       - Snapshots
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: vm_uuid
         in: path
         required: true
@@ -173,6 +194,11 @@ paths:
       - Virtual Machines
       - Snapshots
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: vm_uuid
         in: path
         required: true
@@ -206,6 +232,11 @@ paths:
       - Virtual Machines
       - Snapshots
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: vm_uuid
         in: path
         required: true
@@ -232,6 +263,11 @@ paths:
       - Virtual Machines
       - Snapshots
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: vm_uuid
         in: path
         required: true
@@ -258,6 +294,11 @@ paths:
       - Virtual Machines
       - Snapshots
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: vm_uuid
         in: path
         required: true
@@ -284,6 +325,11 @@ paths:
       - Virtual Machines
       - Permissions
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: vm_uuid
         in: path
         required: true
@@ -314,8 +360,8 @@ paths:
       tags:
       - Permissions
       parameters:
-      - in: header
-        name: X-Request-ID
+      - name: X-Request-ID
+        in: header
         schema:
           type: string
           format: uuid
@@ -333,6 +379,11 @@ paths:
       tags:
       - Find
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: path
         in: query
         required: true
@@ -366,6 +417,11 @@ paths:
       tags:
       - Tasks
       parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
       - name: task_id
         in: path
         required: true
