@@ -42,21 +42,18 @@ type Deployment struct {
 
 type ovfx struct {
 	// Name is the Virtual Machine name
-	Name         string
-	Datacenter   *object.Datacenter
-	Datastore    *object.Datastore
-	Folder       *object.Folder
-	ResourcePool *object.ResourcePool
-	Host         *object.HostSystem
-
-	// NetworkMapping defines a mapping from each network inside the OVF
-	// to a ESXi network. The networks must be presented on the ESXi host.
+	Name           string
+	Datacenter     *object.Datacenter
+	Datastore      *object.Datastore
+	Folder         *object.Folder
+	ResourcePool   *object.ResourcePool
+	Host           *object.HostSystem
 	NetworkMapping []Network
 	Annotation     string
 }
 
-// Network represent mapping between OVF network and ESXi system network.
-// 'OVF-VM-Network-Name' -> 'Yours-ESXi-VM-Network-Name'
+// Network defines a mapping from each network inside the OVF
+// to a ESXi network. The networks must be presented on the ESXi host.
 type Network struct {
 	Name    string
 	Network string

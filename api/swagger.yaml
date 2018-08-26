@@ -90,6 +90,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/vm_list_response"
 
+    post:
+      summary: "Deploy OVA file."
+      description: Returns VMs list from default directory.
+      tags:
+      - Virtual Machines
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/deploy_ova_body'
+            examples:
+              full:
+                summary: full example
+                value:
+                  name: janna-VM
+
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+              example:
+                "task_id": "548f65e9-2f79-2af9-8641-be75088f43c5"
+
   /vm/{vm_uuid}:
     get:
       summary: "Get information about VM"
@@ -335,6 +365,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/find_vm_error_response"
 
+  /status/{task_id}:
+    get:
+      summary: "Get information about backgroud task"
+      tags:
+      - Tasks
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+          example: 6ef18379-6220-6f7e-30ca-1d1c20a3cc97
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json::
+              schema:
+                $ref: "#/components/schemas/task_id_response"
+
 components:
   schemas:
     build_info_response:
@@ -469,3 +521,68 @@ components:
           "description":
             "label": "Virtual machine user (sample)"
             "summary": "Provides virtual machine interaction permissions"
+
+    task_id_response:
+      type: object
+      properties:
+        task_id:
+          type: string
+      example:
+        "status": "Starting deploy"
+
+    deploy_ova_body:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Janna VM
+        ova_url:
+          type: string
+          format: uri
+          example: https://stable.release.core-os.net/amd64-usr/current/coreos_production_vmware_ova.ova
+        datacenter:
+          type: string
+          example: DC1
+        folder:
+          type: string
+          example: Dev VMs
+        annotation:
+          type: string
+          example: This is an annotation of the deployed VM
+        datastores:
+          type: object
+          properties:
+            type:
+              type: string
+              description: "Storage type. Possible values: 'cluster', 'datastore'. If 'cluster' type was chosen then Janna try to get DRS recommendation to choose proper 'datastore'."
+              example: cluster
+            names:
+              type: array
+              items:
+                type: string
+                description: List of storages. One of them will be chosen randomly.
+                example: DatastoreCluster1
+          required:
+            - type
+        networks:
+          type: object
+          description: Network defines a mapping from each network inside the OVF to a ESXi network. The networks must be presented on the ESXi host.
+          example:
+            "VM Network": "esxi-net1"
+        computer_resources:
+          type: object
+          properties:
+            type:
+              type: string
+              description: "Computer resource type. Possible values: 'host', 'cluster', 'rp'."
+              example: cluster
+            path:
+              type: string
+              description: Name or path to a computer resource. The parameter Can be omitted, then Janna will try to get default computer resource.
+              example: my-esxi-cluster
+          required:
+            - type
+      required:
+        - name
+        - ova_url
+        - datacenter
