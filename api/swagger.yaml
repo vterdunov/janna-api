@@ -167,6 +167,15 @@ paths:
           type: string
           format: uuid
           minimum: 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                datacenter:
+                  type: string
+                  example: DC1
       responses:
         '200':
           description: OK

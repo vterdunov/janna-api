@@ -19,7 +19,7 @@ func Delete(ctx context.Context, client *vim25.Client, params *jt.VMDeleteParams
 		return errors.Wrap(err, "could not power off Virtual Machine before destroying")
 	}
 
-	if err := task.Wait(ctx); err != nil {
+	if err = task.Wait(ctx); err != nil {
 		return errors.Wrap(err, "could not power off Virtual Machine before destroying")
 	}
 
