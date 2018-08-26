@@ -11,7 +11,7 @@ docker run -d --name=janna-api --env-file=envfile vterdunov/janna-api:<tag>
 
 ## Configuration
 Janna accept environment variables as its config.  
-See available environment variables examples in [.env.example](https://github.com/vterdunov/janna-api/blob/master/.env.example). E.g.:
+See available environment variables examples in [.env.example](https://github.com/vterdunov/janna-api/blob/master/config/.env.example). E.g.:
 ```bash
 export VMWARE_URL=username:password@vsphere.address.com
 export VMWARE_INSECURE=1
