@@ -15,7 +15,8 @@ See available environment variables examples in [.env.example](https://github.co
 ```bash
 export VMWARE_URL=username:password@vsphere.address.com
 export VMWARE_INSECURE=1
-export VMWARE_DC=DC1
+export VMWARE_DATACENTER=DC1
+export VMWARE_FOLDER=DevVMs
 ```
 
 ## Development
@@ -30,5 +31,5 @@ or using Docker and Docker Compose
 make dc
 ```
 
-## API
+## API docs
 See [swagger file](https://github.com/vterdunov/janna-api/blob/master/api/swagger.yaml)
