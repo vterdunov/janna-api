@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -69,6 +70,9 @@ type Service interface {
 	// TasksList(context.Context) (*status.Tasks, error)
 
 	TaskInfo(context.Context, string) (*Task, error)
+
+	// Reads Open API spec file
+	OpenAPI(context.Context) ([]byte, error)
 }
 
 // service implements our Service
@@ -256,4 +260,12 @@ func (s *service) TaskInfo(ctx context.Context, taskID string) (*Task, error) {
 		return t, nil
 	}
 	return nil, errors.New("task not found")
+}
+
+func (s *service) OpenAPI(_ context.Context) ([]byte, error) {
+	spec, err := ioutil.ReadFile("./api/openapi.json")
+	if err != nil {
+		return nil, err
+	}
+	return spec, err
 }

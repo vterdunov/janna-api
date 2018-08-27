@@ -147,6 +147,13 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		options...,
 	))
 
+	r.Path("/openapi").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.OpenAPIEndpoint,
+		decodeOpenAPIRequest,
+		encodeOpenAPIResponse,
+		options...,
+	))
+
 	return r
 }
 
@@ -299,6 +306,10 @@ func decodeRoleListRequest(_ context.Context, r *http.Request) (interface{}, err
 	return req, nil
 }
 
+func decodeOpenAPIRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
 // common response decoder
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	// check business logic errors
@@ -324,4 +335,22 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})
+}
+
+func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	res, ok := response.(endpoint.OpenAPIResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not get OpenAPI data"), w)
+	}
+
+	w.Write(res.Spec)
+	return nil
 }

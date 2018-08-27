@@ -10,9 +10,9 @@ RUN make compile
 
 FROM scratch
 
-ARG PORT=8080
-ENV PORT=${PORT}
+ENV PORT=8080
 
 CMD ["/janna-api"]
 
+COPY api/openapi.json /janna-api/api/openapi.json
 COPY --from=build-stage /go/src/github.com/vterdunov/janna-api/janna-api /janna-api
