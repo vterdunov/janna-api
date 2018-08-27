@@ -72,7 +72,7 @@ type Service interface {
 	TaskInfo(context.Context, string) (*Task, error)
 
 	// Reads Open API spec file
-	OpenAPI() ([]byte, error)
+	OpenAPI(context.Context) ([]byte, error)
 }
 
 // service implements our Service
@@ -262,7 +262,7 @@ func (s *service) TaskInfo(ctx context.Context, taskID string) (*Task, error) {
 	return nil, errors.New("task not found")
 }
 
-func (s *service) OpenAPI() ([]byte, error) {
+func (s *service) OpenAPI(_ context.Context) ([]byte, error) {
 	spec, err := ioutil.ReadFile("./api/openapi.json")
 	if err != nil {
 		return nil, err

@@ -199,3 +199,16 @@ func (s *loggingMiddleware) RoleList(ctx context.Context) (_ []types.Role, err e
 
 	return s.Service.RoleList(ctx)
 }
+
+func (s *loggingMiddleware) OpenAPI(ctx context.Context) (_ []byte, err error) {
+	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	defer func() {
+		s.logger.Log(
+			"request_id", reqID,
+			"method", "OpenAPI",
+			"err", err,
+		)
+	}()
+
+	return s.Service.OpenAPI(ctx)
+}

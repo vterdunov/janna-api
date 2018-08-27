@@ -10,7 +10,7 @@ import (
 // MakeOpenAPIEndpoint returns an endpoint via the passed service
 func MakeOpenAPIEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		spec, err := s.OpenAPI()
+		spec, err := s.OpenAPI(ctx)
 		if err != nil {
 			return OpenAPIResponse{Spec: nil, Err: err}, err
 		}

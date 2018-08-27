@@ -121,3 +121,11 @@ func (mw instrumentingMiddleware) RoleList(ctx context.Context) (_ []types.Role,
 	}(time.Now())
 	return mw.Service.RoleList(ctx)
 }
+
+func (mw instrumentingMiddleware) OpenAPI(ctx context.Context) (_ []byte, err error) {
+	defer func(begin time.Time) {
+		lvs := []string{"method", "OpenAPI", "success", fmt.Sprint(err == nil)}
+		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mw.Service.OpenAPI(ctx)
+}
