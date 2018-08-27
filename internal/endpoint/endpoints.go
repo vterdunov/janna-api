@@ -32,6 +32,8 @@ type Endpoints struct {
 	RoleListEndpoint endpoint.Endpoint
 
 	TaskInfoEndpoint endpoint.Endpoint
+
+	OpenAPIEndpoint endpoint.Endpoint
 }
 
 // New returns an Endpoints struct where each endpoint invokes
@@ -83,6 +85,9 @@ func New(s service.Service, logger log.Logger) Endpoints {
 	taskInfoEndpoint := MakeTaskInfoEndpoint(s)
 	taskInfoEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "TaskInfoEndpoint"))(taskInfoEndpoint)
 
+	openAPIEndpoint := MakeOpenAPIEndpoint(s)
+	openAPIEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "OpenAPIEndpoint"))(openAPIEndpoint)
+
 	return Endpoints{
 		InfoEndpoint: infoEndpoint,
 
@@ -107,6 +112,8 @@ func New(s service.Service, logger log.Logger) Endpoints {
 		RoleListEndpoint: roleListEndpoint,
 
 		TaskInfoEndpoint: taskInfoEndpoint,
+
+		OpenAPIEndpoint: openAPIEndpoint,
 	}
 }
 

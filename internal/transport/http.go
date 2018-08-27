@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -144,6 +145,13 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		endpoints.TaskInfoEndpoint,
 		decodeTaskInfoRequest,
 		encodeResponse,
+		options...,
+	))
+
+	r.Path("/openapi").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.OpenAPIEndpoint,
+		decodeOpenAPIRequest,
+		encodeFileResponse,
 		options...,
 	))
 
@@ -299,6 +307,10 @@ func decodeRoleListRequest(_ context.Context, r *http.Request) (interface{}, err
 	return req, nil
 }
 
+func decodeOpenAPIRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
 // common response decoder
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	// check business logic errors
@@ -324,4 +336,17 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})
+}
+
+func encodeFileResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	z := buf.
+		fmt.Println(z)
+
+	// w.Write(b)
+
+	return nil
 }
