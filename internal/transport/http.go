@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -151,7 +150,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r.Path("/openapi").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.OpenAPIEndpoint,
 		decodeOpenAPIRequest,
-		encodeFileResponse,
+		encodeOpenAPIResponse,
 		options...,
 	))
 
@@ -338,15 +337,20 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	})
 }
 
-func encodeFileResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
+func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeError(ctx, e.Failed(), w)
+		return nil
 	}
-	z := buf.
-		fmt.Println(z)
 
-	// w.Write(b)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
+	res, ok := response.(endpoint.OpenAPIResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not get OpenAPI data"), w)
+	}
+
+	w.Write(res.Spec)
 	return nil
 }
