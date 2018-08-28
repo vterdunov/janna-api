@@ -92,15 +92,15 @@ func New(
 	statuses Statuser,
 ) Service {
 	// Build the layers of the service "onion" from the inside out.
-	svc := NewSimpleService(logger, cfg, client, statuses)
+	svc := newSimpleService(logger, cfg, client, statuses)
 	svc = NewLoggingService(log.With(logger, "component", "core"))(svc)
 	svc = NewInstrumentingService(duration)(svc)
 
 	return svc
 }
 
-// NewSimpleService creates a new instance of the Service with minimal preconfigured options
-func NewSimpleService(
+// newSimpleService creates a new instance of the Service with minimal preconfigured options
+func newSimpleService(
 	logger log.Logger,
 	cfg *config.Config,
 	client *vim25.Client,
