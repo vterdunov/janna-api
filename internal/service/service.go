@@ -161,7 +161,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	}
 
 	taskID := uuid.NewUUID()
-	s.statuses.Add(taskID, "Start deploy")
+	s.statuses.Add(taskID, map[string]string{"stage": "Start deploy"})
 
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	l := log.With(s.logger, "request_id", reqID)
@@ -176,46 +176,49 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		if err != nil {
 			err = errors.Wrap(err, "Could not create deployment object")
 			l.Log("err", err)
-			s.statuses.Add(taskID, err.Error())
+			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
 			cancel()
 			return
 		}
 
-		s.statuses.Add(taskID, "Importing OVA")
+		s.statuses.Add(taskID, map[string]string{"stage": "Importing OVA"})
 		moref, err := d.Import(taskCtx, params.OVAURL, params.Annotation)
 		if err != nil {
 			err = errors.Wrap(err, "Could not import OVA/OVF")
 			l.Log("err", err)
-			s.statuses.Add(taskID, err.Error())
+			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
 			cancel()
 			return
 		}
 
-		s.statuses.Add(taskID, "Creating Virtual Machine")
+		s.statuses.Add(taskID, map[string]string{"error": "Creating Virtual Machine"})
 		vmx := object.NewVirtualMachine(s.Client, *moref)
 
 		l.Log("msg", "Powering on...")
-		s.statuses.Add(taskID, "Powering on")
+		s.statuses.Add(taskID, map[string]string{"error": "Powering on"})
 		if err = vm.PowerON(taskCtx, vmx); err != nil {
 			err = errors.Wrap(err, "Could not Virtual Machine power on")
 			l.Log("err", err)
-			s.statuses.Add(taskID, err.Error())
+			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
 			cancel()
 			return
 		}
 
-		s.statuses.Add(taskID, "Waiting for IP")
+		s.statuses.Add(taskID, map[string]string{"stage": "Waiting for IP"})
 		ip, err := vm.WaitForIP(taskCtx, vmx)
 		if err != nil {
 			err = errors.Wrap(err, "error getting IP address")
 			l.Log("err", err)
-			s.statuses.Add(taskID, err.Error())
+			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
 			cancel()
 			return
 		}
 
 		l.Log("msg", "Successful deploy", "ip", ip)
-		s.statuses.Add(taskID, fmt.Sprintf("Done, IP: %s", ip))
+		s.statuses.Add(taskID, map[string]string{
+			"stage": "Successful deploy",
+			"ip":    ip,
+		})
 	}()
 
 	return taskID, nil

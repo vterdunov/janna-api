@@ -34,7 +34,7 @@ func New() *Tasks {
 }
 
 // Add a task to in-memory storage
-func (tt *Tasks) Add(taskID, Status string) {
+func (tt *Tasks) Add(taskID string, Status map[string]string) {
 	tt.Lock()
 	defer tt.Unlock()
 
