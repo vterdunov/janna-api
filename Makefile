@@ -15,7 +15,7 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-GOLANGCI_LINTER_VERSION = v1.10
+GOLANGCI_LINTER_VERSION = v1.10.1
 OPENAPI_GENERATOR_CLI_VERSION = v3.2.2
 
 all: lint test api-doc-convert docker
