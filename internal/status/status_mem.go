@@ -1,3 +1,5 @@
+// status used to add and get information
+// such as current deploy progress, deploy error messages, etc.
 package status
 
 import (
@@ -5,25 +7,24 @@ import (
 	"time"
 
 	"github.com/vterdunov/janna-api/internal/service"
+	"github.com/vterdunov/janna-api/pkg/uuid"
 )
 
-type Tasks struct {
+// Status stores information about something
+type Status struct {
 	sync.RWMutex
 	expiration    time.Duration
 	cleanInterval time.Duration
 
-	tasks map[string]service.Task
+	records []*service.Task
 }
 
-// New creates a new in-memory storage for tasks status information.
-// Such as current progress, created date, etc.
-func New() *Tasks {
-	emptyTasks := make(map[string]service.Task)
+// NewStorage creates a new in-memory storage
+func NewStorage() *Status {
 	expiration := time.Hour * 24
 	cleanInterval := time.Second * 10
 
-	tt := Tasks{
-		tasks:         emptyTasks,
+	tt := Status{
 		expiration:    expiration,
 		cleanInterval: cleanInterval,
 	}
@@ -33,13 +34,22 @@ func New() *Tasks {
 	return &tt
 }
 
-// Add a task to in-memory storage
-func (tt *Tasks) Add(taskID string, Status map[string]string) {
-	tt.Lock()
-	defer tt.Unlock()
+// NewRecord creates a new unique status
+func NewRecord() *service.Task {
+	r := service.Task{
+		ID: uuid.NewUUID(),
+		Created:    time.Now(),
+	}
+	return &r
+}
 
-	expiration := time.Now().Add(tt.expiration).UnixNano()
-	tt.tasks[taskID] = service.Task{
+// Add a task to in-memory storage
+func (t *service.Task) Add(msg map[string]string) {
+	r.Lock()
+	defer r.Unlock()
+
+	expiration := time.Now().Add(r.expiration).UnixNano()
+	tt.entry[taskID] = service.Task{
 		Status:     Status,
 		Created:    time.Now(),
 		Expiration: expiration,
@@ -47,11 +57,11 @@ func (tt *Tasks) Add(taskID string, Status map[string]string) {
 }
 
 // Get a task from in-memory storage
-func (tt *Tasks) Get(taskID string) *service.Task {
+func (tt *Status) Get(taskID string) *service.Task {
 	tt.RLock()
 	defer tt.RUnlock()
 
-	task, exists := tt.tasks[taskID]
+	task, exists := tt.entry[taskID]
 	if !exists {
 		return nil
 	}
@@ -64,17 +74,17 @@ func (tt *Tasks) Get(taskID string) *service.Task {
 }
 
 // gc search and clean expired tasks from in-memory storage
-func (tt *Tasks) gc() {
+func (tt *Status) gc() {
 	ticker := time.NewTicker(tt.cleanInterval)
 
 	for range ticker.C {
-		if tt.tasks == nil {
+		if tt.entry == nil {
 			return
 		}
 		var expiredTasksIDs []string
 
 		tt.RLock()
-		for id, task := range tt.tasks {
+		for id, task := range tt.entry {
 			isTaskExpired := time.Now().UnixNano() > task.Expiration
 			if isTaskExpired {
 				expiredTasksIDs = append(expiredTasksIDs, id)
@@ -83,7 +93,7 @@ func (tt *Tasks) gc() {
 		tt.RUnlock()
 
 		for _, id := range expiredTasksIDs {
-			delete(tt.tasks, id)
+			delete(tt.entry, id)
 		}
 	}
 }

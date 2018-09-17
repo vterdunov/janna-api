@@ -1,8 +1,13 @@
 package service
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type Task struct {
+	sync.RWMutex
+	ID string
 	Status     map[string]string
 	Created    time.Time
 	Expiration int64
