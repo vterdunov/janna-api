@@ -12,7 +12,9 @@ FROM scratch
 
 ENV PORT=8080
 
-CMD ["/janna-api"]
+WORKDIR /janna-api
 
-COPY api/openapi.json /janna-api/api/openapi.json
-COPY --from=build-stage /go/src/github.com/vterdunov/janna-api/janna-api /janna-api
+CMD ["./janna-api"]
+
+COPY api/openapi.json api/openapi.json
+COPY --from=build-stage /go/src/github.com/vterdunov/janna-api/janna-api janna-api
