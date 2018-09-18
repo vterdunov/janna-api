@@ -1,4 +1,4 @@
-FROM golang:1.10.2-alpine AS build-stage
+FROM golang:1.11.0-alpine3.8 AS build-stage
 
 WORKDIR /go/src/github.com/vterdunov/janna-api
 
