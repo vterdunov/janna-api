@@ -8,7 +8,7 @@ COPY . .
 
 RUN make compile
 
-FROM scratch
+FROM alpine:3.8
 
 ENV PORT=8080
 
