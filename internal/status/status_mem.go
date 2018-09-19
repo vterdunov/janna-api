@@ -3,97 +3,101 @@
 package status
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/vterdunov/janna-api/internal/service"
 	"github.com/vterdunov/janna-api/pkg/uuid"
 )
 
-// Status stores information about something
-type Status struct {
+// StatusStorage stores information about something
+type StatusStorage struct {
 	sync.RWMutex
-	expiration    time.Duration
 	cleanInterval time.Duration
 
-	records []*service.Task
+	tasks []TaskStatus
+}
+
+type TaskStatus struct {
+	sync.RWMutex
+	ID         string
+	Status     map[string]string
+	Created    time.Time
+	expiration int64
 }
 
 // NewStorage creates a new in-memory storage
-func NewStorage() *Status {
-	expiration := time.Hour * 24
+func NewStatusStorage() *StatusStorage {
+
 	cleanInterval := time.Second * 10
 
-	tt := Status{
-		expiration:    expiration,
+	s := StatusStorage{
 		cleanInterval: cleanInterval,
 	}
 
-	go tt.gc()
+	go s.gc()
 
-	return &tt
+	return &s
 }
 
-// NewRecord creates a new unique status
-func NewRecord() *service.Task {
-	r := service.Task{
-		ID: uuid.NewUUID(),
+// NewTask creates a new unique status
+func NewTask() *TaskStatus {
+	expirationTime := time.Hour * 24
+
+	expiration := time.Now().Add(expirationTime).UnixNano()
+	r := TaskStatus{
+		ID:         uuid.NewUUID(),
 		Created:    time.Now(),
+		expiration: expiration,
 	}
 	return &r
 }
 
 // Add a task to in-memory storage
-func (t *service.Task) Add(msg map[string]string) {
-	r.Lock()
-	defer r.Unlock()
+func (t *TaskStatus) Add(statuses map[string]string) {
+	t.Lock()
+	defer t.Unlock()
 
-	expiration := time.Now().Add(r.expiration).UnixNano()
-	tt.entry[taskID] = service.Task{
-		Status:     Status,
-		Created:    time.Now(),
-		Expiration: expiration,
-	}
+	t.Status = statuses
 }
 
 // Get a task from in-memory storage
-func (tt *Status) Get(taskID string) *service.Task {
-	tt.RLock()
-	defer tt.RUnlock()
+func (t *TaskStatus) Get() (statuses map[string]string) {
+	t.RLock()
+	defer t.RUnlock()
 
-	task, exists := tt.entry[taskID]
-	if !exists {
-		return nil
-	}
+	// TODO: check status exist
+	// task, exists := t.entry[taskID]
+	// if !exists {
+	// 	return nil
+	// }
 
-	isTaskExpired := time.Now().UnixNano() > task.Expiration
-	if isTaskExpired {
-		return nil
-	}
-	return &task
+	return t.Status
 }
 
 // gc search and clean expired tasks from in-memory storage
-func (tt *Status) gc() {
-	ticker := time.NewTicker(tt.cleanInterval)
+func (s *StatusStorage) gc() {
+	ticker := time.NewTicker(s.cleanInterval)
 
 	for range ticker.C {
-		if tt.entry == nil {
+		if s.tasks == nil {
 			return
 		}
-		var expiredTasksIDs []string
+		// var expiredTasksIDs []string
 
-		tt.RLock()
-		for id, task := range tt.entry {
-			isTaskExpired := time.Now().UnixNano() > task.Expiration
+		s.RLock()
+		fmt.Println(s.tasks)
+		for id, task := range s.tasks {
+			isTaskExpired := time.Now().UnixNano() > task.expiration
 			if isTaskExpired {
-				expiredTasksIDs = append(expiredTasksIDs, id)
+				s.tasks = append(s.tasks[:id], s.tasks[id+1:]...)
 			}
 		}
-		tt.RUnlock()
+		s.RUnlock()
+		fmt.Println(s.tasks)
 
-		for _, id := range expiredTasksIDs {
-			delete(tt.entry, id)
-		}
+		// for _, id := range expiredTasksIDs {
+		// 	delete(s.tasks, id)
+		// }
 	}
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/vterdunov/janna-api/internal/providers/vmware/vm"
 	"github.com/vterdunov/janna-api/internal/types"
 	"github.com/vterdunov/janna-api/internal/version"
-	"github.com/vterdunov/janna-api/pkg/uuid"
 )
 
 // Service is the interface that represents methods of the business logic
@@ -160,15 +159,14 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) // nolint: golint
 	}
 
-	taskID := uuid.NewUUID()
-	s.statuses.Add(taskID, map[string]string{"stage": "Start deploy"})
-
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	l := log.With(s.logger, "request_id", reqID)
 	l = log.With(l, "vm", params.Name)
 
 	taskCtx, cancel := context.WithTimeout(context.Background(), s.cfg.TaskTTL)
 
+	t := s.statuses.NewTask()
+	t.Add
 	// Start deploy in background
 	go func() {
 		defer cancel()
@@ -176,47 +174,59 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		if err != nil {
 			err = errors.Wrap(err, "Could not create deployment object")
 			l.Log("err", err)
-			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
+			s.statuses.Add(taskID, map[string]string{
+				"stage": "error",
+				"error": err.Error(),
+			})
 			cancel()
 			return
 		}
 
-		s.statuses.Add(taskID, map[string]string{"stage": "Importing OVA"})
+		s.statuses.Add(taskID, map[string]string{"stage": "import"})
 		moref, err := d.Import(taskCtx, params.OVAURL, params.Annotation)
 		if err != nil {
 			err = errors.Wrap(err, "Could not import OVA/OVF")
 			l.Log("err", err)
-			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
+			s.statuses.Add(taskID, map[string]string{
+				"stage": "error",
+				"error": err.Error(),
+			})
 			cancel()
 			return
 		}
 
-		s.statuses.Add(taskID, map[string]string{"error": "Creating Virtual Machine"})
+		s.statuses.Add(taskID, map[string]string{"stage": "create"})
 		vmx := object.NewVirtualMachine(s.Client, *moref)
 
 		l.Log("msg", "Powering on...")
-		s.statuses.Add(taskID, map[string]string{"error": "Powering on"})
+		s.statuses.Add(taskID, map[string]string{"message": "Powerig on"})
 		if err = vm.PowerON(taskCtx, vmx); err != nil {
 			err = errors.Wrap(err, "Could not Virtual Machine power on")
 			l.Log("err", err)
-			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
+			s.statuses.Add(taskID, map[string]string{
+				"stage": "error",
+				"error": err.Error(),
+			})
 			cancel()
 			return
 		}
 
-		s.statuses.Add(taskID, map[string]string{"stage": "Waiting for IP"})
+		s.statuses.Add(taskID, map[string]string{"message": "Waiting for IP"})
 		ip, err := vm.WaitForIP(taskCtx, vmx)
 		if err != nil {
 			err = errors.Wrap(err, "error getting IP address")
 			l.Log("err", err)
-			s.statuses.Add(taskID, map[string]string{"error": err.Error()})
+			s.statuses.Add(taskID, map[string]string{
+				"stage": "error",
+				"error": err.Error(),
+			})
 			cancel()
 			return
 		}
 
 		l.Log("msg", "Successful deploy", "ip", ip)
 		s.statuses.Add(taskID, map[string]string{
-			"stage": "Successful deploy",
+			"stage": "complete",
 			"ip":    ip,
 		})
 	}()

@@ -61,7 +61,7 @@ func main() {
 		Help:      "Total duration of requests in seconds.",
 	}, []string{"method", "success"})
 
-	inMemoryStorage := status.NewStorage()
+	inMemoryStorage := status.NewStatusStorage()
 	statusStorage := service.Statuser(inMemoryStorage)
 
 	svc := service.New(logger, cfg, client.Client, duration, statusStorage)

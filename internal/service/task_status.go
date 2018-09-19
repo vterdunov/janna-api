@@ -1,19 +1,12 @@
 package service
 
-import (
-	"sync"
-	"time"
-)
-
-type Task struct {
-	sync.RWMutex
-	ID string
-	Status     map[string]string
-	Created    time.Time
-	Expiration int64
+// Statuser represents how to get new storage to keep statuses
+type Statuser interface {
+	NewTask() *TaskStatuser
 }
 
-type Statuser interface {
-	Add(taskId string, payload map[string]string)
-	Get(taskId string) *Task
+// TaskStatuser represents behavoir of every single task
+type TaskStatuser interface {
+	Add(statuses map[string]string)
+	Get() (statuses map[string]string)
 }
