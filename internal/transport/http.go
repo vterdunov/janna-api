@@ -143,7 +143,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	r.Path("/tasks/{taskID}").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.TaskInfoEndpoint,
 		decodeTaskInfoRequest,
-		encodeResponse,
+		encodeTaskInfoResponse,
 		options...,
 	))
 
@@ -353,4 +353,20 @@ func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response 
 
 	w.Write(res.Spec)
 	return nil
+}
+
+func encodeTaskInfoResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	res, ok := response.(endpoint.TaskInfoResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not get OpenAPI data"), w)
+	}
+	return json.NewEncoder(w).Encode(res.Status)
 }
