@@ -226,9 +226,11 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 
 		l.Log("msg", "Successful deploy", "ip", ip)
 		t.Add(map[string]string{
-			"stage": "complete",
-			"ip":    ip,
+			"stage":   "complete",
+			"ip":      ip,
+			"message": "ok",
 		})
+		cancel()
 	}()
 
 	return t.ID(), nil

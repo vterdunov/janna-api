@@ -79,15 +79,18 @@ func (t *TaskStatus) ID() string {
 // Add a task to in-memory storage
 func (t *TaskStatus) Add(statuses map[string]string) {
 	t.Lock()
-	defer t.Unlock()
 
 	for k, v := range statuses {
 		t.Status[k] = v
 	}
+	t.Unlock()
 }
 
 // Get a task from in-memory storage
 func (t *TaskStatus) Get() (statuses map[string]string) {
+	t.Lock()
+	defer t.Unlock()
+
 	return t.Status
 }
 
