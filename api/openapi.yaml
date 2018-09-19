@@ -434,7 +434,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/find_vm_error_response"
 
-  /status/{task_id}:
+  /tasks/{task_id}:
     get:
       summary: "Get information about backgroud task"
       tags:
