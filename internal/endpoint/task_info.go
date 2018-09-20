@@ -16,12 +16,10 @@ func MakeTaskInfoEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
 			return nil, errors.New("could not parse request")
 		}
 
-		info, err := s.TaskInfo(ctx, req.TaskID)
+		status, err := s.TaskInfo(ctx, req.TaskID)
 		if err != nil {
-			return TaskInfoResponse{Status: "", Err: err}, nil
+			return TaskInfoResponse{Status: nil, Err: err}, nil
 		}
-
-		status := info.Status
 
 		return TaskInfoResponse{Status: status, Err: err}, nil
 	}
@@ -34,8 +32,8 @@ type TaskInfoRequest struct {
 
 // TaskInfoResponse collects the response values for the TaskInfo method
 type TaskInfoResponse struct {
-	Err    error  `json:"error,omitempty"`
-	Status string `json:"status,omitempty"`
+	Err    error `json:"error,omitempty"`
+	Status map[string]string
 }
 
 // Failed implements Failer

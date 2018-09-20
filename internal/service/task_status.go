@@ -1,14 +1,15 @@
 package service
 
-import "time"
-
-type Task struct {
-	Status     string
-	Created    time.Time
-	Expiration int64
+// Statuser represents behavior of storage that keeps statuses
+// nolint: misspell
+type Statuser interface {
+	NewTask() TaskStatuser
+	FindByID(id string) TaskStatuser
 }
 
-type Statuser interface {
-	Add(string, string)
-	Get(string) *Task
+// TaskStatuser represents behavior of every single task
+type TaskStatuser interface {
+	ID() string
+	Add(keyvals ...string)
+	Get() (statuses map[string]string)
 }
