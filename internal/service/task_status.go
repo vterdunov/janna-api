@@ -1,6 +1,6 @@
 package service
 
-// Statuser represents how to get new storage to keep statuses
+// Statuser represents behavior of storage that keeps statuses
 // nolint: misspell
 type Statuser interface {
 	NewTask() TaskStatuser
