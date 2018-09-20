@@ -598,14 +598,27 @@ components:
 
     task_id_response:
       type: object
+      required:
+        - stage
       properties:
-        task_id:
+        stage:
           type: string
-      example:
-        "status": "Starting deploy"
+          example: complete
+        message:
+          type: string
+          example: ok
+        ip:
+          type: string
+          example: "10.10.30.110"
 
     deploy_ova_body:
       type: object
+      required:
+        - name
+        - ova_url
+        - datastores
+        - networks
+        - computer_resources
       properties:
         name:
           type: string
@@ -628,7 +641,8 @@ components:
           properties:
             type:
               type: string
-              description: "Storage type. Possible values: 'cluster', 'datastore'. If 'cluster' type was chosen then Janna try to get DRS recommendation to choose proper 'datastore'."
+              description: "Storage type. If 'cluster' type was chosen then Janna try to get DRS recommendation to choose proper 'datastore'."
+              enum: [cluster, datastore]
               example: cluster
             names:
               type: array
@@ -648,7 +662,8 @@ components:
           properties:
             type:
               type: string
-              description: "Computer resource type. Possible values: 'host', 'cluster', 'rp'."
+              description: "Computer resource type."
+              enum: [host, cluster, rp]
               example: cluster
             path:
               type: string
@@ -656,9 +671,6 @@ components:
               example: my-esxi-cluster
           required:
             - type
-      required:
-        - name
-        - ova_url
 
     with_task_id_response:
       type: object

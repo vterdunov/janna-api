@@ -122,6 +122,14 @@ func (mw instrumentingMiddleware) RoleList(ctx context.Context) (_ []types.Role,
 	return mw.Service.RoleList(ctx)
 }
 
+func (mw instrumentingMiddleware) TaskInfo(ctx context.Context, taskID string) (_ map[string]string, err error) {
+	defer func(begin time.Time) {
+		lvs := []string{"method", "TaskInfo", "success", fmt.Sprint(err == nil)}
+		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mw.Service.TaskInfo(ctx, taskID)
+}
+
 func (mw instrumentingMiddleware) OpenAPI(ctx context.Context) (_ []byte, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "OpenAPI", "success", fmt.Sprint(err == nil)}
