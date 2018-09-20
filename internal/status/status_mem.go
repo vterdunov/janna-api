@@ -78,7 +78,7 @@ func (t *TaskStatus) ID() string {
 	return t.id
 }
 
-// Add status messages to a task
+// Add a key-value pairs to a task status message
 func (t *TaskStatus) Add(keyvals ...string) {
 	t.Lock()
 	for i := 0; i < len(keyvals); i += 2 {
