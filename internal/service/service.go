@@ -166,7 +166,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	taskCtx, cancel := context.WithTimeout(context.Background(), s.cfg.TaskTTL)
 
 	t := s.statuses.NewTask()
-	t.Add(map[string]string{"stage": "start"})
+	t.Add("stage", "start")
 	// Start deploy in background
 	go func() {
 		defer cancel()
@@ -174,62 +174,62 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		if err != nil {
 			err = errors.Wrap(err, "Could not create deployment object")
 			l.Log("err", err)
-			t.Add(map[string]string{
-				"stage": "error",
-				"error": err.Error(),
-			})
+			t.Add(
+				"stage", "error",
+				"error", err.Error(),
+			)
 			cancel()
 			return
 		}
 
-		t.Add(map[string]string{"stage": "import"})
+		t.Add("stage", "import")
 		moref, err := d.Import(taskCtx, params.OVAURL, params.Annotation)
 		if err != nil {
 			err = errors.Wrap(err, "Could not import OVA/OVF")
 			l.Log("err", err)
-			t.Add(map[string]string{
-				"stage": "error",
-				"error": err.Error(),
-			})
+			t.Add(
+				"stage", "error",
+				"error", err.Error(),
+			)
 			cancel()
 			return
 		}
 
-		t.Add(map[string]string{"stage": "create"})
+		t.Add("stage", "create")
 		vmx := object.NewVirtualMachine(s.Client, *moref)
 
 		l.Log("msg", "Powering on...")
-		t.Add(map[string]string{"message": "Powerig on"})
+		t.Add("message", "Powerig on")
 		if err = vm.PowerON(taskCtx, vmx); err != nil {
 			err = errors.Wrap(err, "Could not Virtual Machine power on")
 			l.Log("err", err)
-			t.Add(map[string]string{
-				"stage": "error",
-				"error": err.Error(),
-			})
+			t.Add(
+				"stage", "error",
+				"error", err.Error(),
+			)
 			cancel()
 			return
 		}
 
-		t.Add(map[string]string{"message": "Waiting for IP"})
+		t.Add("message", "Waiting for IP")
 		ip, err := vm.WaitForIP(taskCtx, vmx)
 		if err != nil {
 			err = errors.Wrap(err, "error getting IP address")
 			l.Log("err", err)
-			t.Add(map[string]string{
-				"stage": "error",
-				"error": err.Error(),
-			})
+			t.Add(
+				"stage", "error",
+				"error", err.Error(),
+			)
 			cancel()
 			return
 		}
 
 		l.Log("msg", "Successful deploy", "ip", ip)
-		t.Add(map[string]string{
-			"stage":   "complete",
-			"ip":      ip,
-			"message": "ok",
-		})
+		t.Add(
+			"stage", "complete",
+			"ip", ip,
+			"message", "ok",
+		)
 		cancel()
 	}()
 

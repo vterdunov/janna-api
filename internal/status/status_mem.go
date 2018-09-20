@@ -3,6 +3,7 @@
 package status
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ type Storage struct {
 	tasks map[string]*TaskStatus
 }
 
+// TaskStatus keep status messages and other metadata of task
 type TaskStatus struct {
 	sync.RWMutex
 	id         string
@@ -43,7 +45,7 @@ func NewStorage() *Storage {
 	return &s
 }
 
-// NewTask creates a new unique status
+// NewTask creates a new unique status for a task
 func (s *Storage) NewTask() service.TaskStatuser {
 
 	expiration := time.Now().Add(s.defaultExpiration).UnixNano()
@@ -76,17 +78,21 @@ func (t *TaskStatus) ID() string {
 	return t.id
 }
 
-// Add a task to in-memory storage
-func (t *TaskStatus) Add(statuses map[string]string) {
+// Add status messages to a task
+func (t *TaskStatus) Add(keyvals ...string) {
 	t.Lock()
-
-	for k, v := range statuses {
-		t.Status[k] = v
+	for i := 0; i < len(keyvals); i += 2 {
+		if i+1 < len(keyvals) {
+			t.Status[fmt.Sprint(keyvals[i])] = keyvals[i+1]
+		} else {
+			t.Status[fmt.Sprint(keyvals[i])] = "(MISSING)"
+		}
 	}
+
 	t.Unlock()
 }
 
-// Get a task from in-memory storage
+// Get status messages from a task
 func (t *TaskStatus) Get() (statuses map[string]string) {
 	t.Lock()
 	defer t.Unlock()

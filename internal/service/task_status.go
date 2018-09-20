@@ -10,6 +10,6 @@ type Statuser interface {
 // TaskStatuser represents behavior of every single task
 type TaskStatuser interface {
 	ID() string
-	Add(statuses map[string]string)
+	Add(keyvals ...string)
 	Get() (statuses map[string]string)
 }
