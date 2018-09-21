@@ -5,6 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/types"
+
 	jt "github.com/vterdunov/janna-api/internal/types"
 )
 
@@ -14,19 +16,26 @@ func Delete(ctx context.Context, client *vim25.Client, params *jt.VMDeleteParams
 		return err
 	}
 
-	task, err := vm.PowerOff(ctx)
+	state, err := vm.PowerState(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not power off Virtual Machine before destroying")
+		return errors.Wrap(err, "could not get Virtual Machine power state")
 	}
 
-	if err = task.Wait(ctx); err != nil {
-		return errors.Wrap(err, "could not power off Virtual Machine before destroying")
+	if state != types.VirtualMachinePowerStatePoweredOff {
+		task, err := vm.PowerOff(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not power off Virtual Machine before destroying")
+		}
+
+		if err = task.Wait(ctx); err != nil {
+			return errors.Wrap(err, "could not power off Virtual Machine before destroying")
+		}
 	}
 
-	task, err = vm.Destroy(ctx)
+	destroyTask, err := vm.Destroy(ctx)
 	if err != nil {
 		return err
 	}
 
-	return task.Wait(ctx)
+	return destroyTask.Wait(ctx)
 }
