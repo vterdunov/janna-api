@@ -511,7 +511,7 @@ func newSimpleDeployment(c *vim25.Client, deployParams *jt.VMDeployParams, logge
 func PowerON(ctx context.Context, vm *object.VirtualMachine) error {
 	task, err := vm.PowerOn(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Could not power on VM")
+		return err
 	}
 	if _, err := task.WaitForResult(ctx, nil); err != nil {
 		return errors.Wrap(err, "Failed while powering on task")
