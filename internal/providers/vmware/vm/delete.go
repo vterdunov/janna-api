@@ -16,15 +16,15 @@ func Delete(ctx context.Context, client *vim25.Client, params *jt.VMDeleteParams
 		return err
 	}
 
-	state, err := vm.PowerState(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get Virtual Machine power state")
+	state, psErr := vm.PowerState(ctx)
+	if psErr != nil {
+		return errors.Wrap(psErr, "could not get Virtual Machine power state")
 	}
 
 	if state != types.VirtualMachinePowerStatePoweredOff {
-		task, err := vm.PowerOff(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not power off Virtual Machine before destroying")
+		task, pOffErr := vm.PowerOff(ctx)
+		if pOffErr != nil {
+			return errors.Wrap(pOffErr, "could not power off Virtual Machine before destroying")
 		}
 
 		if err = task.Wait(ctx); err != nil {
