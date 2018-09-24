@@ -306,43 +306,40 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 		return nil, err
 	}
 
-	rovf, _, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
+	ova, _, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
 	if err != nil {
 		o.logger.Log("err", err)
 		return nil, err
 	}
+	defer ova.Close()
 
 	td, err := ioutil.TempDir("", "janna-")
 	if err != nil {
 		o.logger.Log("err", err)
 		return nil, err
 	}
-
 	defer os.RemoveAll(td)
 
-	if untarErr := untar(td, rovf); untarErr != nil {
+	if untarErr := untar(td, ova); untarErr != nil {
 		o.logger.Log("err", untarErr)
 		return nil, untarErr
 	}
 
-	ovfName, err := checkOVFfiles(td)
+	ovfPath, err := findOVF(td)
 	if err != nil {
 		o.logger.Log("err", err)
 		return nil, err
 	}
 
-	ovfPath := td + "/" + ovfName
-	rova, err := os.Open(ovfPath)
+	rawOvf, err := os.Open(ovfPath)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := ioutil.ReadAll(rova)
+	b, err := ioutil.ReadAll(rawOvf)
 	if err != nil {
 		return nil, err
 	}
-
-	defer rovf.Close()
 
 	e, err := readEnvelope(b)
 	if err != nil {
@@ -520,12 +517,18 @@ func PowerON(ctx context.Context, vm *object.VirtualMachine) error {
 	return nil
 }
 
-func WaitForIP(ctx context.Context, vm *object.VirtualMachine) (string, error) {
-	ip, err := vm.WaitForIP(ctx)
+func WaitForIP(ctx context.Context, vm *object.VirtualMachine) ([]string, error) {
+	addresses, err := vm.WaitForNetIP(ctx, true)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return ip, nil
+
+	var ipAdresses []string
+	for _, ips := range addresses {
+		ipAdresses = append(ipAdresses, ips...)
+	}
+
+	return ipAdresses, nil
 }
 
 func readEnvelope(data []byte) (*ovf.Envelope, error) {
@@ -685,20 +688,23 @@ func untar(dst string, r io.Reader) error {
 	}
 }
 
-func checkOVFfiles(dir string) (string, error) {
-	var file string
-	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+func findOVF(dir string) (string, error) {
+	var ovfPath string
+	walcFunc := func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if filepath.Ext(path) == ".ovf" {
-			file = f.Name()
-		}
-		return nil
-	})
 
-	if err != nil {
+		if filepath.Ext(path) == ".ovf" {
+			ovfPath = path
+		}
+
+		return nil
+	}
+
+	if err := filepath.Walk(dir, walcFunc); err != nil {
 		return "", err
 	}
-	return file, nil
+
+	return ovfPath, nil
 }

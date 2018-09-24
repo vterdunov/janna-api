@@ -211,8 +211,8 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 			return
 		}
 
-		t.Add("message", "Waiting for IP")
-		ip, err := vm.WaitForIP(taskCtx, vmx)
+		t.Add("message", "Waiting for IP addresses")
+		ips, err := vm.WaitForIP(taskCtx, vmx)
 		if err != nil {
 			err = errors.Wrap(err, "error getting IP address")
 			l.Log("err", err)
@@ -224,10 +224,11 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 			return
 		}
 
-		l.Log("msg", "Successful deploy", "ip", ip)
+		// FIXME: this msg don't display
+		l.Log("msg", "Successful deploy", "IP addresses", fmt.Sprintf("%s", ips))
 		t.Add(
 			"stage", "complete",
-			"ip", ip,
+			"ip", fmt.Sprintf("%s", ips),
 			"message", "ok",
 		)
 		cancel()
