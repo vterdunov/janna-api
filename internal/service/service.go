@@ -68,7 +68,7 @@ type Service interface {
 
 	// TasksList(context.Context) (*status.Tasks, error)
 
-	TaskInfo(context.Context, string) (map[string]string, error)
+	TaskInfo(context.Context, string) (map[string][]byte, error)
 
 	// Reads Open API spec file
 	OpenAPI(context.Context) ([]byte, error)
@@ -166,7 +166,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	taskCtx, cancel := context.WithTimeout(context.Background(), s.cfg.TaskTTL)
 
 	t := s.statuses.NewTask()
-	t.Add("stage", "start")
+	t.Str("stage", "start")
 	// Start deploy in background
 	go func() {
 		defer cancel()
@@ -174,7 +174,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		if err != nil {
 			err = errors.Wrap(err, "Could not create deployment object")
 			l.Log("err", err)
-			t.Add(
+			t.Str(
 				"stage", "error",
 				"error", err.Error(),
 			)
@@ -182,12 +182,12 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 			return
 		}
 
-		t.Add("stage", "import")
+		t.Str("stage", "import")
 		moref, err := d.Import(taskCtx, params.OVAURL, params.Annotation)
 		if err != nil {
 			err = errors.Wrap(err, "Could not import OVA/OVF")
 			l.Log("err", err)
-			t.Add(
+			t.Str(
 				"stage", "error",
 				"error", err.Error(),
 			)
@@ -195,15 +195,15 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 			return
 		}
 
-		t.Add("stage", "create")
+		t.Str("stage", "create")
 		vmx := object.NewVirtualMachine(s.Client, *moref)
 
 		l.Log("msg", "Powering on...")
-		t.Add("message", "Powerig on")
+		t.Str("message", "Powerig on")
 		if err = vm.PowerON(taskCtx, vmx); err != nil {
 			err = errors.Wrap(err, "Could not Virtual Machine power on")
 			l.Log("err", err)
-			t.Add(
+			t.Str(
 				"stage", "error",
 				"error", err.Error(),
 			)
@@ -211,12 +211,12 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 			return
 		}
 
-		t.Add("message", "Waiting for IP addresses")
+		t.Str("message", "Waiting for IP addresses")
 		ips, err := vm.WaitForIP(taskCtx, vmx)
 		if err != nil {
 			err = errors.Wrap(err, "error getting IP address")
 			l.Log("err", err)
-			t.Add(
+			t.Str(
 				"stage", "error",
 				"error", err.Error(),
 			)
@@ -225,12 +225,13 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		}
 
 		// FIXME: this msg don't display
-		l.Log("msg", "Successful deploy", "IP addresses", fmt.Sprintf("%s", ips))
-		t.Add(
+		fmt.Println(fmt.Sprintf("IPS: %s", ips))
+		l.Log("msg", "Successful deploy")
+		t.Str(
 			"stage", "complete",
-			"ip", fmt.Sprintf("%s", ips),
 			"message", "ok",
 		)
+		t.StrArr("ip", ips)
 		cancel()
 	}()
 
@@ -270,7 +271,7 @@ func (s *service) RoleList(ctx context.Context) ([]types.Role, error) {
 	return permissions.RoleList(ctx, s.Client)
 }
 
-func (s *service) TaskInfo(ctx context.Context, taskID string) (map[string]string, error) {
+func (s *service) TaskInfo(ctx context.Context, taskID string) (map[string][]byte, error) {
 	t := s.statuses.FindByID(taskID)
 	if t != nil {
 		return t.Get(), nil

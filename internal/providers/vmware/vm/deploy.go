@@ -523,7 +523,7 @@ func WaitForIP(ctx context.Context, vm *object.VirtualMachine) ([]string, error)
 		return nil, err
 	}
 
-	var ipAdresses []string
+	ipAdresses := make([]string, len(addresses))
 	for _, ips := range addresses {
 		ipAdresses = append(ipAdresses, ips...)
 	}
