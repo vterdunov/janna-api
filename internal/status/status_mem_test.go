@@ -128,12 +128,12 @@ func TestTaskStatus_Get(t *testing.T) {
 	task2 := st.NewTask()
 	mvTask := task2.(*TaskStatus)
 	mvTask.Str("key")
-	mMap := map[string][]byte{"key": []byte("(MISSING)")}
+	mMap := map[string]interface{}{"key": "(MISSING)"}
 
 	tests := []struct {
 		name         string
 		t            *TaskStatus
-		wantStatuses map[string][]byte
+		wantStatuses map[string]interface{}
 	}{
 		{"fullKeyValue", fullTask, fullTask.Get()},
 		{"missingValue", mvTask, mMap},

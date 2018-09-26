@@ -24,7 +24,7 @@ type Storage struct {
 type TaskStatus struct {
 	sync.RWMutex
 	id         string
-	Status     map[string][]byte
+	Status     map[string]interface{}
 	Created    time.Time
 	expiration int64
 }
@@ -50,7 +50,7 @@ func (s *Storage) NewTask() service.TaskStatuser {
 
 	expiration := time.Now().Add(s.defaultExpiration).UnixNano()
 	uuid := uuid.NewUUID()
-	status := make(map[string][]byte)
+	status := make(map[string]interface{})
 	r := TaskStatus{
 		id:         uuid,
 		Created:    time.Now(),
@@ -79,28 +79,32 @@ func (t *TaskStatus) ID() string {
 }
 
 // Str a key-value pairs to a task status message
-func (t *TaskStatus) Str(keyvals ...string) {
+func (t *TaskStatus) Str(keyvals ...string) service.TaskStatuser {
 	t.Lock()
+	defer t.Unlock()
+
 	for i := 0; i < len(keyvals); i += 2 {
 		if i+1 < len(keyvals) {
-			t.Status[fmt.Sprint(keyvals[i])] = []byte(keyvals[i+1])
+			t.Status[fmt.Sprint(keyvals[i])] = keyvals[i+1]
 		} else {
-			t.Status[fmt.Sprint(keyvals[i])] = []byte("(MISSING)")
+			t.Status[fmt.Sprint(keyvals[i])] = "(MISSING)"
 		}
 	}
 
-	t.Unlock()
+	return t
 }
 
 // StrArr a key-value pairs to a task status message
-func (t *TaskStatus) StrArr(key string, arr []string) {
+func (t *TaskStatus) StrArr(key string, arr []string) service.TaskStatuser {
 	t.Lock()
+	defer t.Unlock()
 
-	t.Unlock()
+	t.Status[key] = arr
+	return t
 }
 
 // Get status messages from a task
-func (t *TaskStatus) Get() (statuses map[string][]byte) {
+func (t *TaskStatus) Get() (statuses map[string]interface{}) {
 	t.Lock()
 	defer t.Unlock()
 

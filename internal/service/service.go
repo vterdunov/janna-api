@@ -68,7 +68,7 @@ type Service interface {
 
 	// TasksList(context.Context) (*status.Tasks, error)
 
-	TaskInfo(context.Context, string) (map[string][]byte, error)
+	TaskInfo(context.Context, string) (map[string]interface{}, error)
 
 	// Reads Open API spec file
 	OpenAPI(context.Context) ([]byte, error)
@@ -167,6 +167,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 
 	t := s.statuses.NewTask()
 	t.Str("stage", "start")
+
 	// Start deploy in background
 	go func() {
 		defer cancel()
@@ -187,6 +188,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		if err != nil {
 			err = errors.Wrap(err, "Could not import OVA/OVF")
 			l.Log("err", err)
+
 			t.Str(
 				"stage", "error",
 				"error", err.Error(),
@@ -224,14 +226,12 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 			return
 		}
 
-		// FIXME: this msg don't display
-		fmt.Println(fmt.Sprintf("IPS: %s", ips))
-		l.Log("msg", "Successful deploy")
+		l.Log("msg", "Successful deploy", "ips", fmt.Sprintf("%v", ips))
 		t.Str(
 			"stage", "complete",
 			"message", "ok",
-		)
-		t.StrArr("ip", ips)
+		).StrArr("ip", ips)
+
 		cancel()
 	}()
 
@@ -271,7 +271,7 @@ func (s *service) RoleList(ctx context.Context) ([]types.Role, error) {
 	return permissions.RoleList(ctx, s.Client)
 }
 
-func (s *service) TaskInfo(ctx context.Context, taskID string) (map[string][]byte, error) {
+func (s *service) TaskInfo(ctx context.Context, taskID string) (map[string]interface{}, error) {
 	t := s.statuses.FindByID(taskID)
 	if t != nil {
 		return t.Get(), nil
