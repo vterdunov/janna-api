@@ -114,7 +114,7 @@ func TestTaskStatus_Add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.t.Add(tt.args.keyvals...)
+			tt.t.Str(tt.args.keyvals...)
 		})
 	}
 }
@@ -123,17 +123,17 @@ func TestTaskStatus_Get(t *testing.T) {
 	st := NewStorage()
 	task := st.NewTask()
 	fullTask := task.(*TaskStatus)
-	fullTask.Add("key", "value")
+	fullTask.Str("key", "value")
 
 	task2 := st.NewTask()
 	mvTask := task2.(*TaskStatus)
-	mvTask.Add("key")
-	mMap := map[string]string{"key": "(MISSING)"}
+	mvTask.Str("key")
+	mMap := map[string]interface{}{"key": "(MISSING)"}
 
 	tests := []struct {
 		name         string
 		t            *TaskStatus
-		wantStatuses map[string]string
+		wantStatuses map[string]interface{}
 	}{
 		{"fullKeyValue", fullTask, fullTask.Get()},
 		{"missingValue", mvTask, mMap},

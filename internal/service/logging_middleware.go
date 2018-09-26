@@ -200,7 +200,7 @@ func (s *loggingMiddleware) RoleList(ctx context.Context) (_ []types.Role, err e
 	return s.Service.RoleList(ctx)
 }
 
-func (s *loggingMiddleware) TaskInfo(ctx context.Context, taskID string) (_ map[string]string, err error) {
+func (s *loggingMiddleware) TaskInfo(ctx context.Context, taskID string) (_ map[string]interface{}, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {
 		s.logger.Log(
