@@ -60,6 +60,8 @@ type Service interface {
 	// VMSnapshotDelete deletes snapshot
 	VMSnapshotDelete(context.Context, *types.VMSnapshotDeleteParams) error
 
+	VMPower(context.Context, *types.VMPowerParams) error
+
 	VMRolesList(context.Context, *types.VMRolesListParams) ([]types.Role, error)
 
 	VMAddRole(context.Context, *types.VMAddRoleParams) error
@@ -257,6 +259,10 @@ func (s *service) VMRestoreFromSnapshot(ctx context.Context, params *types.VMRes
 
 func (s *service) VMSnapshotDelete(ctx context.Context, params *types.VMSnapshotDeleteParams) error {
 	return vm.DeleteSnapshot(ctx, s.Client, params)
+}
+
+func (s *service) VMPower(ctx context.Context, params *types.VMPowerParams) error {
+	return vm.Power(ctx, s.Client, params)
 }
 
 func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListParams) ([]types.Role, error) {

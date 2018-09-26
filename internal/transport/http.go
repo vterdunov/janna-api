@@ -107,6 +107,14 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 		options...,
 	))
 
+	// Power state
+	r.Path("/vm/{vm}/power").Methods("PATCH").Handler(httptransport.NewServer(
+		endpoints.VMPowerEndpoint,
+		decodeVMPowerRequest,
+		encodeResponse,
+		options...,
+	))
+
 	// Read VM roles
 	r.Path("/vm/{vm}/roles").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMRolesListEndpoint,
@@ -266,6 +274,18 @@ func decodeVMRestoreFromSnapshotRequest(_ context.Context, r *http.Request) (int
 		return nil, err
 	}
 	req.SnapshotID = int32(sID)
+
+	return req, nil
+}
+
+func decodeVMPowerRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMPowerRequest
+
+	vars := mux.Vars(r)
+	req.UUID = vars["vm"]
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(err, "Could not decode request")
+	}
 
 	return req, nil
 }
