@@ -21,6 +21,7 @@ func MakeVMPowerEndpoint(s service.Service) endpoint.Endpoint {
 			UUID:       req.UUID,
 			Datacenter: req.Datacenter,
 			State:      req.State,
+			Force:      req.Force,
 		}
 		params.FillEmptyFields(s.GetConfig())
 
@@ -34,6 +35,7 @@ type VMPowerRequest struct {
 	UUID       string
 	Datacenter string `json:"datacenter"`
 	State      string `json:"state"`
+	Force      bool   `json:"force"`
 }
 
 // VMPowerResponse collects the response values for the VMPower method

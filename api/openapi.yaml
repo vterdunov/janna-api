@@ -377,6 +377,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/vm_add_role_error_response"
 
+  /vm/{vm_uuid}/power:
+    patch:
+      summary: "Change Virtual Machine power state"
+      tags:
+      - Virtual Machines
+      - Power
+      parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
+      - name: vm_uuid
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/vm_change_power_body'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Error
+
   /permissions/roles:
     get:
       summary: "List roles"
@@ -571,6 +603,23 @@ components:
         principal:
           type: string
           example: "DOMAIN\\example.user"
+        datacenter:
+          type: string
+          example: "DC1"
+
+    vm_change_power_body:
+      type: object
+      required:
+      - state
+      properties:
+        state:
+          type: string
+          enum: ["on", "off", "reset", "suspend", "reboot", "shutdown"]
+          example: "on"
+        force:
+          type: boolean
+          description: "For \"reboot\" and \"shutdown\" options you could pass \"force\" flag. If it possible, Virtual machine reboot using guest extension."
+          example: true
         datacenter:
           type: string
           example: "DC1"
