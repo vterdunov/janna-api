@@ -614,12 +614,8 @@ components:
       properties:
         state:
           type: string
-          enum: ["on", "off", "reset", "suspend", "reboot", "shutdown"]
+          enum: ["on", "off", "reboot", "reset", "suspend"]
           example: "on"
-        force:
-          type: boolean
-          description: "For \"reboot\" and \"shutdown\" options you could pass \"force\" flag. If it possible, Virtual machine reboot using guest extension."
-          example: true
         datacenter:
           type: string
           example: "DC1"
