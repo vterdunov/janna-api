@@ -159,6 +159,20 @@ func (s *loggingMiddleware) VMSnapshotDelete(ctx context.Context, params *types.
 	return s.Service.VMSnapshotDelete(ctx, params)
 }
 
+func (s *loggingMiddleware) VMPower(ctx context.Context, params *types.VMPowerParams) (err error) {
+	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	defer func() {
+		s.logger.Log(
+			"method", "VMPower",
+			"request_id", reqID,
+			"params", fmt.Sprintf("%+v", params),
+			"err", err,
+		)
+	}()
+
+	return s.Service.VMPower(ctx, params)
+}
+
 func (s *loggingMiddleware) VMRolesList(ctx context.Context, params *types.VMRolesListParams) (_ []types.Role, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {

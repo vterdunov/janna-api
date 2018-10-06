@@ -98,6 +98,14 @@ func (mw instrumentingMiddleware) VMRestoreFromSnapshot(ctx context.Context, par
 	return mw.Service.VMRestoreFromSnapshot(ctx, params)
 }
 
+func (mw instrumentingMiddleware) VMPower(ctx context.Context, params *types.VMPowerParams) (err error) {
+	defer func(begin time.Time) {
+		lvs := []string{"method", "VMPower", "success", fmt.Sprint(err == nil)}
+		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mw.Service.VMPower(ctx, params)
+}
+
 func (mw instrumentingMiddleware) VMRolesList(ctx context.Context, params *types.VMRolesListParams) (_ []types.Role, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMRolesList", "success", fmt.Sprint(err == nil)}

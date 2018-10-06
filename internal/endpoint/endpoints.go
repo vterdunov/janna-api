@@ -26,6 +26,8 @@ type Endpoints struct {
 	VMSnapshotDeleteEndpoint      endpoint.Endpoint
 	VMRestoreFromSnapshotEndpoint endpoint.Endpoint
 
+	VMPowerEndpoint endpoint.Endpoint
+
 	VMRolesListEndpoint endpoint.Endpoint
 	VMAddRoleEndpoint   endpoint.Endpoint
 
@@ -73,6 +75,9 @@ func New(s service.Service, logger log.Logger) Endpoints {
 	vmSnapshotDeleteEndpoint := MakeVMSnapshotDeleteEndpoint(s)
 	vmSnapshotDeleteEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMSnapshotDelete"))(vmSnapshotDeleteEndpoint)
 
+	vmPowerEndpoint := MakeVMPowerEndpoint(s)
+	vmPowerEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMPower"))(vmPowerEndpoint)
+
 	vmRolesListEndpoint := MakeVMRolesListEndpoint(s)
 	vmRolesListEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMRolesListEndpoint"))(vmRolesListEndpoint)
 
@@ -105,6 +110,8 @@ func New(s service.Service, logger log.Logger) Endpoints {
 		VMSnapshotCreateEndpoint:      vmSnapshotCreateEndpoint,
 		VMSnapshotDeleteEndpoint:      vmSnapshotDeleteEndpoint,
 		VMRestoreFromSnapshotEndpoint: vmRestoreFromSnapshotEndpoint,
+
+		VMPowerEndpoint: vmPowerEndpoint,
 
 		VMRolesListEndpoint: vmRolesListEndpoint,
 		VMAddRoleEndpoint:   vmAddROleEndpoint,
