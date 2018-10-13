@@ -9,7 +9,7 @@ import (
 )
 
 // MakeTaskInfoEndpoint returns an endpoint via the passed service
-func MakeTaskInfoEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
+func MakeTaskInfoEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(TaskInfoRequest)
 		if !ok {

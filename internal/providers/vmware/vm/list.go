@@ -37,7 +37,8 @@ func List(ctx context.Context, c *vim25.Client, params *jt.VMListParams) (map[st
 	}
 
 	res := make(map[string]string)
-	for _, vm := range vms {
+	for i := range vms {
+		vm := &vms[i]
 		res[vm.Summary.Config.Uuid] = vm.Summary.Config.Name
 	}
 

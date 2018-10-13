@@ -10,7 +10,7 @@ import (
 )
 
 // MakeVMFindEndpoint returns an endpoint via the passed service
-func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint { // nolint:dupl
+func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMFindRequest)
 		if !ok {

@@ -158,7 +158,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	}
 
 	if exist {
-		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) // nolint: golint
+		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) //nolint: golint
 	}
 
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)

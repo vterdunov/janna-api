@@ -439,7 +439,7 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) 
 
 // NewDeployment create a new deployment object.
 // It choose needed resources
-func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { // nolint: unparam
+func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { //nolint: unparam
 	d := newSimpleDeployment(c, params, l)
 
 	// step 1. choose Datacenter and folder

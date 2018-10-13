@@ -1,4 +1,4 @@
-// nolint: dupl
+//nolint: dupl
 package endpoint
 
 import (
@@ -11,7 +11,7 @@ import (
 )
 
 // MakeVMAddRoleEndpoint returns an endpoint via the passed service
-func MakeVMAddRoleEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
+func MakeVMAddRoleEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(VMAddRoleRequest)
 		if !ok {

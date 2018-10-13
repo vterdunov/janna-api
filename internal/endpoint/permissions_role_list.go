@@ -9,7 +9,7 @@ import (
 )
 
 // MakeRolesListEndpoint returns an endpoint via the passed service
-func MakeRolesListEndpoint(s service.Service) endpoint.Endpoint { // nolint: dupl
+func MakeRolesListEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		roles, err := s.RoleList(ctx)
 		return RoleListResponse{Roles: roles, Err: err}, nil

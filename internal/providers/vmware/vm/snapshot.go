@@ -145,7 +145,8 @@ func DeleteSnapshot(ctx context.Context, client *vim25.Client, params *jt.VMSnap
 }
 
 func (s *snapshotReference) findByID(snapshots []types.VirtualMachineSnapshotTree, id int32) {
-	for _, st := range snapshots {
+	for i := range snapshots {
+		st := &snapshots[i]
 		if id == st.Id {
 			s.ref = st.Snapshot
 			s.exist = true
@@ -183,7 +184,8 @@ func vmSnapshots(ctx context.Context, vm *object.VirtualMachine) ([]jt.Snapshot,
 }
 
 func walk(st []types.VirtualMachineSnapshotTree, ch chan jt.Snapshot) {
-	for _, s := range st {
+	for i := range st {
+		s := &st[i]
 		t := jt.Snapshot{
 			Name:        s.Name,
 			ID:          s.Id,
