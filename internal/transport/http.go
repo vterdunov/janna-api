@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" // Register pprof
 	"strconv"
 
 	"github.com/go-kit/kit/log"

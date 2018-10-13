@@ -41,12 +41,12 @@ func Load() (*Config, error) {
 	config := &Config{}
 
 	debug := os.Getenv("DEBUG")
-	if debug == "1" || debug == "true" {
+	if debug == "1" || debug == "true" { //nolint:goconst
 		config.Debug = true
 	}
 
 	DebugHTTP := os.Getenv("DEBUG_HTTP")
-	if DebugHTTP == "1" || DebugHTTP == "true" {
+	if DebugHTTP == "1" || DebugHTTP == "true" { //nolint:goconst
 		config.DebugHTTP = true
 	}
 
