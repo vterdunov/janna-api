@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	_ "net/http/pprof"
 	"strconv"
 
 	"github.com/go-kit/kit/log"
@@ -17,7 +18,7 @@ import (
 )
 
 // NewHTTPHandler mounts all of the service endpoints into an http.Handler.
-func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handler {
+func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
 		httptransport.ServerBefore(httptransport.PopulateRequestContext),
@@ -48,6 +49,10 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger) http.Handle
 	))
 
 	r.Path("/metrics").Methods("GET").Handler(promhttp.Handler())
+
+	if debug {
+		r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
+	}
 
 	// Virtual Machines
 	r.Path("/vm").Methods("GET").Handler(httptransport.NewServer(

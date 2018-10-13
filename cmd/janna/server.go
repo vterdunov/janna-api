@@ -67,7 +67,7 @@ func main() {
 	svc := service.New(logger, cfg, client.Client, duration, statusStorage)
 
 	endpoints := endpoint.New(svc, logger)
-	httpHandler := transport.NewHTTPHandler(endpoints, logger)
+	httpHandler := transport.NewHTTPHandler(endpoints, logger, cfg.DebugHTTP)
 	jsonrpcHandler := transport.NewJSONRPCHandler(endpoints, logger)
 
 	logger.Log(

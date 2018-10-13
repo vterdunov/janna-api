@@ -58,6 +58,17 @@ paths:
             text/plain:
               schema:
                 $ref: "#/components/schemas/metrics_response"
+
+  /debug:
+    get:
+      summary: "Golang net http pprof"
+      description: "Runtime profiling data in the format expected by the pprof visualization tool (https://golang.org/pkg/net/http/pprof/)"
+      tags:
+      - Service state
+      responses:
+        '200':
+          description: OK
+
   /vm:
     get:
       summary: "Virtual Machines UUIDs and names list"

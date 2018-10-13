@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Protocols protocols
 	Debug     bool
+	DebugHTTP bool
 	VMWare    resources
 	TaskTTL   time.Duration
 }
@@ -42,6 +43,11 @@ func Load() (*Config, error) {
 	debug := os.Getenv("DEBUG")
 	if debug == "1" || debug == "true" {
 		config.Debug = true
+	}
+
+	DebugHTTP := os.Getenv("DEBUG_HTTP")
+	if DebugHTTP == "1" || DebugHTTP == "true" {
+		config.DebugHTTP = true
 	}
 
 	port := os.Getenv("PORT")
