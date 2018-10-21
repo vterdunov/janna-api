@@ -38,8 +38,8 @@ type VMListRequest struct {
 
 // VMListResponse collects the response values for the VMList method
 type VMListResponse struct {
-	VMList map[string]string `json:"vm_list,omitempty"`
-	Err    error             `json:"error,omitempty"`
+	VMList map[string]string
+	Err    error `json:"error,omitempty"`
 }
 
 // Failed implements Failer

@@ -55,28 +55,28 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	}
 
 	// Virtual Machines
-	r.Path("/vm").Methods("GET").Handler(httptransport.NewServer(
+	r.Path("/vms").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMListEndpoint,
 		decodeVMListRequest,
-		encodeResponse,
+		encodeVMListResponse,
 		options...,
 	))
 
-	r.Path("/vm").Methods("POST").Handler(httptransport.NewServer(
+	r.Path("/vms").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMDeployEndpoint,
 		decodeVMDeployRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Path("/vm/{vm}").Methods("GET").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMInfoEndpoint,
 		decodeVMInfoRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Path("/vm/{vm}").Methods("DELETE").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}").Methods("DELETE").Handler(httptransport.NewServer(
 		endpoints.VMDeleteEndpoint,
 		decodeVMDeleteRequest,
 		encodeResponse,
@@ -84,28 +84,28 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	))
 
 	// Snapshots
-	r.Path("/vm/{vm}/snapshots").Methods("GET").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}/snapshots").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMSnapshotsListEndpoint,
 		decodeVMSnapshotsListyRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Path("/vm/{vm}/snapshots").Methods("POST").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}/snapshots").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMSnapshotCreateEndpoint,
 		decodeVMSnapshotCreateRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Path("/vm/{vm}/snapshots").Methods("DELETE").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}/snapshots").Methods("DELETE").Handler(httptransport.NewServer(
 		endpoints.VMSnapshotDeleteEndpoint,
 		decodeVMSnapshotDeleteRequest,
 		encodeResponse,
 		options...,
 	))
 
-	r.Path("/vm/{vm}/revert/{snapshot}").Methods("POST").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}/revert/{snapshot}").Methods("POST").Handler(httptransport.NewServer(
 		endpoints.VMRestoreFromSnapshotEndpoint,
 		decodeVMRestoreFromSnapshotRequest,
 		encodeResponse,
@@ -113,7 +113,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	))
 
 	// Power state
-	r.Path("/vm/{vm}/power").Methods("PATCH").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}/power").Methods("PATCH").Handler(httptransport.NewServer(
 		endpoints.VMPowerEndpoint,
 		decodeVMPowerRequest,
 		encodeResponse,
@@ -121,7 +121,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	))
 
 	// Read VM roles
-	r.Path("/vm/{vm}/roles").Methods("GET").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}/roles").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMRolesListEndpoint,
 		decodeVMRolesListRequest,
 		encodeResponse,
@@ -129,7 +129,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	))
 
 	// Add VM roles
-	r.Path("/vm/{vm}/roles").Methods("PATCH").Handler(httptransport.NewServer(
+	r.Path("/vms/{vm}/roles").Methods("PATCH").Handler(httptransport.NewServer(
 		endpoints.VMAddRoleEndpoint,
 		decodeVMAddRoleRequest,
 		encodeResponse,
@@ -339,7 +339,7 @@ func decodeOpenAPIRequest(_ context.Context, r *http.Request) (interface{}, erro
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	// check business logic errors
 	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
-		encodeError(ctx, e.Failed(), w)
+		encodeBusinesLogicError(ctx, e.Failed(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -362,10 +362,21 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	})
 }
 
+func encodeBusinesLogicError(_ context.Context, err error, w http.ResponseWriter) {
+	if err == nil {
+		panic("encodeBusinesLogicError with nil error")
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": err.Error(),
+	})
+}
+
 func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	// check business logic errors
 	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
-		encodeError(ctx, e.Failed(), w)
+		encodeBusinesLogicError(ctx, e.Failed(), w)
 		return nil
 	}
 
@@ -383,7 +394,7 @@ func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response 
 func encodeTaskInfoResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	// check business logic errors
 	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
-		encodeError(ctx, e.Failed(), w)
+		encodeBusinesLogicError(ctx, e.Failed(), w)
 		return nil
 	}
 
@@ -394,4 +405,20 @@ func encodeTaskInfoResponse(ctx context.Context, w http.ResponseWriter, response
 		encodeError(ctx, errors.New("could not get OpenAPI data"), w)
 	}
 	return json.NewEncoder(w).Encode(res.Status)
+}
+
+func encodeVMListResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeBusinesLogicError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	res, ok := response.(endpoint.VMListResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not get Virtial Machines list"), w)
+	}
+	return json.NewEncoder(w).Encode(res.VMList)
 }
