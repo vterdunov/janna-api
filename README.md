@@ -20,6 +20,7 @@ export VMWARE_FOLDER=DevVMs
 ```
 
 ## Development
+- Install Go v1.11+ environment.
 - Copy `cp .env.example .env` and change env file.
 
 - Compile and Run
@@ -30,6 +31,8 @@ or using Docker and Docker Compose
 ```
 make dc
 ```
+
+Run `make help` to additional useful commands.
 
 ## API docs
 See [OpenAPI file](https://github.com/vterdunov/janna-api/blob/master/api/openapi.yaml)

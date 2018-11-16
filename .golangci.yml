@@ -1,6 +1,7 @@
 ---
 run:
   deadline: 5m
+  tests: false
   skip-files:
     - ".*\\.pb\\.go$"
 
