@@ -10,7 +10,7 @@ env:
     - COMMIT=${TRAVIS_COMMIT::7}
 
 go:
-  - "1.10.x"
+  - "1.11.x"
 
 script:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
