@@ -18,7 +18,7 @@ TAG ?= $(COMMIT)
 GOLANGCI_LINTER_VERSION = v1.12.2
 OPENAPI_GENERATOR_CLI_VERSION = v3.2.2
 
-all: lint test api-doc-convert docker
+all: lint docker
 
 .PHONY: docker
 docker: ### Build Docker container
