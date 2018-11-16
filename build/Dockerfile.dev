@@ -1,8 +1,8 @@
-FROM golang:1.11.1-alpine3.8
+FROM golang:1.11.2-alpine3.8
 
-RUN apk add --no-cache make git
+RUN apk add --no-cache make git ca-certificates
 
-WORKDIR /go/src/github.com/vterdunov/janna-api
+WORKDIR /build
 
 RUN go get github.com/canthefason/go-watcher && \
     go install github.com/canthefason/go-watcher/cmd/watcher

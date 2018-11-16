@@ -1,8 +1,15 @@
-FROM golang:1.11.1-alpine3.8 AS build-stage
+FROM golang:1.11.2-alpine3.8 AS builder
 
-WORKDIR /go/src/github.com/vterdunov/janna-api
+RUN mkdir /user && \
+    echo 'janna:x:65534:65534:janna:/:' > /user/passwd && \
+    echo 'janna:x:65534:' > /user/group
 
-RUN apk add --no-cache make git
+WORKDIR /build
+
+RUN apk add --no-cache make git ca-certificates
+
+COPY go.mod go.sum ./
+RUN go mod download
 
 COPY . .
 
@@ -14,7 +21,12 @@ ENV PORT=8080
 
 WORKDIR /janna-api
 
+COPY --from=builder /user/group /user/passwd /etc/
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+USER janna:janna
+
 CMD ["./janna-api"]
 
 COPY api/openapi.json api/openapi.json
-COPY --from=build-stage /go/src/github.com/vterdunov/janna-api/janna-api janna-api
+COPY --from=builder /build/janna-api janna-api

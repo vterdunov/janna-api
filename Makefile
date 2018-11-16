@@ -15,60 +15,56 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-GOLANGCI_LINTER_VERSION = v1.10.1
+GOLANGCI_LINTER_VERSION = v1.12.2
 OPENAPI_GENERATOR_CLI_VERSION = v3.2.2
 
 all: lint test api-doc-convert docker
 
 .PHONY: docker
-docker:
+docker: ### Build Docker container
 	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --file build/Dockerfile .
 
 .PHONY: push
-push:
+push: ### Push docker container to registry
 	docker tag $(IMAGE_NAME):$(COMMIT) $(IMAGE_NAME):$(TAG)
 	docker push $(IMAGE_NAME):$(TAG)
 
-.PHONY: dep
-dep:
-	@dep ensure -v
-
 .PHONY: compile
-compile: clean
-	 $(GO_VARS) go build -v -ldflags $(GO_LDFLAGS) -o $(PROG_NAME) ./cmd/janna/server.go
+compile: clean ### Compile Janna
+	$(GO_VARS) go build -v -ldflags $(GO_LDFLAGS) -o $(PROG_NAME) ./cmd/janna/server.go
 
 .PHONY: cgo-compile
 cgo-compile: clean
-	 go build -v -o $(PROG_NAME) ./cmd/janna/server.go
+	go build -v -o $(PROG_NAME) ./cmd/janna/server.go
 
 .PHONY: start
-start:
+start: ### Extract env variables from .env and run Janna with race detector
 	@env `cat .env | grep -v ^# | xargs` go run -race ./cmd/janna/server.go
 
-start-binary: compile
+start-binary: compile ### Extract env variables from .env. Compile and run Janna
 	@env `cat .env | grep -v ^# | xargs` ./janna-api
 
 .PHONY: dc
-dc: dc-clean
+dc: dc-clean ### Run project using docker-compose. Autobuild when files was changed.
 	docker-compose -f deploy/docker-compose.dev.yml up --build
 
 dc-clean:
 	docker-compose -f deploy/docker-compose.dev.yml down --volumes
 
 .PHONY: test
-test:
+test: ### Run tests
 	go test -v -race ./...
 
 .PHONY: lint
-lint:
+lint: ### Run linters
 	@echo Linting...
-	@docker run -it --rm -v $(CURDIR):/go/src/$(PROJECT) -w /go/src/$(PROJECT) golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) run
+	@docker run -it --rm -v $(CURDIR):/lint -w /lint golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run
 
 .PHONY: clean
-clean:
+clean: ### Removes binary file
 	@rm -f ${PROG_NAME}
 
-api-doc-validate:
+api-doc-validate: ### Validate OpenAPI spec
 	@docker run \
 		--rm \
 		--entrypoint='' \
@@ -80,7 +76,7 @@ api-doc-validate:
 					validate \
 					--input-spec /local/api/openapi.yaml'
 
-api-doc-convert:
+api-doc-convert: ### Convert OpenAPI spec from yaml to json format
 	@docker run \
 		--rm \
 		--entrypoint='' \
@@ -93,3 +89,7 @@ api-doc-convert:
 					--input-spec /local/api/openapi.yaml \
 					--generator-name openapi --output /tmp/api/ && \
 				cp /tmp/api/openapi.json /local/api'
+
+.PHONY: help
+help: ### Show this help.
+	@sed -e '/__hidethis__/d; /###/!d; s/:.\+### /\t/g' $(MAKEFILE_LIST)
