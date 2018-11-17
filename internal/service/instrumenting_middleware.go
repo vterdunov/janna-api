@@ -122,6 +122,14 @@ func (mw instrumentingMiddleware) VMAddRole(ctx context.Context, params *types.V
 	return mw.Service.VMAddRole(ctx, params)
 }
 
+func (mw instrumentingMiddleware) VMScreenshot(ctx context.Context, params *types.VMScreenshotParams) (_ []byte, err error) {
+	defer func(begin time.Time) {
+		lvs := []string{"method", "VMScreenshot", "success", fmt.Sprint(err == nil)}
+		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mw.Service.VMScreenshot(ctx, params)
+}
+
 func (mw instrumentingMiddleware) RoleList(ctx context.Context) (_ []types.Role, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "RoleList", "success", fmt.Sprint(err == nil)}

@@ -2,8 +2,8 @@ openapi: "3.0.1"
 
 info:
   title: Janna API docs
-  description: "Janna is a little REST API interface for VMware."
-  version: '0.0.1'
+  description: "Janna provides a REST API interface for some ESXi/vSphere functions"
+  version: 'v0.6.0'
   license:
     name: "MIT"
     url: http://opensource.org/licenses/MIT
@@ -420,6 +420,47 @@ paths:
         '500':
           description: Error
 
+  /vms/{vm_uuid}/screenshot:
+    patch:
+      summary: "Get Virtual Machine console screenshot"
+      tags:
+      - Virtual Machines
+      - Screenshot
+      parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
+      - name: vm_uuid
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+          format: uuid
+      - name: datacenter
+        in: query
+        description: Datacenter name
+        schema:
+          type: string
+          format: uuid
+          minimum: 1
+      responses:
+        '200':
+          description: OK
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                $ref: "#/components/schemas/vm_not_found_errror"
+        '500':
+          description: Error
+
   /permissions/roles:
     get:
       summary: "List roles"
@@ -651,6 +692,13 @@ components:
           "description":
             "label": "Virtual machine user (sample)"
             "summary": "Provides virtual machine interaction permissions"
+
+    vm_not_found_errror:
+      type: object
+      properties:
+       error:
+        type: string
+        example: "could not find Virtual Machine by UUID. Could not assert reference to Virtual Machine"
 
     task_id_response:
       type: object

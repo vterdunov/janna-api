@@ -136,6 +136,14 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 		options...,
 	))
 
+	// Get VM screenshot
+	r.Path("/vms/{vm}/screenshot").Methods("GET").Handler(httptransport.NewServer(
+		endpoints.VMScreenshotEndpoint,
+		decodeVMScreenshotRequest,
+		encodeVMScreenshotResponse,
+		options...,
+	))
+
 	// Find VM
 	r.Path("/find/vm").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMFindEndpoint,
@@ -210,7 +218,7 @@ func decodeVMDeleteRequest(_ context.Context, r *http.Request) (interface{}, err
 	case err == io.EOF:
 		// Empty body. No operation.
 	case err != nil:
-		return nil, errors.Wrap(err, "Could not decode request")
+		return nil, errors.Wrap(err, "Could not decode request: "+r.Method+" "+r.RequestURI)
 	}
 
 	return req, nil
@@ -228,7 +236,7 @@ func decodeVMFindRequest(ctx context.Context, r *http.Request) (interface{}, err
 func decodeVMDeployRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMDeployRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(err, "Could not decode request")
+		return nil, errors.Wrap(err, "Could not decode request: "+r.Method+" "+r.RequestURI)
 	}
 	return req, nil
 }
@@ -249,7 +257,7 @@ func decodeVMSnapshotCreateRequest(_ context.Context, r *http.Request) (interfac
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(err, "Could not decode request")
+		return nil, errors.Wrap(err, "Could not decode request: "+r.Method+" "+r.RequestURI)
 	}
 
 	return req, nil
@@ -261,7 +269,7 @@ func decodeVMSnapshotDeleteRequest(_ context.Context, r *http.Request) (interfac
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(err, "Could not decode request")
+		return nil, errors.Wrap(err, "Could not decode request: "+r.Method+" "+r.RequestURI)
 	}
 
 	return req, nil
@@ -289,7 +297,7 @@ func decodeVMPowerRequest(_ context.Context, r *http.Request) (interface{}, erro
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(err, "Could not decode request")
+		return nil, errors.Wrap(err, "Could not decode request: "+r.Method+" "+r.RequestURI)
 	}
 
 	return req, nil
@@ -311,8 +319,18 @@ func decodeVMAddRoleRequest(_ context.Context, r *http.Request) (interface{}, er
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(err, "Could not decode request")
+		return nil, errors.Wrap(err, "Could not decode request: "+r.Method+" "+r.RequestURI)
 	}
+
+	return req, nil
+}
+
+func decodeVMScreenshotRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMScreenshotRequest
+
+	vars := mux.Vars(r)
+	req.UUID = vars["vm"]
+	req.Datacenter = r.URL.Query().Get("datacenter")
 
 	return req, nil
 }
@@ -388,6 +406,24 @@ func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response 
 	}
 
 	w.Write(res.Spec)
+	return nil
+}
+
+func encodeVMScreenshotResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeBusinesLogicError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+
+	res, ok := response.(endpoint.VMScreenshotResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not get screenshot data"), w)
+	}
+
+	w.Write(res.Screen)
 	return nil
 }
 

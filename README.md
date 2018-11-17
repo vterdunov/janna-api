@@ -25,7 +25,7 @@ export VMWARE_FOLDER=DevVMs
 
 - Compile and Run
 ```
-make start
+make run
 ```
 or using Docker and Docker Compose
 ```

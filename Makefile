@@ -37,11 +37,11 @@ compile: clean ### Compile Janna
 cgo-compile: clean
 	go build -v -o $(PROG_NAME) ./cmd/janna/server.go
 
-.PHONY: start
-start: ### Extract env variables from .env and run Janna with race detector
+.PHONY: run
+run: ### Extract env variables from .env and run Janna with race detector
 	@env `cat .env | grep -v ^# | xargs` go run -race ./cmd/janna/server.go
 
-start-binary: compile ### Extract env variables from .env. Compile and run Janna
+compile-and-run: compile ### Extract env variables from .env. Compile and run Janna
 	@env `cat .env | grep -v ^# | xargs` ./janna-api
 
 .PHONY: dc
