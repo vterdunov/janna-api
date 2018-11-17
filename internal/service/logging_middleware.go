@@ -201,6 +201,20 @@ func (s *loggingMiddleware) VMAddRole(ctx context.Context, params *types.VMAddRo
 	return s.Service.VMAddRole(ctx, params)
 }
 
+func (s *loggingMiddleware) VMScreenshot(ctx context.Context, params *types.VMScreenshotParams) (_ []byte, err error) {
+	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	defer func() {
+		s.logger.Log(
+			"request_id", reqID,
+			"method", "VMScreenshot",
+			"params", fmt.Sprintf("%+v", params),
+			"err", err,
+		)
+	}()
+
+	return s.Service.VMScreenshot(ctx, params)
+}
+
 func (s *loggingMiddleware) RoleList(ctx context.Context) (_ []types.Role, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {

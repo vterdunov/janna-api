@@ -66,6 +66,8 @@ type Service interface {
 
 	VMAddRole(context.Context, *types.VMAddRoleParams) error
 
+	VMScreenshot(context.Context, *types.VMScreenshotParams) ([]byte, error)
+
 	RoleList(context.Context) ([]types.Role, error)
 
 	// TasksList(context.Context) (*status.Tasks, error)
@@ -271,6 +273,10 @@ func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListPara
 
 func (s *service) VMAddRole(ctx context.Context, params *types.VMAddRoleParams) error {
 	return vm.AddRole(ctx, s.Client, params)
+}
+
+func (s *service) VMScreenshot(ctx context.Context, params *types.VMScreenshotParams) ([]byte, error) {
+	return vm.Screenshot(ctx, s.Client, params)
 }
 
 func (s *service) RoleList(ctx context.Context) ([]types.Role, error) {
