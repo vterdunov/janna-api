@@ -1,0 +1,6 @@
+allow = [
+  "MIT License",
+  "Apache License 2.0",
+  "BSD 2-Clause \"Simplified\" License",
+  "BSD 3-Clause \"New\" or \"Revised\" License",
+]
