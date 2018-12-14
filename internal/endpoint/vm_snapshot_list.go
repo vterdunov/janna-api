@@ -37,8 +37,8 @@ type VMSnapshotsListRequest struct {
 
 // VMSnapshotsListResponse collects the response values for the VMSnapshotsList method
 type VMSnapshotsListResponse struct {
-	VMSnapshotsList []types.Snapshot `json:"snapshots"`
-	Err             error            `json:"error,omitempty"`
+	VMSnapshotsList []service.Snapshot `json:"snapshots"`
+	Err             error              `json:"error,omitempty"`
 }
 
 // Failed implements Failer

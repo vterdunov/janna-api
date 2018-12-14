@@ -1,4 +1,4 @@
-package vm
+package service
 
 import (
 	"archive/tar"
@@ -420,7 +420,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 	return &info.Entity, lease.Complete(ctx)
 }
 
-func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) (bool, error) {
+func isVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) (bool, error) {
 	f := find.NewFinder(c, false)
 	dc, err := f.DatacenterOrDefault(ctx, params.Datacenter)
 	if err != nil {
@@ -437,9 +437,9 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) 
 	}
 }
 
-// NewDeployment create a new deployment object.
+// newDeployment create a new deployment object.
 // It choose needed resources
-func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { //nolint: unparam
+func newDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { //nolint: unparam
 	d := newSimpleDeployment(c, params, l)
 
 	// step 1. choose Datacenter and folder

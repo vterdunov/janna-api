@@ -37,8 +37,8 @@ type VMRolesListRequest struct {
 
 // VMRolesListResponse collects the response values for the VMRolesList method
 type VMRolesListResponse struct {
-	VMRolesList []types.Role `json:"roles"`
-	Err         error        `json:"error,omitempty"`
+	VMRolesList []service.Role `json:"roles"`
+	Err         error          `json:"error,omitempty"`
 }
 
 // Failed implements Failer

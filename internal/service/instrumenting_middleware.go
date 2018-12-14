@@ -42,7 +42,7 @@ func (mw *instrumentingMiddleware) VMList(ctx context.Context, params *types.VML
 	return mw.Service.VMList(ctx, params)
 }
 
-func (mw instrumentingMiddleware) VMInfo(ctx context.Context, params *types.VMInfoParams) (_ *types.VMSummary, err error) {
+func (mw instrumentingMiddleware) VMInfo(ctx context.Context, params *types.VMInfoParams) (_ *VMSummary, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMInfo", "success", fmt.Sprint(err == nil)}
 		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
@@ -58,7 +58,7 @@ func (mw instrumentingMiddleware) VMDelete(ctx context.Context, params *types.VM
 	return mw.Service.VMDelete(ctx, params)
 }
 
-func (mw instrumentingMiddleware) VMFind(ctx context.Context, params *types.VMFindParams) (_ *types.VMFound, err error) {
+func (mw instrumentingMiddleware) VMFind(ctx context.Context, params *types.VMFindParams) (_ *VMUuid, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMFind", "success", fmt.Sprint(err == nil)}
 		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
@@ -74,7 +74,7 @@ func (mw instrumentingMiddleware) VMDeploy(ctx context.Context, params *types.VM
 	return mw.Service.VMDeploy(ctx, params)
 }
 
-func (mw instrumentingMiddleware) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) (_ []types.Snapshot, err error) {
+func (mw instrumentingMiddleware) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) (_ []Snapshot, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMSnapshotsList", "success", fmt.Sprint(err == nil)}
 		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
@@ -106,7 +106,7 @@ func (mw instrumentingMiddleware) VMPower(ctx context.Context, params *types.VMP
 	return mw.Service.VMPower(ctx, params)
 }
 
-func (mw instrumentingMiddleware) VMRolesList(ctx context.Context, params *types.VMRolesListParams) (_ []types.Role, err error) {
+func (mw instrumentingMiddleware) VMRolesList(ctx context.Context, params *types.VMRolesListParams) (_ []Role, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMRolesList", "success", fmt.Sprint(err == nil)}
 		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())
@@ -130,7 +130,7 @@ func (mw instrumentingMiddleware) VMScreenshot(ctx context.Context, params *type
 	return mw.Service.VMScreenshot(ctx, params)
 }
 
-func (mw instrumentingMiddleware) RoleList(ctx context.Context) (_ []types.Role, err error) {
+func (mw instrumentingMiddleware) RoleList(ctx context.Context) (_ []Role, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "RoleList", "success", fmt.Sprint(err == nil)}
 		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())

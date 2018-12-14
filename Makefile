@@ -15,22 +15,22 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-GOLANGCI_LINTER_VERSION = v1.12.2
+GOLANGCI_LINTER_VERSION = v1.12.3
 OPENAPI_GENERATOR_CLI_VERSION = v3.2.2
 
 all: lint docker
 
 .PHONY: docker
-docker: ### Build Docker container
+docker: ## Build Docker container
 	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --file build/Dockerfile .
 
 .PHONY: push
-push: ### Push docker container to registry
+push: ## Push docker container to registry
 	docker tag $(IMAGE_NAME):$(COMMIT) $(IMAGE_NAME):$(TAG)
 	docker push $(IMAGE_NAME):$(TAG)
 
 .PHONY: compile
-compile: clean ### Compile Janna
+compile: clean ## Compile Janna
 	$(GO_VARS) go build -v -ldflags $(GO_LDFLAGS) -o $(PROG_NAME) ./cmd/janna/server.go
 
 .PHONY: cgo-compile
@@ -38,33 +38,33 @@ cgo-compile: clean
 	go build -v -o $(PROG_NAME) ./cmd/janna/server.go
 
 .PHONY: run
-run: ### Extract env variables from .env and run Janna with race detector
+run: ## Extract env variables from .env and run Janna with race detector
 	@env `cat .env | grep -v ^# | xargs` go run -race ./cmd/janna/server.go
 
-compile-and-run: compile ### Extract env variables from .env. Compile and run Janna
+compile-and-run: compile ## Extract env variables from .env. Compile and run Janna
 	@env `cat .env | grep -v ^# | xargs` ./janna-api
 
 .PHONY: dc
-dc: dc-clean ### Run project using docker-compose. Autobuild when files was changed.
+dc: dc-clean ## Run project using docker-compose. Autobuild when files was changed.
 	docker-compose -f deploy/docker-compose.dev.yml up --build
 
 dc-clean:
 	docker-compose -f deploy/docker-compose.dev.yml down --volumes
 
 .PHONY: test
-test: ### Run tests
+test: ## Run tests
 	go test -v -race ./...
 
 .PHONY: lint
-lint: ### Run linters
+lint: ## Run linters
 	@echo Linting...
-	@docker run -it --rm -v $(CURDIR):/lint -w /lint golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run
+	@docker run --tty --rm -v $(CURDIR):/lint -w /lint golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run
 
 .PHONY: clean
-clean: ### Removes binary file
+clean: ## Removes binary file
 	@rm -f ${PROG_NAME}
 
-api-doc-validate: ### Validate OpenAPI spec
+api-doc-validate: ## Validate OpenAPI spec
 	@docker run \
 		--rm \
 		--entrypoint='' \
@@ -76,7 +76,7 @@ api-doc-validate: ### Validate OpenAPI spec
 					validate \
 					--input-spec /local/api/openapi.yaml'
 
-api-doc-convert: ### Convert OpenAPI spec from yaml to json format
+api-doc-convert: ## Convert OpenAPI spec from yaml to json format
 	@docker run \
 		--rm \
 		--entrypoint='' \
@@ -91,5 +91,5 @@ api-doc-convert: ### Convert OpenAPI spec from yaml to json format
 				cp /tmp/api/openapi.json /local/api'
 
 .PHONY: help
-help: ### Show this help.
-	@sed -e '/__hidethis__/d; /###/!d; s/:.\+### /\t/g' $(MAKEFILE_LIST)
+help: ## Display this help message
+	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-\.]*: *.*## *" | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/vterdunov/janna-api/internal/service"
-	"github.com/vterdunov/janna-api/internal/types"
 )
 
 // MakeRolesListEndpoint returns an endpoint via the passed service
@@ -21,8 +20,8 @@ type RoleListRequest struct{}
 
 // RoleListResponse collects the response values for the RoleList method
 type RoleListResponse struct {
-	Roles []types.Role `json:"roles"`
-	Err   error        `json:"error,omitempty"`
+	Roles []service.Role `json:"roles"`
+	Err   error          `json:"error,omitempty"`
 }
 
 // Failed implements Failer

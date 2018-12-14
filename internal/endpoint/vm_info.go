@@ -36,8 +36,8 @@ type VMInfoRequest struct {
 
 // VMInfoResponse collects the response values for the VMInfo method
 type VMInfoResponse struct {
-	Summary *types.VMSummary `json:"summary,omitempty"`
-	Err     error            `json:"error,omitempty"`
+	Summary *service.VMSummary `json:"summary,omitempty"`
+	Err     error              `json:"error,omitempty"`
 }
 
 // Failed implements Failer

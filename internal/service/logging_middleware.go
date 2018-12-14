@@ -47,7 +47,7 @@ func (s *loggingMiddleware) VMList(ctx context.Context, params *types.VMListPara
 	return s.Service.VMList(ctx, params)
 }
 
-func (s *loggingMiddleware) VMInfo(ctx context.Context, params *types.VMInfoParams) (_ *types.VMSummary, err error) {
+func (s *loggingMiddleware) VMInfo(ctx context.Context, params *types.VMInfoParams) (_ *VMSummary, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {
 		s.logger.Log(
@@ -61,7 +61,7 @@ func (s *loggingMiddleware) VMInfo(ctx context.Context, params *types.VMInfoPara
 	return s.Service.VMInfo(ctx, params)
 }
 
-func (s *loggingMiddleware) VMFind(ctx context.Context, params *types.VMFindParams) (_ *types.VMFound, err error) {
+func (s *loggingMiddleware) VMFind(ctx context.Context, params *types.VMFindParams) (_ *VMUuid, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {
 		s.logger.Log(
@@ -103,7 +103,7 @@ func (s *loggingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeploy
 	return s.Service.VMDeploy(ctx, params)
 }
 
-func (s *loggingMiddleware) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) (_ []types.Snapshot, err error) {
+func (s *loggingMiddleware) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) (_ []Snapshot, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {
 		s.logger.Log(
@@ -173,7 +173,7 @@ func (s *loggingMiddleware) VMPower(ctx context.Context, params *types.VMPowerPa
 	return s.Service.VMPower(ctx, params)
 }
 
-func (s *loggingMiddleware) VMRolesList(ctx context.Context, params *types.VMRolesListParams) (_ []types.Role, err error) {
+func (s *loggingMiddleware) VMRolesList(ctx context.Context, params *types.VMRolesListParams) (_ []Role, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {
 		s.logger.Log(
@@ -215,7 +215,7 @@ func (s *loggingMiddleware) VMScreenshot(ctx context.Context, params *types.VMSc
 	return s.Service.VMScreenshot(ctx, params)
 }
 
-func (s *loggingMiddleware) RoleList(ctx context.Context) (_ []types.Role, err error) {
+func (s *loggingMiddleware) RoleList(ctx context.Context) (_ []Role, err error) {
 	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
 	defer func() {
 		s.logger.Log(
