@@ -17,11 +17,16 @@ import (
 	"github.com/vterdunov/janna-api/internal/endpoint"
 )
 
+func populateRequestContext(ctx context.Context, r *http.Request) context.Context {
+	ctx = context.WithValue(ctx, "X-Request-Id", r.Header.Get("X-Request-Id"))
+	return ctx
+}
+
 // NewHTTPHandler mounts all of the service endpoints into an http.Handler.
 func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
-		httptransport.ServerBefore(httptransport.PopulateRequestContext),
+		httptransport.ServerBefore(populateRequestContext),
 	}
 
 	r := mux.NewRouter()

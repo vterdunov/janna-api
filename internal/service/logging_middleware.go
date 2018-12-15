@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/transport/http"
 
 	"github.com/vterdunov/janna-api/internal/types"
 )
@@ -34,7 +33,11 @@ func (s *loggingMiddleware) Info() (string, string) {
 }
 
 func (s *loggingMiddleware) VMList(ctx context.Context, params *types.VMListParams) (_ map[string]string, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMList",
@@ -48,7 +51,11 @@ func (s *loggingMiddleware) VMList(ctx context.Context, params *types.VMListPara
 }
 
 func (s *loggingMiddleware) VMInfo(ctx context.Context, params *types.VMInfoParams) (_ *VMSummary, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMInfo",
@@ -62,7 +69,11 @@ func (s *loggingMiddleware) VMInfo(ctx context.Context, params *types.VMInfoPara
 }
 
 func (s *loggingMiddleware) VMFind(ctx context.Context, params *types.VMFindParams) (_ *VMUuid, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMFind",
@@ -76,7 +87,11 @@ func (s *loggingMiddleware) VMFind(ctx context.Context, params *types.VMFindPara
 }
 
 func (s *loggingMiddleware) VMDelete(ctx context.Context, params *types.VMDeleteParams) (err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMDelete",
@@ -90,7 +105,11 @@ func (s *loggingMiddleware) VMDelete(ctx context.Context, params *types.VMDelete
 }
 
 func (s *loggingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeployParams) (_ string, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID).(string)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMDeploy",
@@ -104,7 +123,11 @@ func (s *loggingMiddleware) VMDeploy(ctx context.Context, params *types.VMDeploy
 }
 
 func (s *loggingMiddleware) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) (_ []Snapshot, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMSnapshotsList",
@@ -118,7 +141,11 @@ func (s *loggingMiddleware) VMSnapshotsList(ctx context.Context, params *types.V
 }
 
 func (s *loggingMiddleware) VMSnapshotCreate(ctx context.Context, params *types.SnapshotCreateParams) (_ int32, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMSnapshotCreate",
@@ -132,7 +159,11 @@ func (s *loggingMiddleware) VMSnapshotCreate(ctx context.Context, params *types.
 }
 
 func (s *loggingMiddleware) VMRestoreFromSnapshot(ctx context.Context, params *types.VMRestoreFromSnapshotParams) (err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMRestoreFromSnapshot",
@@ -146,7 +177,11 @@ func (s *loggingMiddleware) VMRestoreFromSnapshot(ctx context.Context, params *t
 }
 
 func (s *loggingMiddleware) VMSnapshotDelete(ctx context.Context, params *types.VMSnapshotDeleteParams) (err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMSnapshotDelete",
@@ -160,7 +195,11 @@ func (s *loggingMiddleware) VMSnapshotDelete(ctx context.Context, params *types.
 }
 
 func (s *loggingMiddleware) VMPower(ctx context.Context, params *types.VMPowerParams) (err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"method", "VMPower",
@@ -174,7 +213,11 @@ func (s *loggingMiddleware) VMPower(ctx context.Context, params *types.VMPowerPa
 }
 
 func (s *loggingMiddleware) VMRolesList(ctx context.Context, params *types.VMRolesListParams) (_ []Role, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"request_id", reqID,
@@ -188,7 +231,11 @@ func (s *loggingMiddleware) VMRolesList(ctx context.Context, params *types.VMRol
 }
 
 func (s *loggingMiddleware) VMAddRole(ctx context.Context, params *types.VMAddRoleParams) (err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"request_id", reqID,
@@ -202,7 +249,11 @@ func (s *loggingMiddleware) VMAddRole(ctx context.Context, params *types.VMAddRo
 }
 
 func (s *loggingMiddleware) VMScreenshot(ctx context.Context, params *types.VMScreenshotParams) (_ []byte, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"request_id", reqID,
@@ -216,7 +267,11 @@ func (s *loggingMiddleware) VMScreenshot(ctx context.Context, params *types.VMSc
 }
 
 func (s *loggingMiddleware) RoleList(ctx context.Context) (_ []Role, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"request_id", reqID,
@@ -229,7 +284,11 @@ func (s *loggingMiddleware) RoleList(ctx context.Context) (_ []Role, err error) 
 }
 
 func (s *loggingMiddleware) TaskInfo(ctx context.Context, taskID string) (_ map[string]interface{}, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"request_id", reqID,
@@ -242,7 +301,11 @@ func (s *loggingMiddleware) TaskInfo(ctx context.Context, taskID string) (_ map[
 }
 
 func (s *loggingMiddleware) OpenAPI(ctx context.Context) (_ []byte, err error) {
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
+	reqID, ok := ctx.Value("X-Request-Id").(string)
+	if !ok {
+		reqID = ""
+	}
+
 	defer func() {
 		s.logger.Log(
 			"request_id", reqID,
