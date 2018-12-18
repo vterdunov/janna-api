@@ -12,7 +12,7 @@ func MakeOpenAPIEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		spec, err := s.OpenAPI(ctx)
 		if err != nil {
-			return OpenAPIResponse{Spec: nil, Err: err}, err
+			return OpenAPIResponse{Spec: nil, Err: err}, nil
 		}
 
 		return OpenAPIResponse{Spec: spec}, nil

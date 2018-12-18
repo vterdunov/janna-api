@@ -15,10 +15,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/vterdunov/janna-api/internal/endpoint"
+	"github.com/vterdunov/janna-api/internal/service"
 )
 
 func populateRequestContext(ctx context.Context, r *http.Request) context.Context {
-	ctx = context.WithValue(ctx, "X-Request-Id", r.Header.Get("X-Request-Id"))
+	ctx = context.WithValue(ctx, service.ContextKeyRequestXRequestID, r.Header.Get("X-Request-Id"))
 	return ctx
 }
 
@@ -77,7 +78,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	r.Path("/vms/{vm}").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMInfoEndpoint,
 		decodeVMInfoRequest,
-		encodeResponse,
+		encodeVMInfoResponse,
 		options...,
 	))
 
@@ -394,6 +395,23 @@ func encodeBusinesLogicError(_ context.Context, err error, w http.ResponseWriter
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})
+}
+
+func encodeVMInfoResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeBusinesLogicError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, ok := response.(endpoint.VMInfoResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not parse VM summary"), w)
+	}
+
+	return json.NewEncoder(w).Encode(resp.Summary)
 }
 
 func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

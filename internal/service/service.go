@@ -25,6 +25,10 @@ import (
 	"github.com/vterdunov/janna-api/internal/version"
 )
 
+type contextKey int
+
+const ContextKeyRequestXRequestID contextKey = iota
+
 // Service is the interface that represents methods of the business logic
 type Service interface {
 	GetConfig() *config.Config
@@ -190,7 +194,14 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 	}
 
 	sum := VMSummary{
-		Name: mVM.Summary.Config.Name,
+		Name:             mVM.Summary.Config.Name,
+		Uuid:             mVM.Summary.Config.Uuid,
+		Template:         mVM.Summary.Config.Template,
+		GuestId:          mVM.Summary.Config.GuestId,
+		Annotation:       mVM.Summary.Config.Annotation,
+		NumCpu:           mVM.Summary.Config.NumCpu,
+		NumEthernetCards: mVM.Summary.Config.NumEthernetCards,
+		NumVirtualDisks:  mVM.Summary.Config.NumVirtualDisks,
 	}
 
 	return &sum, nil

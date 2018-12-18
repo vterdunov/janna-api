@@ -72,11 +72,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) //nolint: golint
 	}
 
-	// do not depends on go-kit HTTP package. need interface or method to get request ID, or pass logger with reauest_id field
-	// r.Header.Get("X-Request-Id") r.Context().Value("X-Request-Id")
-	// reqID := ctx.Value(http.ContextKeyRequestXRequestID)
-
-	reqID, ok := ctx.Value("X-Request-Id").(string)
+	reqID, ok := ctx.Value(ContextKeyRequestXRequestID).(string)
 	if !ok {
 		reqID = ""
 	}

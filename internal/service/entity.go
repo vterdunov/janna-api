@@ -4,13 +4,20 @@ import "time"
 
 // VMSummary stores some information about Virtual Machines
 type VMSummary struct {
-	Name string
+	Name             string
+	Uuid             string
+	Template         bool
+	GuestId          string
+	Annotation       string
+	NumCpu           int32
+	NumEthernetCards int32
+	NumVirtualDisks  int32
 }
 
 // VMUuid saves a VM uuid
 type VMUuid struct {
-	UUID string
 	Name string
+	UUID string
 }
 
 // Snapshot stores info about VM snapshot
