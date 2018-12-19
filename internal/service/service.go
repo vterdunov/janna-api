@@ -193,6 +193,14 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 		return nil, err
 	}
 
+	gi := VMGuestInfo{
+		GuestID:            mVM.Summary.Guest.GuestId,
+		GuestFullName:      mVM.Summary.Guest.GuestFullName,
+		ToolsRunningStatus: mVM.Summary.Guest.ToolsRunningStatus,
+		HostName:           mVM.Summary.Guest.HostName,
+		IPAddress:          mVM.Summary.Guest.IpAddress,
+	}
+
 	sum := VMSummary{
 		Name:             mVM.Summary.Config.Name,
 		UUID:             mVM.Summary.Config.Uuid,
@@ -202,6 +210,7 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 		NumCPU:           mVM.Summary.Config.NumCpu,
 		NumEthernetCards: mVM.Summary.Config.NumEthernetCards,
 		NumVirtualDisks:  mVM.Summary.Config.NumVirtualDisks,
+		VMGuestInfo:      gi,
 	}
 
 	return &sum, nil

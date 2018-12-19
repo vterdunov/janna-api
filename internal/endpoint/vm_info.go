@@ -24,6 +24,13 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		summary, err := s.VMInfo(ctx, params)
+		gi := VMGuestInfo{
+			GuestId:            summary.VMGuestInfo.GuestID,
+			GuestFullName:      summary.VMGuestInfo.GuestFullName,
+			ToolsRunningStatus: summary.VMGuestInfo.ToolsRunningStatus,
+			HostName:           summary.VMGuestInfo.HostName,
+			IpAddress:          summary.VMGuestInfo.IPAddress,
+		}
 		respSummary := VMSummary{
 			Name:             summary.Name,
 			UUID:             summary.UUID,
@@ -33,6 +40,7 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 			NumCPU:           summary.NumCPU,
 			NumEthernetCards: summary.NumEthernetCards,
 			NumVirtualDisks:  summary.NumVirtualDisks,
+			VMGuestInfo:      gi,
 		}
 
 		return VMInfoResponse{Summary: respSummary, Err: err}, nil
@@ -60,6 +68,15 @@ type VMSummary struct {
 	NumEthernetCards int32  `json:"num_ethernet_cards"`
 	NumVirtualDisks  int32  `json:"num_virtual_disks"`
 	Template         bool   `json:"template"`
+	VMGuestInfo      `json:"guest_info"`
+}
+
+type VMGuestInfo struct {
+	GuestID            string `json:"guest_id"`
+	GuestFullName      string `json:"guest_full_name"`
+	ToolsRunningStatus string `json:"tools_running_status"`
+	HostName           string `json:"host_name"`
+	IPAddress          string `json:"ip_address"`
 }
 
 // Failed implements Failer

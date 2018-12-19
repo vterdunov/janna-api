@@ -4,14 +4,28 @@ import "time"
 
 // VMSummary stores some information about Virtual Machines
 type VMSummary struct {
-	Name             string
-	UUID             string
-	GuestID          string
-	Annotation       string
-	NumCPU           int32
-	NumEthernetCards int32
-	NumVirtualDisks  int32
-	Template         bool
+	BootTime            time.Time
+	Name                string
+	UUID                string
+	GuestID             string
+	Annotation          string
+	PowerState          string
+	ConnectionState     string
+	NumCPU              int32
+	NumEthernetCards    int32
+	NumVirtualDisks     int32
+	Paused              bool
+	ConsolidationNeeded bool
+	Template            bool
+	VMGuestInfo
+}
+
+type VMGuestInfo struct {
+	GuestID            string
+	GuestFullName      string
+	ToolsRunningStatus string
+	HostName           string
+	IPAddress          string
 }
 
 // VMUuid saves a VM uuid
