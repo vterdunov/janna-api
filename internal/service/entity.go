@@ -9,7 +9,7 @@ type VMSummary struct {
 	Template         bool
 	GuestID          string
 	Annotation       string
-	NumCpu           int32
+	NumCPU           int32
 	NumEthernetCards int32
 	NumVirtualDisks  int32
 }

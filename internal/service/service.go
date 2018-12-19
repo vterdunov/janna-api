@@ -199,7 +199,7 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 		Template:         mVM.Summary.Config.Template,
 		GuestID:          mVM.Summary.Config.GuestId,
 		Annotation:       mVM.Summary.Config.Annotation,
-		NumCpu:           mVM.Summary.Config.NumCpu,
+		NumCPU:           mVM.Summary.Config.NumCpu,
 		NumEthernetCards: mVM.Summary.Config.NumEthernetCards,
 		NumVirtualDisks:  mVM.Summary.Config.NumVirtualDisks,
 	}

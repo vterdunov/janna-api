@@ -30,7 +30,7 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 			Template:         summary.Template,
 			GuestID:          summary.GuestID,
 			Annotation:       summary.Annotation,
-			NumCpu:           summary.NumCpu,
+			NumCPU:           summary.NumCPU,
 			NumEthernetCards: summary.NumEthernetCards,
 			NumVirtualDisks:  summary.NumVirtualDisks,
 		}
@@ -54,12 +54,12 @@ type VMInfoResponse struct {
 type VMSummary struct {
 	Name             string `json:"name"`
 	UUID             string `json:"uuid"`
-	Template         bool   `json:"template"`
 	GuestID          string `json:"guest_id"`
 	Annotation       string `json:"annotation"`
-	NumCpu           int32  `json:"num_cpu"`
+	NumCPU           int32  `json:"num_cpu"`
 	NumEthernetCards int32  `json:"num_ethernet_cards"`
 	NumVirtualDisks  int32  `json:"num_virtual_disks"`
+	Template         bool   `json:"template"`
 }
 
 // Failed implements Failer
