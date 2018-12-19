@@ -195,9 +195,9 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 
 	sum := VMSummary{
 		Name:             mVM.Summary.Config.Name,
-		Uuid:             mVM.Summary.Config.Uuid,
+		UUID:             mVM.Summary.Config.Uuid,
 		Template:         mVM.Summary.Config.Template,
-		GuestId:          mVM.Summary.Config.GuestId,
+		GuestID:          mVM.Summary.Config.GuestId,
 		Annotation:       mVM.Summary.Config.Annotation,
 		NumCpu:           mVM.Summary.Config.NumCpu,
 		NumEthernetCards: mVM.Summary.Config.NumEthernetCards,

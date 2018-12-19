@@ -26,9 +26,9 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 		summary, err := s.VMInfo(ctx, params)
 		respSummary := VMSummary{
 			Name:             summary.Name,
-			Uuid:             summary.Uuid,
+			UUID:             summary.UUID,
 			Template:         summary.Template,
-			GuestId:          summary.GuestId,
+			GuestID:          summary.GuestID,
 			Annotation:       summary.Annotation,
 			NumCpu:           summary.NumCpu,
 			NumEthernetCards: summary.NumEthernetCards,
@@ -53,9 +53,9 @@ type VMInfoResponse struct {
 
 type VMSummary struct {
 	Name             string `json:"name"`
-	Uuid             string `json:"uuid"`
+	UUID             string `json:"uuid"`
 	Template         bool   `json:"template"`
-	GuestId          string `json:"guest_id"`
+	GuestID          string `json:"guest_id"`
 	Annotation       string `json:"annotation"`
 	NumCpu           int32  `json:"num_cpu"`
 	NumEthernetCards int32  `json:"num_ethernet_cards"`

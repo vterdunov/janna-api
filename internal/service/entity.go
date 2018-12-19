@@ -5,9 +5,9 @@ import "time"
 // VMSummary stores some information about Virtual Machines
 type VMSummary struct {
 	Name             string
-	Uuid             string
+	UUID             string
 	Template         bool
-	GuestId          string
+	GuestID          string
 	Annotation       string
 	NumCpu           int32
 	NumEthernetCards int32
