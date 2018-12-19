@@ -6,12 +6,12 @@ import "time"
 type VMSummary struct {
 	Name             string
 	UUID             string
-	Template         bool
 	GuestID          string
 	Annotation       string
 	NumCPU           int32
 	NumEthernetCards int32
 	NumVirtualDisks  int32
+	Template         bool
 }
 
 // VMUuid saves a VM uuid
