@@ -25,7 +25,16 @@ func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		list, err := s.VMList(ctx, params)
-		return VMListResponse{VMList: list, Err: err}, nil
+		resVMuuid := []VMUuid{}
+		for _, i := range list {
+			u := VMUuid{
+				Name: i.Name,
+				UUID: i.UUID,
+			}
+			resVMuuid = append(resVMuuid, u)
+		}
+
+		return VMListResponse{VMList: resVMuuid, Err: err}, nil
 	}
 }
 
@@ -38,7 +47,7 @@ type VMListRequest struct {
 
 // VMListResponse collects the response values for the VMList method
 type VMListResponse struct {
-	VMList map[string]string
+	VMList []VMUuid
 	Err    error `json:"error,omitempty"`
 }
 

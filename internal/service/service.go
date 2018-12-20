@@ -43,7 +43,7 @@ type Service interface {
 	Readyz() bool
 
 	// VMList returns list of VMs
-	VMList(context.Context, *types.VMListParams) (map[string]string, error)
+	VMList(context.Context, *types.VMListParams) ([]VMUuid, error)
 
 	// VMInfo provide summary information about VM
 	VMInfo(context.Context, *types.VMInfoParams) (*VMSummary, error)
@@ -142,7 +142,7 @@ func (s *service) Readyz() bool {
 	return health.Readyz()
 }
 
-func (s *service) VMList(ctx context.Context, params *types.VMListParams) (map[string]string, error) {
+func (s *service) VMList(ctx context.Context, params *types.VMListParams) ([]VMUuid, error) {
 	root, err := chooseRoot(ctx, s.Client, params)
 	if err != nil {
 		return nil, err
@@ -164,13 +164,17 @@ func (s *service) VMList(ctx context.Context, params *types.VMListParams) (map[s
 		return nil, err
 	}
 
-	res := make(map[string]string)
+	resVMs := []VMUuid{}
 	for i := range vms {
 		vm := &vms[i]
-		res[vm.Summary.Config.Uuid] = vm.Summary.Config.Name
+		vmUUID := VMUuid{
+			Name: vm.Summary.Config.Name,
+			UUID: vm.Summary.Config.Uuid,
+		}
+		resVMs = append(resVMs, vmUUID)
 	}
 
-	return res, nil
+	return resVMs, nil
 }
 
 func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSummary, error) {
@@ -207,6 +211,7 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 		Template:         mVM.Summary.Config.Template,
 		GuestID:          mVM.Summary.Config.GuestId,
 		Annotation:       mVM.Summary.Config.Annotation,
+		PowerState:       string(mVM.Runtime.PowerState),
 		NumCPU:           mVM.Summary.Config.NumCpu,
 		NumEthernetCards: mVM.Summary.Config.NumEthernetCards,
 		NumVirtualDisks:  mVM.Summary.Config.NumVirtualDisks,
@@ -285,7 +290,6 @@ func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListPara
 
 	for _, p := range perms {
 		_ = p
-		// fmt.Println(p.Principal)
 	}
 
 	roles, err := am.RoleList(ctx)

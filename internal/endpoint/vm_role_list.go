@@ -25,7 +25,17 @@ func MakeVMRolesListEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		list, err := s.VMRolesList(ctx, params)
-		return VMRolesListResponse{VMRolesList: list, Err: err}, nil
+		rs := []VMRole{}
+		for _, r := range list {
+			role := VMRole{}
+			role.Name = r.Name
+			role.ID = r.ID
+			role.Description.Label = r.Description.Label
+			role.Description.Summary = r.Description.Summary
+			rs = append(rs, role)
+		}
+
+		return VMRolesListResponse{VMRolesList: rs, Err: err}, nil
 	}
 }
 
@@ -37,8 +47,17 @@ type VMRolesListRequest struct {
 
 // VMRolesListResponse collects the response values for the VMRolesList method
 type VMRolesListResponse struct {
-	VMRolesList []service.Role `json:"roles"`
-	Err         error          `json:"error,omitempty"`
+	VMRolesList []VMRole
+	Err         error `json:"error,omitempty"`
+}
+
+type VMRole struct {
+	Name        string `json:"name"`
+	ID          int32  `json:"id"`
+	Description struct {
+		Label   string `json:"label"`
+		Summary string `json:"summary"`
+	} `json:"description"`
 }
 
 // Failed implements Failer

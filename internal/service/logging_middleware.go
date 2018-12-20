@@ -32,7 +32,7 @@ func (s *loggingMiddleware) Info() (string, string) {
 	return s.Service.Info()
 }
 
-func (s *loggingMiddleware) VMList(ctx context.Context, params *types.VMListParams) (_ map[string]string, err error) {
+func (s *loggingMiddleware) VMList(ctx context.Context, params *types.VMListParams) (_ []VMUuid, err error) {
 	reqID, ok := ctx.Value("X-Request-Id").(string)
 	if !ok {
 		reqID = ""

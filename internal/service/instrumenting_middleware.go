@@ -34,7 +34,7 @@ func (mw instrumentingMiddleware) Info() (string, string) {
 	return mw.Service.Info()
 }
 
-func (mw *instrumentingMiddleware) VMList(ctx context.Context, params *types.VMListParams) (_ map[string]string, err error) {
+func (mw *instrumentingMiddleware) VMList(ctx context.Context, params *types.VMListParams) (_ []VMUuid, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "VMList", "success", fmt.Sprint(err == nil)}
 		mw.duration.With(lvs...).Observe(time.Since(begin).Seconds())

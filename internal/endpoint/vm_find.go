@@ -28,12 +28,14 @@ func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint {
 			return VMFindResponse{Err: err}, nil
 		}
 
+		vmUUID := VMUuid{
+			Name: vm.Name,
+			UUID: vm.UUID,
+		}
+
 		return VMFindResponse{
-			VMUuid: &service.VMUuid{
-				Name: vm.Name,
-				UUID: vm.UUID,
-			},
-			Err: err,
+			VMUuid: vmUUID,
+			Err:    err,
 		}, nil
 	}
 }
@@ -46,8 +48,13 @@ type VMFindRequest struct {
 
 // VMFindResponse collects the response values for the VMFind method
 type VMFindResponse struct {
-	*service.VMUuid
+	VMUuid
 	Err error `json:"error,omitempty"`
+}
+
+type VMUuid struct {
+	Name string `json:"name"`
+	UUID string `json:"uuid"`
 }
 
 // Failed implements Failer

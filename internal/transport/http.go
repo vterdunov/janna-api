@@ -130,7 +130,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	r.Path("/vms/{vm}/roles").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMRolesListEndpoint,
 		decodeVMRolesListRequest,
-		encodeResponse,
+		encodeVMRoleListResponse,
 		options...,
 	))
 
@@ -162,7 +162,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	r.Path("/permissions/roles").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.RoleListEndpoint,
 		decodeRoleListRequest,
-		encodeResponse,
+		encodeRoleListResponse,
 		options...,
 	))
 
@@ -412,6 +412,40 @@ func encodeVMInfoResponse(ctx context.Context, w http.ResponseWriter, response i
 	}
 
 	return json.NewEncoder(w).Encode(resp.Summary)
+}
+
+func encodeVMRoleListResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeBusinesLogicError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, ok := response.(endpoint.VMRolesListResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not parse VM summary"), w)
+	}
+
+	return json.NewEncoder(w).Encode(resp.VMRolesList)
+}
+
+func encodeRoleListResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeBusinesLogicError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, ok := response.(endpoint.RoleListResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not parse VM summary"), w)
+	}
+
+	return json.NewEncoder(w).Encode(resp.Roles)
 }
 
 func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

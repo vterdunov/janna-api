@@ -24,19 +24,22 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		summary, err := s.VMInfo(ctx, params)
+
 		gi := VMGuestInfo{
-			GuestId:            summary.VMGuestInfo.GuestID,
+			GuestID:            summary.VMGuestInfo.GuestID,
 			GuestFullName:      summary.VMGuestInfo.GuestFullName,
 			ToolsRunningStatus: summary.VMGuestInfo.ToolsRunningStatus,
 			HostName:           summary.VMGuestInfo.HostName,
-			IpAddress:          summary.VMGuestInfo.IPAddress,
+			IPAddress:          summary.VMGuestInfo.IPAddress,
 		}
+
 		respSummary := VMSummary{
 			Name:             summary.Name,
 			UUID:             summary.UUID,
 			Template:         summary.Template,
 			GuestID:          summary.GuestID,
 			Annotation:       summary.Annotation,
+			PowerState:       summary.PowerState,
 			NumCPU:           summary.NumCPU,
 			NumEthernetCards: summary.NumEthernetCards,
 			NumVirtualDisks:  summary.NumVirtualDisks,
@@ -64,6 +67,7 @@ type VMSummary struct {
 	UUID             string `json:"uuid"`
 	GuestID          string `json:"guest_id"`
 	Annotation       string `json:"annotation"`
+	PowerState       string `json:"power_state"`
 	NumCPU           int32  `json:"num_cpu"`
 	NumEthernetCards int32  `json:"num_ethernet_cards"`
 	NumVirtualDisks  int32  `json:"num_virtual_disks"`
