@@ -1,4 +1,4 @@
-ARG GOLANG_VERSION=1.11.3
+ARG GOLANG_VERSION=1.11.4
 ARG OPENAPI_GENERATOR_CLI_VERSION=v3.2.2
 # ---------------
 FROM golang:${GOLANG_VERSION} AS env
@@ -29,7 +29,7 @@ FROM builder AS licence-scanner
 ARG GOLICENSE_VERSION=0.1.1
 RUN wget https://github.com/mitchellh/golicense/releases/download/v${GOLICENSE_VERSION}/golicense_${GOLICENSE_VERSION}_linux_x86_64.tar.gz && \
 		tar xvf golicense_${GOLICENSE_VERSION}_linux_x86_64.tar.gz
-RUN ./golicense ./build/ci/golicense.hcl janna-api
+RUN ./golicense -verbose ./build/ci/golicense.hcl ./janna-api
 
 # ---------------
 FROM openapitools/openapi-generator-cli:${OPENAPI_GENERATOR_CLI_VERSION} AS api
