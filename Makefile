@@ -22,7 +22,7 @@ all: lint docker
 
 .PHONY: docker
 docker: ## Build Docker container
-	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --file build/Dockerfile .
+	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --build-arg=GITHUB_TOKEN=${GITHUB_TOKEN} --file build/Dockerfile .
 
 .PHONY: push
 push: ## Push docker container to registry
