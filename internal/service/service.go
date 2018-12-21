@@ -20,6 +20,7 @@ import (
 	vmware_types "github.com/vmware/govmomi/vim25/types"
 
 	"github.com/vterdunov/janna-api/internal/config"
+	"github.com/vterdunov/janna-api/internal/domain"
 	"github.com/vterdunov/janna-api/internal/health"
 	"github.com/vterdunov/janna-api/internal/types"
 	"github.com/vterdunov/janna-api/internal/version"
@@ -43,22 +44,22 @@ type Service interface {
 	Readyz() bool
 
 	// VMList returns list of VMs
-	VMList(context.Context, *types.VMListParams) ([]VMUuid, error)
+	VMList(context.Context, *types.VMListParams) ([]domain.VMUuid, error)
 
 	// VMInfo provide summary information about VM
-	VMInfo(context.Context, *types.VMInfoParams) (*VMSummary, error)
+	VMInfo(context.Context, *types.VMInfoParams) (*domain.VMSummary, error)
 
 	// VMDelete destroys a Virtual Machine
 	VMDelete(context.Context, *types.VMDeleteParams) error
 
 	// VMFind find VM by path and return its UUID
-	VMFind(context.Context, *types.VMFindParams) (*VMUuid, error)
+	VMFind(context.Context, *types.VMFindParams) (*domain.VMUuid, error)
 
 	// VMDeploy create VM from OVA file
 	VMDeploy(context.Context, *types.VMDeployParams) (string, error)
 
 	// VMSnapshotsList returns VM snapshots list
-	VMSnapshotsList(context.Context, *types.VMSnapshotsListParams) ([]Snapshot, error)
+	VMSnapshotsList(context.Context, *types.VMSnapshotsListParams) ([]domain.Snapshot, error)
 
 	// VMSnapshotCreate creates a VM snapshot
 	VMSnapshotCreate(context.Context, *types.SnapshotCreateParams) (int32, error)
@@ -71,13 +72,13 @@ type Service interface {
 
 	VMPower(context.Context, *types.VMPowerParams) error
 
-	VMRolesList(context.Context, *types.VMRolesListParams) ([]Role, error)
+	VMRolesList(context.Context, *types.VMRolesListParams) ([]domain.Role, error)
 
 	VMAddRole(context.Context, *types.VMAddRoleParams) error
 
 	VMScreenshot(context.Context, *types.VMScreenshotParams) ([]byte, error)
 
-	RoleList(context.Context) ([]Role, error)
+	RoleList(context.Context) ([]domain.Role, error)
 
 	// TasksList(context.Context) (*status.Tasks, error)
 
@@ -142,7 +143,7 @@ func (s *service) Readyz() bool {
 	return health.Readyz()
 }
 
-func (s *service) VMList(ctx context.Context, params *types.VMListParams) ([]VMUuid, error) {
+func (s *service) VMList(ctx context.Context, params *types.VMListParams) ([]domain.VMUuid, error) {
 	root, err := chooseRoot(ctx, s.Client, params)
 	if err != nil {
 		return nil, err
@@ -164,10 +165,10 @@ func (s *service) VMList(ctx context.Context, params *types.VMListParams) ([]VMU
 		return nil, err
 	}
 
-	resVMs := []VMUuid{}
+	resVMs := []domain.VMUuid{}
 	for i := range vms {
 		vm := &vms[i]
-		vmUUID := VMUuid{
+		vmUUID := domain.VMUuid{
 			Name: vm.Summary.Config.Name,
 			UUID: vm.Summary.Config.Uuid,
 		}
@@ -177,7 +178,7 @@ func (s *service) VMList(ctx context.Context, params *types.VMListParams) ([]VMU
 	return resVMs, nil
 }
 
-func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSummary, error) {
+func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*domain.VMSummary, error) {
 	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
 	if err != nil {
 		return nil, err
@@ -197,7 +198,7 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 		return nil, err
 	}
 
-	gi := VMGuestInfo{
+	gi := domain.VMGuestInfo{
 		GuestID:            mVM.Summary.Guest.GuestId,
 		GuestFullName:      mVM.Summary.Guest.GuestFullName,
 		ToolsRunningStatus: mVM.Summary.Guest.ToolsRunningStatus,
@@ -205,7 +206,7 @@ func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*VMSu
 		IPAddress:          mVM.Summary.Guest.IpAddress,
 	}
 
-	sum := VMSummary{
+	sum := domain.VMSummary{
 		Name:             mVM.Summary.Config.Name,
 		UUID:             mVM.Summary.Config.Uuid,
 		Template:         mVM.Summary.Config.Template,
@@ -251,7 +252,7 @@ func (s *service) VMDelete(ctx context.Context, params *types.VMDeleteParams) er
 	return destroyTask.Wait(ctx)
 }
 
-func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*VMUuid, error) {
+func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*domain.VMUuid, error) {
 	oVM, err := findByPath(ctx, s.Client, params.Datacenter, params.Path)
 	if err != nil {
 		return nil, err
@@ -267,7 +268,7 @@ func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*VMUu
 		return nil, err
 	}
 
-	res := VMUuid{
+	res := domain.VMUuid{
 		UUID: vm.Summary.Config.Uuid,
 		Name: vm.Summary.Config.Name,
 	}
@@ -275,7 +276,7 @@ func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*VMUu
 	return &res, nil
 }
 
-func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListParams) ([]Role, error) {
+func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListParams) ([]domain.Role, error) {
 	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
 	if err != nil {
 		return nil, err
@@ -297,10 +298,10 @@ func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListPara
 		return nil, err
 	}
 
-	rr := []Role{}
+	rr := []domain.Role{}
 	for _, role := range roles {
 		desc := role.Info.GetDescription()
-		r := Role{
+		r := domain.Role{
 			Name: role.Name,
 			ID:   role.RoleId,
 		}
@@ -335,17 +336,17 @@ func (s *service) VMAddRole(ctx context.Context, params *types.VMAddRoleParams) 
 	return nil
 }
 
-func (s *service) RoleList(ctx context.Context) ([]Role, error) {
+func (s *service) RoleList(ctx context.Context) ([]domain.Role, error) {
 	am := object.NewAuthorizationManager(s.Client)
 	roles, err := am.RoleList(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rr := []Role{}
+	rr := []domain.Role{}
 	for _, role := range roles {
 		desc := role.Info.GetDescription()
-		r := Role{
+		r := domain.Role{
 			Name: role.Name,
 			ID:   role.RoleId,
 		}
@@ -478,7 +479,7 @@ func findByPath(ctx context.Context, client *vim25.Client, DCname, path string) 
 	return f.VirtualMachine(ctx, path)
 }
 
-func vmSnapshots(ctx context.Context, vm *object.VirtualMachine) ([]Snapshot, error) {
+func vmSnapshots(ctx context.Context, vm *object.VirtualMachine) ([]domain.Snapshot, error) {
 	var o mo.VirtualMachine
 
 	err := vm.Properties(ctx, vm.Reference(), []string{"snapshot"}, &o)
@@ -486,12 +487,12 @@ func vmSnapshots(ctx context.Context, vm *object.VirtualMachine) ([]Snapshot, er
 		return nil, err
 	}
 
-	st := make([]Snapshot, 0)
+	st := make([]domain.Snapshot, 0)
 	if o.Snapshot == nil {
 		return st, nil
 	}
 
-	ch := make(chan Snapshot, 1000)
+	ch := make(chan domain.Snapshot, 1000)
 	walk(o.Snapshot.RootSnapshotList, ch)
 
 	close(ch)
@@ -502,10 +503,10 @@ func vmSnapshots(ctx context.Context, vm *object.VirtualMachine) ([]Snapshot, er
 	return st, nil
 }
 
-func walk(st []vmware_types.VirtualMachineSnapshotTree, ch chan Snapshot) {
+func walk(st []vmware_types.VirtualMachineSnapshotTree, ch chan domain.Snapshot) {
 	for i := range st {
 		s := &st[i]
-		t := Snapshot{
+		t := domain.Snapshot{
 			Name:        s.Name,
 			ID:          s.Id,
 			Description: s.Description,

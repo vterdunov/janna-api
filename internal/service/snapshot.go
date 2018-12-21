@@ -8,10 +8,11 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 	vmware_types "github.com/vmware/govmomi/vim25/types"
 
+	"github.com/vterdunov/janna-api/internal/domain"
 	"github.com/vterdunov/janna-api/internal/types"
 )
 
-func (s *service) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) ([]Snapshot, error) {
+func (s *service) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) ([]domain.Snapshot, error) {
 	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
 	if err != nil {
 		return nil, err

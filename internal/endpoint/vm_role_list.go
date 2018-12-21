@@ -25,6 +25,10 @@ func MakeVMRolesListEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		list, err := s.VMRolesList(ctx, params)
+		if err != nil {
+			return VMRolesListResponse{Err: err}, nil
+		}
+
 		rs := []VMRole{}
 		for _, r := range list {
 			role := VMRole{}

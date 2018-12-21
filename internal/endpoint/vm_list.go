@@ -25,6 +25,10 @@ func MakeVMListEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		list, err := s.VMList(ctx, params)
+		if err != nil {
+			return VMListResponse{Err: err}, nil
+		}
+
 		resVMuuid := []VMUuid{}
 		for _, i := range list {
 			u := VMUuid{

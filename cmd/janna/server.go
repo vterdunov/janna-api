@@ -68,7 +68,6 @@ func main() {
 
 	endpoints := endpoint.New(svc, logger)
 	httpHandler := transport.NewHTTPHandler(endpoints, logger, cfg.DebugHTTP)
-	jsonrpcHandler := transport.NewJSONRPCHandler(endpoints, logger)
 
 	logger.Log(
 		"commit", version.Commit,
@@ -96,26 +95,6 @@ func main() {
 		}()
 	}
 
-	// JSON RPC server
-	var jsonrpcServer *http.Server
-	if cfg.Protocols.JSONRPC.Port != "" {
-		jsonrpcServer = &http.Server{
-			Addr:    ":" + cfg.Protocols.JSONRPC.Port,
-			Handler: jsonrpcHandler,
-		}
-
-		go func() {
-			logger.Log(
-				"msg", "Starting JSON RPC over HTTP server",
-				"address", jsonrpcServer.Addr,
-			)
-			if err := jsonrpcServer.ListenAndServe(); err != nil {
-				logger.Log("msg", "Startup failed", "err", err)
-				os.Exit(1)
-			}
-		}()
-	}
-
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
@@ -130,10 +109,9 @@ func main() {
 	client.Logout(ctx)
 
 	if cfg.Protocols.HTTP.Port != "" {
-		httpServer.Shutdown(ctx)
-	}
-	if cfg.Protocols.JSONRPC.Port != "" {
-		jsonrpcServer.Shutdown(ctx)
+		if err := httpServer.Shutdown(ctx); err != nil {
+			logger.Log("msg", "Somethig went wrong while HTTP server stopping", "err", err)
+		}
 	}
 	logger.Log("msg", "Stopped")
 }

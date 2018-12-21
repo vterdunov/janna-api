@@ -32,8 +32,8 @@ type TaskInfoRequest struct {
 
 // TaskInfoResponse collects the response values for the TaskInfo method
 type TaskInfoResponse struct {
-	Err    error `json:"error,omitempty"`
 	Status map[string]interface{}
+	Err    error `json:"error,omitempty"`
 }
 
 // Failed implements Failer

@@ -24,6 +24,9 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		summary, err := s.VMInfo(ctx, params)
+		if err != nil {
+			return VMInfoResponse{Err: err}, nil
+		}
 
 		gi := VMGuestInfo{
 			GuestID:            summary.VMGuestInfo.GuestID,
@@ -33,7 +36,7 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 			IPAddress:          summary.VMGuestInfo.IPAddress,
 		}
 
-		respSummary := VMSummary{
+		return VMInfoResponse{
 			Name:             summary.Name,
 			UUID:             summary.UUID,
 			Template:         summary.Template,
@@ -44,9 +47,8 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 			NumEthernetCards: summary.NumEthernetCards,
 			NumVirtualDisks:  summary.NumVirtualDisks,
 			VMGuestInfo:      gi,
-		}
-
-		return VMInfoResponse{Summary: respSummary, Err: err}, nil
+			Err:              err,
+		}, nil
 	}
 }
 
@@ -58,11 +60,6 @@ type VMInfoRequest struct {
 
 // VMInfoResponse collects the response values for the VMInfo method
 type VMInfoResponse struct {
-	Summary VMSummary
-	Err     error `json:"error,omitempty"`
-}
-
-type VMSummary struct {
 	Name             string `json:"name"`
 	UUID             string `json:"uuid"`
 	GuestID          string `json:"guest_id"`
@@ -73,6 +70,7 @@ type VMSummary struct {
 	NumVirtualDisks  int32  `json:"num_virtual_disks"`
 	Template         bool   `json:"template"`
 	VMGuestInfo      `json:"guest_info"`
+	Err              error `json:"error,omitempty"`
 }
 
 type VMGuestInfo struct {

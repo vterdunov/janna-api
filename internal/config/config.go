@@ -24,15 +24,10 @@ type resources struct {
 }
 
 type protocols struct {
-	HTTP    http
-	JSONRPC jsonrpc
+	HTTP http
 }
 
 type http struct {
-	Port string
-}
-
-type jsonrpc struct {
 	Port string
 }
 
@@ -53,11 +48,6 @@ func Load() (*Config, error) {
 	port := os.Getenv("PORT")
 	if port != "" {
 		config.Protocols.HTTP.Port = port
-	}
-
-	jsonrpcPort := os.Getenv("JSONRPC_PORT")
-	if jsonrpcPort != "" {
-		config.Protocols.JSONRPC.Port = jsonrpcPort
 	}
 
 	// VMWare URL

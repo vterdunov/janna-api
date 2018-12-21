@@ -11,6 +11,10 @@ import (
 func MakeRolesListEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		roles, err := s.RoleList(ctx)
+		if err != nil {
+			return RoleListResponse{Err: err}, nil
+		}
+
 		rs := []Role{}
 
 		for _, r := range roles {
