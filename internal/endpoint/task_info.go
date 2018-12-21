@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-kit/kit/endpoint"
+
 	"github.com/vterdunov/janna-api/internal/service"
 )
 
