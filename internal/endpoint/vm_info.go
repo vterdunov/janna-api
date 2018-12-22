@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-kit/kit/endpoint"
+
 	"github.com/vterdunov/janna-api/internal/service"
 	"github.com/vterdunov/janna-api/internal/types"
 )
@@ -24,7 +25,31 @@ func MakeVMInfoEndpoint(s service.Service) endpoint.Endpoint {
 		params.FillEmptyFields(s.GetConfig())
 
 		summary, err := s.VMInfo(ctx, params)
-		return VMInfoResponse{Summary: summary, Err: err}, nil
+		if err != nil {
+			return VMInfoResponse{Err: err}, nil
+		}
+
+		gi := VMGuestInfo{
+			GuestID:            summary.VMGuestInfo.GuestID,
+			GuestFullName:      summary.VMGuestInfo.GuestFullName,
+			ToolsRunningStatus: summary.VMGuestInfo.ToolsRunningStatus,
+			HostName:           summary.VMGuestInfo.HostName,
+			IPAddress:          summary.VMGuestInfo.IPAddress,
+		}
+
+		return VMInfoResponse{
+			Name:             summary.Name,
+			UUID:             summary.UUID,
+			Template:         summary.Template,
+			GuestID:          summary.GuestID,
+			Annotation:       summary.Annotation,
+			PowerState:       summary.PowerState,
+			NumCPU:           summary.NumCPU,
+			NumEthernetCards: summary.NumEthernetCards,
+			NumVirtualDisks:  summary.NumVirtualDisks,
+			VMGuestInfo:      gi,
+			Err:              err,
+		}, nil
 	}
 }
 
@@ -36,8 +61,25 @@ type VMInfoRequest struct {
 
 // VMInfoResponse collects the response values for the VMInfo method
 type VMInfoResponse struct {
-	Summary *types.VMSummary `json:"summary,omitempty"`
-	Err     error            `json:"error,omitempty"`
+	Name             string `json:"name"`
+	UUID             string `json:"uuid"`
+	GuestID          string `json:"guest_id"`
+	Annotation       string `json:"annotation"`
+	PowerState       string `json:"power_state"`
+	NumCPU           int32  `json:"num_cpu"`
+	NumEthernetCards int32  `json:"num_ethernet_cards"`
+	NumVirtualDisks  int32  `json:"num_virtual_disks"`
+	Template         bool   `json:"template"`
+	VMGuestInfo      `json:"guest_info"`
+	Err              error `json:"error,omitempty"`
+}
+
+type VMGuestInfo struct {
+	GuestID            string `json:"guest_id"`
+	GuestFullName      string `json:"guest_full_name"`
+	ToolsRunningStatus string `json:"tools_running_status"`
+	HostName           string `json:"host_name"`
+	IPAddress          string `json:"ip_address"`
 }
 
 // Failed implements Failer

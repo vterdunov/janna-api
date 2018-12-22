@@ -4,21 +4,31 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net/url"
+
+	"github.com/vmware/govmomi/property"
+	"github.com/vmware/govmomi/view"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/transport/http"
 	"github.com/pkg/errors"
+	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/soap"
+	vmware_types "github.com/vmware/govmomi/vim25/types"
 
 	"github.com/vterdunov/janna-api/internal/config"
+	"github.com/vterdunov/janna-api/internal/domain"
 	"github.com/vterdunov/janna-api/internal/health"
-	"github.com/vterdunov/janna-api/internal/providers/vmware/permissions"
-	"github.com/vterdunov/janna-api/internal/providers/vmware/vm"
 	"github.com/vterdunov/janna-api/internal/types"
 	"github.com/vterdunov/janna-api/internal/version"
 )
+
+type contextKey int
+
+const ContextKeyRequestXRequestID contextKey = iota
 
 // Service is the interface that represents methods of the business logic
 type Service interface {
@@ -34,22 +44,22 @@ type Service interface {
 	Readyz() bool
 
 	// VMList returns list of VMs
-	VMList(context.Context, *types.VMListParams) (map[string]string, error)
+	VMList(context.Context, *types.VMListParams) ([]domain.VMUuid, error)
 
 	// VMInfo provide summary information about VM
-	VMInfo(context.Context, *types.VMInfoParams) (*types.VMSummary, error)
+	VMInfo(context.Context, *types.VMInfoParams) (*domain.VMSummary, error)
 
 	// VMDelete destroys a Virtual Machine
 	VMDelete(context.Context, *types.VMDeleteParams) error
 
 	// VMFind find VM by path and return its UUID
-	VMFind(context.Context, *types.VMFindParams) (*types.VMFound, error)
+	VMFind(context.Context, *types.VMFindParams) (*domain.VMUuid, error)
 
 	// VMDeploy create VM from OVA file
 	VMDeploy(context.Context, *types.VMDeployParams) (string, error)
 
 	// VMSnapshotsList returns VM snapshots list
-	VMSnapshotsList(context.Context, *types.VMSnapshotsListParams) ([]types.Snapshot, error)
+	VMSnapshotsList(context.Context, *types.VMSnapshotsListParams) ([]domain.Snapshot, error)
 
 	// VMSnapshotCreate creates a VM snapshot
 	VMSnapshotCreate(context.Context, *types.SnapshotCreateParams) (int32, error)
@@ -62,13 +72,13 @@ type Service interface {
 
 	VMPower(context.Context, *types.VMPowerParams) error
 
-	VMRolesList(context.Context, *types.VMRolesListParams) ([]types.Role, error)
+	VMRolesList(context.Context, *types.VMRolesListParams) ([]domain.Role, error)
 
 	VMAddRole(context.Context, *types.VMAddRoleParams) error
 
 	VMScreenshot(context.Context, *types.VMScreenshotParams) ([]byte, error)
 
-	RoleList(context.Context) ([]types.Role, error)
+	RoleList(context.Context) ([]domain.Role, error)
 
 	// TasksList(context.Context) (*status.Tasks, error)
 
@@ -133,154 +143,256 @@ func (s *service) Readyz() bool {
 	return health.Readyz()
 }
 
-func (s *service) VMList(ctx context.Context, params *types.VMListParams) (map[string]string, error) {
-	return vm.List(ctx, s.Client, params)
-}
-
-func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*types.VMSummary, error) {
-	return vm.Info(ctx, s.Client, params)
-}
-
-func (s *service) VMDelete(ctx context.Context, params *types.VMDeleteParams) error {
-	return vm.Delete(ctx, s.Client, params)
-}
-
-func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*types.VMFound, error) {
-	return vm.Find(ctx, s.Client, params)
-}
-
-func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (string, error) {
-	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
-	// use Endpoint middleware
-
-	// predeploy checks
-	exist, err := vm.IsVMExist(ctx, s.Client, params)
-	if err != nil {
-		return "", err
-	}
-
-	if exist {
-		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) //nolint: golint
-	}
-
-	reqID := ctx.Value(http.ContextKeyRequestXRequestID)
-	l := log.With(s.logger, "request_id", reqID)
-	l = log.With(l, "vm", params.Name)
-
-	taskCtx, cancel := context.WithTimeout(context.Background(), s.cfg.TaskTTL)
-
-	t := s.statuses.NewTask()
-	t.Str("stage", "start")
-
-	// Start deploy in background
-	go func() {
-		defer cancel()
-		d, err := vm.NewDeployment(taskCtx, s.Client, params, l, s.cfg)
-		if err != nil {
-			err = errors.Wrap(err, "Could not create deployment object")
-			l.Log("err", err)
-			t.Str(
-				"stage", "error",
-				"error", err.Error(),
-			)
-			cancel()
-			return
-		}
-
-		t.Str("stage", "import")
-		moref, err := d.Import(taskCtx, params.OVAURL, params.Annotation)
-		if err != nil {
-			err = errors.Wrap(err, "Could not import OVA/OVF")
-			l.Log("err", err)
-
-			t.Str(
-				"stage", "error",
-				"error", err.Error(),
-			)
-			cancel()
-			return
-		}
-
-		t.Str("stage", "create")
-		vmx := object.NewVirtualMachine(s.Client, *moref)
-
-		l.Log("msg", "Powering on...")
-		t.Str("message", "Powerig on")
-		if err = vm.PowerON(taskCtx, vmx); err != nil {
-			err = errors.Wrap(err, "Could not Virtual Machine power on")
-			l.Log("err", err)
-			t.Str(
-				"stage", "error",
-				"error", err.Error(),
-			)
-			cancel()
-			return
-		}
-
-		t.Str("message", "Waiting for IP addresses")
-		ips, err := vm.WaitForIP(taskCtx, vmx)
-		if err != nil {
-			err = errors.Wrap(err, "error getting IP address")
-			l.Log("err", err)
-			t.Str(
-				"stage", "error",
-				"error", err.Error(),
-			)
-			cancel()
-			return
-		}
-
-		l.Log("msg", "Successful deploy", "ips", fmt.Sprintf("%v", ips))
-		t.Str(
-			"stage", "complete",
-			"message", "ok",
-		).StrArr("ip", ips)
-
-		cancel()
-	}()
-
-	return t.ID(), nil
-}
-
-func (s *service) VMSnapshotsList(ctx context.Context, params *types.VMSnapshotsListParams) ([]types.Snapshot, error) {
-	st, err := vm.SnapshotsList(ctx, s.Client, params)
+func (s *service) VMList(ctx context.Context, params *types.VMListParams) ([]domain.VMUuid, error) {
+	root, err := chooseRoot(ctx, s.Client, params)
 	if err != nil {
 		return nil, err
 	}
 
-	return st, nil
+	m := view.NewManager(s.Client)
+	v, err := m.CreateContainerView(ctx, root, []string{"VirtualMachine"}, true)
+	if err != nil {
+		return nil, err
+	}
+
+	defer v.Destroy(ctx)
+
+	// Retrieve summary property for all machines
+	// Reference: http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.VirtualMachine.html
+	var vms []mo.VirtualMachine
+	err = v.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary"}, &vms)
+	if err != nil {
+		return nil, err
+	}
+
+	resVMs := []domain.VMUuid{}
+	for i := range vms {
+		vm := &vms[i]
+		vmUUID := domain.VMUuid{
+			Name: vm.Summary.Config.Name,
+			UUID: vm.Summary.Config.Uuid,
+		}
+		resVMs = append(resVMs, vmUUID)
+	}
+
+	return resVMs, nil
 }
 
-func (s *service) VMSnapshotCreate(ctx context.Context, params *types.SnapshotCreateParams) (int32, error) {
-	return vm.SnapshotCreate(ctx, s.Client, params)
+func (s *service) VMInfo(ctx context.Context, params *types.VMInfoParams) (*domain.VMSummary, error) {
+	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
+	if err != nil {
+		return nil, err
+	}
+
+	refs := make([]vmware_types.ManagedObjectReference, 0)
+	refs = append(refs, vm.Reference())
+
+	// Retrieve all properties
+	// Reference: http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.VirtualMachine.html
+	var mVM mo.VirtualMachine
+	var props []string
+
+	pc := property.DefaultCollector(s.Client)
+
+	if err := pc.Retrieve(ctx, refs, props, &mVM); err != nil {
+		return nil, err
+	}
+
+	gi := domain.VMGuestInfo{
+		GuestID:            mVM.Summary.Guest.GuestId,
+		GuestFullName:      mVM.Summary.Guest.GuestFullName,
+		ToolsRunningStatus: mVM.Summary.Guest.ToolsRunningStatus,
+		HostName:           mVM.Summary.Guest.HostName,
+		IPAddress:          mVM.Summary.Guest.IpAddress,
+	}
+
+	sum := domain.VMSummary{
+		Name:             mVM.Summary.Config.Name,
+		UUID:             mVM.Summary.Config.Uuid,
+		Template:         mVM.Summary.Config.Template,
+		GuestID:          mVM.Summary.Config.GuestId,
+		Annotation:       mVM.Summary.Config.Annotation,
+		PowerState:       string(mVM.Runtime.PowerState),
+		NumCPU:           mVM.Summary.Config.NumCpu,
+		NumEthernetCards: mVM.Summary.Config.NumEthernetCards,
+		NumVirtualDisks:  mVM.Summary.Config.NumVirtualDisks,
+		VMGuestInfo:      gi,
+	}
+
+	return &sum, nil
 }
 
-func (s *service) VMRestoreFromSnapshot(ctx context.Context, params *types.VMRestoreFromSnapshotParams) error {
-	return vm.RestoreFromSnapshot(ctx, s.Client, params)
+func (s *service) VMDelete(ctx context.Context, params *types.VMDeleteParams) error {
+	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
+	if err != nil {
+		return err
+	}
+
+	state, psErr := vm.PowerState(ctx)
+	if psErr != nil {
+		return errors.Wrap(psErr, "could not get Virtual Machine power state")
+	}
+
+	if state != vmware_types.VirtualMachinePowerStatePoweredOff {
+		task, pOffErr := vm.PowerOff(ctx)
+		if pOffErr != nil {
+			return errors.Wrap(pOffErr, "could not power off Virtual Machine before destroying")
+		}
+
+		if err = task.Wait(ctx); err != nil {
+			return errors.Wrap(err, "could not power off Virtual Machine before destroying")
+		}
+	}
+
+	destroyTask, err := vm.Destroy(ctx)
+	if err != nil {
+		return err
+	}
+
+	return destroyTask.Wait(ctx)
 }
 
-func (s *service) VMSnapshotDelete(ctx context.Context, params *types.VMSnapshotDeleteParams) error {
-	return vm.DeleteSnapshot(ctx, s.Client, params)
+func (s *service) VMFind(ctx context.Context, params *types.VMFindParams) (*domain.VMUuid, error) {
+	oVM, err := findByPath(ctx, s.Client, params.Datacenter, params.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	refs := []vmware_types.ManagedObjectReference{oVM.Reference()}
+
+	var vm mo.VirtualMachine
+
+	pc := property.DefaultCollector(s.Client)
+
+	if err := pc.Retrieve(ctx, refs, []string{"summary"}, &vm); err != nil {
+		return nil, err
+	}
+
+	res := domain.VMUuid{
+		UUID: vm.Summary.Config.Uuid,
+		Name: vm.Summary.Config.Name,
+	}
+
+	return &res, nil
 }
 
-func (s *service) VMPower(ctx context.Context, params *types.VMPowerParams) error {
-	return vm.Power(ctx, s.Client, params)
-}
+func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListParams) ([]domain.Role, error) {
+	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
+	if err != nil {
+		return nil, err
+	}
 
-func (s *service) VMRolesList(ctx context.Context, params *types.VMRolesListParams) ([]types.Role, error) {
-	return vm.RolesList(ctx, s.Client, params)
+	am := object.NewAuthorizationManager(s.Client)
+
+	perms, err := am.RetrieveEntityPermissions(ctx, vm.Reference(), true)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range perms {
+		_ = p
+	}
+
+	roles, err := am.RoleList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rr := []domain.Role{}
+	for _, role := range roles {
+		desc := role.Info.GetDescription()
+		r := domain.Role{
+			Name: role.Name,
+			ID:   role.RoleId,
+		}
+
+		r.Description.Label = desc.Label
+		r.Description.Summary = desc.Summary
+		rr = append(rr, r)
+	}
+
+	// TODO: Implement get role name from IDs
+	return rr, nil
 }
 
 func (s *service) VMAddRole(ctx context.Context, params *types.VMAddRoleParams) error {
-	return vm.AddRole(ctx, s.Client, params)
+	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
+	if err != nil {
+		return err
+	}
+
+	p := vmware_types.Permission{
+		Principal: params.Principal,
+		RoleId:    params.RoleID,
+	}
+	pp := []vmware_types.Permission{}
+	pp = append(pp, p)
+
+	am := object.NewAuthorizationManager(s.Client)
+	if err := am.SetEntityPermissions(ctx, vm.Reference(), pp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) RoleList(ctx context.Context) ([]domain.Role, error) {
+	am := object.NewAuthorizationManager(s.Client)
+	roles, err := am.RoleList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rr := []domain.Role{}
+	for _, role := range roles {
+		desc := role.Info.GetDescription()
+		r := domain.Role{
+			Name: role.Name,
+			ID:   role.RoleId,
+		}
+
+		r.Description.Label = desc.Label
+		r.Description.Summary = desc.Summary
+		rr = append(rr, r)
+	}
+
+	return rr, err
 }
 
 func (s *service) VMScreenshot(ctx context.Context, params *types.VMScreenshotParams) ([]byte, error) {
-	return vm.Screenshot(ctx, s.Client, params)
-}
+	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
+	if err != nil {
+		return nil, err
+	}
 
-func (s *service) RoleList(ctx context.Context) ([]types.Role, error) {
-	return permissions.RoleList(ctx, s.Client)
+	state, psErr := vm.PowerState(ctx)
+	if psErr != nil {
+		return nil, errors.Wrap(psErr, "could not get Virtual Machine power state")
+	}
+
+	if state != vmware_types.VirtualMachinePowerStatePoweredOn {
+		return nil, fmt.Errorf("vm is not powered on (%s)", state)
+	}
+
+	u := s.Client.URL()
+	u.Path = "/screen"
+	query := url.Values{"id": []string{vm.Reference().Value}}
+	u.RawQuery = query.Encode()
+
+	param := soap.DefaultDownload
+
+	rc, _, derr := s.Client.Download(ctx, u, &param)
+	if derr != nil {
+		return nil, derr
+	}
+	defer rc.Close()
+
+	screenshot, rErr := ioutil.ReadAll(rc)
+	if rErr != nil {
+		return nil, rErr
+	}
+
+	return screenshot, nil
 }
 
 func (s *service) TaskInfo(ctx context.Context, taskID string) (map[string]interface{}, error) {
@@ -297,4 +409,139 @@ func (s *service) OpenAPI(_ context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return spec, err
+}
+
+// findByUUID find and returns VM by its UUID
+func findByUUID(ctx context.Context, client *vim25.Client, DCName, uuid string) (*object.VirtualMachine, error) {
+	f := find.NewFinder(client, true)
+
+	dc, err := f.DatacenterOrDefault(ctx, DCName)
+	if err != nil {
+		return nil, err
+	}
+
+	f.SetDatacenter(dc)
+
+	si := object.NewSearchIndex(client)
+
+	ref, err := si.FindByUuid(ctx, dc, uuid, true, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	vm, ok := ref.(*object.VirtualMachine)
+	if !ok {
+		return nil, errors.New("could not find Virtual Machine by UUID. Could not assert reference to Virtual Machine")
+	}
+
+	return vm, nil
+}
+
+func chooseRoot(ctx context.Context, c *vim25.Client, params *types.VMListParams) (vmware_types.ManagedObjectReference, error) {
+	var ref vmware_types.ManagedObjectReference
+	f := find.NewFinder(c, true)
+	dc, err := f.DatacenterOrDefault(ctx, params.Datacenter)
+	if err != nil {
+		return ref, err
+	}
+
+	if params.Folder != "" {
+		f.SetDatacenter(dc)
+		rp, err := f.FolderOrDefault(ctx, params.Folder)
+		if err != nil {
+			return ref, err
+		}
+		return rp.Reference(), nil
+	}
+
+	if params.ResourcePool != "" {
+		f.SetDatacenter(dc)
+		rp, err := f.ResourcePoolOrDefault(ctx, params.ResourcePool)
+		if err != nil {
+			return ref, err
+		}
+		return rp.Reference(), nil
+	}
+	return dc.Reference(), nil
+}
+
+// findByPath find and returns VM by Inventory Path
+func findByPath(ctx context.Context, client *vim25.Client, DCname, path string) (*object.VirtualMachine, error) {
+	f := find.NewFinder(client, true)
+
+	dc, err := f.DatacenterOrDefault(ctx, DCname)
+	if err != nil {
+		return nil, err
+	}
+
+	f.SetDatacenter(dc)
+
+	return f.VirtualMachine(ctx, path)
+}
+
+func vmSnapshots(ctx context.Context, vm *object.VirtualMachine) ([]domain.Snapshot, error) {
+	var o mo.VirtualMachine
+
+	err := vm.Properties(ctx, vm.Reference(), []string{"snapshot"}, &o)
+	if err != nil {
+		return nil, err
+	}
+
+	st := make([]domain.Snapshot, 0)
+	if o.Snapshot == nil {
+		return st, nil
+	}
+
+	ch := make(chan domain.Snapshot, 1000)
+	walk(o.Snapshot.RootSnapshotList, ch)
+
+	close(ch)
+	for v := range ch {
+		st = append(st, v)
+	}
+
+	return st, nil
+}
+
+func walk(st []vmware_types.VirtualMachineSnapshotTree, ch chan domain.Snapshot) {
+	for i := range st {
+		s := &st[i]
+		t := domain.Snapshot{
+			Name:        s.Name,
+			ID:          s.Id,
+			Description: s.Description,
+			CreatedAt:   s.CreateTime,
+		}
+
+		ch <- t
+		walk(s.ChildSnapshotList, ch)
+	}
+}
+
+func diff(slice1 []int32, slice2 []int32) []int32 {
+	var diff []int32
+
+	// Loop two times, first to find slice1 strings not in slice2,
+	// second loop to find slice2 strings not in slice1
+	for i := 0; i < 2; i++ {
+		for _, s1 := range slice1 {
+			found := false
+			for _, s2 := range slice2 {
+				if s1 == s2 {
+					found = true
+					break
+				}
+			}
+			// String not found. We add it to return slice
+			if !found {
+				diff = append(diff, s1)
+			}
+		}
+		// Swap the slices, only if it was the first loop
+		if i == 0 {
+			slice1, slice2 = slice2, slice1
+		}
+	}
+
+	return diff
 }

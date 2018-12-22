@@ -4,15 +4,29 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
+
 	"github.com/vterdunov/janna-api/internal/service"
-	"github.com/vterdunov/janna-api/internal/types"
 )
 
 // MakeRolesListEndpoint returns an endpoint via the passed service
 func MakeRolesListEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		roles, err := s.RoleList(ctx)
-		return RoleListResponse{Roles: roles, Err: err}, nil
+		if err != nil {
+			return RoleListResponse{Err: err}, nil
+		}
+
+		rs := []Role{}
+
+		for _, r := range roles {
+			role := Role{}
+			role.Name = r.Name
+			role.ID = r.ID
+			role.Description.Label = r.Description.Label
+			role.Description.Summary = r.Description.Summary
+			rs = append(rs, role)
+		}
+		return RoleListResponse{Roles: rs, Err: err}, nil
 	}
 }
 
@@ -21,8 +35,17 @@ type RoleListRequest struct{}
 
 // RoleListResponse collects the response values for the RoleList method
 type RoleListResponse struct {
-	Roles []types.Role `json:"roles"`
-	Err   error        `json:"error,omitempty"`
+	Roles []Role
+	Err   error `json:"error,omitempty"`
+}
+
+type Role struct {
+	Name        string `json:"name"`
+	ID          int32  `json:"id"`
+	Description struct {
+		Label   string `json:"label"`
+		Summary string `json:"summary"`
+	} `json:"description"`
 }
 
 // Failed implements Failer

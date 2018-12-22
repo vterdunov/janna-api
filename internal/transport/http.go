@@ -15,13 +15,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/vterdunov/janna-api/internal/endpoint"
+	"github.com/vterdunov/janna-api/internal/service"
 )
+
+func populateRequestContext(ctx context.Context, r *http.Request) context.Context {
+	ctx = context.WithValue(ctx, service.ContextKeyRequestXRequestID, r.Header.Get("X-Request-Id"))
+	return ctx
+}
 
 // NewHTTPHandler mounts all of the service endpoints into an http.Handler.
 func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
-		httptransport.ServerBefore(httptransport.PopulateRequestContext),
+		httptransport.ServerBefore(populateRequestContext),
 	}
 
 	r := mux.NewRouter()
@@ -124,7 +130,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	r.Path("/vms/{vm}/roles").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMRolesListEndpoint,
 		decodeVMRolesListRequest,
-		encodeResponse,
+		encodeVMRoleListResponse,
 		options...,
 	))
 
@@ -156,7 +162,7 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 	r.Path("/permissions/roles").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.RoleListEndpoint,
 		decodeRoleListRequest,
-		encodeResponse,
+		encodeRoleListResponse,
 		options...,
 	))
 
@@ -389,6 +395,40 @@ func encodeBusinesLogicError(_ context.Context, err error, w http.ResponseWriter
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})
+}
+
+func encodeVMRoleListResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeBusinesLogicError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, ok := response.(endpoint.VMRolesListResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not parse VM summary"), w)
+	}
+
+	return json.NewEncoder(w).Encode(resp.VMRolesList)
+}
+
+func encodeRoleListResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	// check business logic errors
+	if e, ok := response.(endpoint.Failer); ok && e.Failed() != nil {
+		encodeBusinesLogicError(ctx, e.Failed(), w)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, ok := response.(endpoint.RoleListResponse)
+	if !ok {
+		encodeError(ctx, errors.New("could not parse VM summary"), w)
+	}
+
+	return json.NewEncoder(w).Encode(resp.Roles)
 }
 
 func encodeOpenAPIResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

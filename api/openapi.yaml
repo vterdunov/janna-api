@@ -457,7 +457,7 @@ paths:
                 format: binary
             application/json:
               schema:
-                $ref: "#/components/schemas/vm_not_found_errror"
+                $ref: "#/components/schemas/vm_not_found_error"
         '500':
           description: Error
 
@@ -510,7 +510,7 @@ paths:
           content:
             application/json::
               schema:
-                $ref: "#/components/schemas/find_vm_response"
+                $ref: "#/components/schemas/vm_name_uuid_response"
         '500':
           description: Error
           content:
@@ -575,13 +575,24 @@ components:
         go_gc_duration_seconds{quantile="0.75"} 8.9717e-05
         go_gc_duration_seconds{quantile="1"} 8.9717e-05
 
-    vms_list_response:
+
+    vm_name_uuid_response:
       type: object
-      example:
-        "vm_list":
-          "420502ba-0a60-311a-5c7b-0d7c3fec60a3": "my-vm1"
-          "42050306-51f9-3b3d-8fbb-8ce6912e1f4c": "my-vm2"
-          "42050646-6bed-ddfe-1f81-ddf8eae21a67": "my-vm3"
+      required:
+        - name
+        - uuid
+      properties:
+        name:
+          type: string
+          example: "My Virtual Machine 01"
+        uuid:
+          type: string
+          format: uuid
+
+    vms_list_response:
+      type: array
+      items:
+        $ref: '#/components/schemas/vm_name_uuid_response'
 
     vm_info_response:
       type: object
@@ -632,32 +643,29 @@ components:
               id: 4
               created_at: "2018-05-17T08:54:35.251931Z"
 
-    find_vm_response:
-      type: object
-      example:
-        "uuid": "42053cb7-b8b7-904f-807e-9d18b1a366fb"
-        "name": "my-vm"
-
     find_vm_error_response:
       type: object
       example:
         "error": "vm 'my-folder/my-vm' not found"
 
     vm_add_role_body:
-      type: object
-      required:
-      - role_id
-      - principal
-      properties:
-        role_id:
-          type: integer
-          example: 5
-        principal:
-          type: string
-          example: "DOMAIN\\example.user"
-        datacenter:
-          type: string
-          example: "DC1"
+      type: array
+      items:
+        $ref: '#/components/schemas/role'
+      # type: object
+      # required:
+      # - role_id
+      # - principal
+      # properties:
+      #   role_id:
+      #     type: integer
+      #     example: 5
+      #   principal:
+      #     type: string
+      #     example: "DOMAIN\\example.user"
+      #   datacenter:
+      #     type: string
+      #     example: "DC1"
 
     vm_change_power_body:
       type: object
@@ -677,23 +685,36 @@ components:
       example:
         "error": "ServerFaultCode: The user or group named 'DOMAIN\\example.user' does not exist."
 
+    role:
+      type: object
+      required:
+        - name
+        - id
+        - description
+      properties:
+        name:
+          type: string
+          example: "VM-Admin"
+        id:
+          type: integer
+          example: -106818344
+        description:
+          type: object
+          properties:
+            label:
+              type: string
+              example: "VM-Admin"
+            summary:
+              type: string
+              example: "VM-Admin"
 
     permissions_roles_response:
-      type: object
-      example:
-        "roles":
-        - "name": "com.vmware.Content.Admin"
-          "id": -1775269336
-          "description":
-            "label": "Content library administrator (sample)"
-            "summary": "Provides full access to Content Library service"
-        - "name": "VirtualMachineUser"
-          "id": 5,
-          "description":
-            "label": "Virtual machine user (sample)"
-            "summary": "Provides virtual machine interaction permissions"
+      type: array
+      items:
+        $ref: '#/components/schemas/role'
 
-    vm_not_found_errror:
+
+    vm_not_found_error:
       type: object
       properties:
        error:

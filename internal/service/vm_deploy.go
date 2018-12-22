@@ -1,4 +1,4 @@
-package vm
+package service
 
 import (
 	"archive/tar"
@@ -26,10 +26,9 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/progress"
 	"github.com/vmware/govmomi/vim25/soap"
-	"github.com/vmware/govmomi/vim25/types"
+	vmware_types "github.com/vmware/govmomi/vim25/types"
 
-	"github.com/vterdunov/janna-api/internal/config"
-	jt "github.com/vterdunov/janna-api/internal/types"
+	"github.com/vterdunov/janna-api/internal/types"
 )
 
 type Deployment struct {
@@ -57,6 +56,103 @@ type ovfx struct {
 type Network struct {
 	Name    string
 	Network string
+}
+
+func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (string, error) {
+	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
+	// use Endpoint middleware
+
+	// predeploy checks
+	exist, err := isVMExist(ctx, s.Client, params)
+	if err != nil {
+		return "", err
+	}
+
+	if exist {
+		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) //nolint: golint
+	}
+
+	reqID, ok := ctx.Value(ContextKeyRequestXRequestID).(string)
+	if !ok {
+		reqID = ""
+	}
+
+	l := log.With(s.logger, "request_id", reqID)
+	l = log.With(l, "vm", params.Name)
+
+	taskCtx, cancel := context.WithTimeout(context.Background(), s.cfg.TaskTTL)
+
+	t := s.statuses.NewTask()
+	t.Str("stage", "start")
+
+	// Start deploy in background
+	go func() {
+		defer cancel()
+		d, err := newDeployment(taskCtx, s.Client, params, l)
+		if err != nil {
+			err = errors.Wrap(err, "Could not create deployment object")
+			l.Log("err", err)
+			t.Str(
+				"stage", "error",
+				"error", err.Error(),
+			)
+			cancel()
+			return
+		}
+
+		t.Str("stage", "import")
+		moref, err := d.Import(taskCtx, params.OVAURL, params.Annotation)
+		if err != nil {
+			err = errors.Wrap(err, "Could not import OVA/OVF")
+			l.Log("err", err)
+
+			t.Str(
+				"stage", "error",
+				"error", err.Error(),
+			)
+			cancel()
+			return
+		}
+
+		t.Str("stage", "create")
+		vmx := object.NewVirtualMachine(s.Client, *moref)
+
+		l.Log("msg", "Powering on...")
+		t.Str("message", "Powerig on")
+		if err = PowerON(taskCtx, vmx); err != nil {
+			err = errors.Wrap(err, "Could not Virtual Machine power on")
+			l.Log("err", err)
+			t.Str(
+				"stage", "error",
+				"error", err.Error(),
+			)
+			cancel()
+			return
+		}
+
+		t.Str("message", "Waiting for IP addresses")
+		ips, err := WaitForIP(taskCtx, vmx)
+		if err != nil {
+			err = errors.Wrap(err, "error getting IP address")
+			l.Log("err", err)
+			t.Str(
+				"stage", "error",
+				"error", err.Error(),
+			)
+			cancel()
+			return
+		}
+
+		l.Log("msg", "Successful deploy", "ips", fmt.Sprintf("%v", ips))
+		t.Str(
+			"stage", "complete",
+			"message", "ok",
+		).StrArr("ip", ips)
+
+		cancel()
+	}()
+
+	return t.ID(), nil
 }
 
 func (o *Deployment) chooseDatacenter(ctx context.Context, dcName string) error {
@@ -99,14 +195,14 @@ func (o *Deployment) chooseDatastoreWithCluster(ctx context.Context, names []str
 		return errors.New("storage DRS is not enabled on datastore cluster")
 	}
 
-	var vmSpec types.VirtualMachineConfigSpec
-	sps := types.StoragePlacementSpec{
-		Type:         string(types.StoragePlacementSpecPlacementTypeCreate),
-		ResourcePool: types.NewReference(o.ResourcePool.Reference()),
-		PodSelectionSpec: types.StorageDrsPodSelectionSpec{
-			StoragePod: types.NewReference(pod.Reference()),
+	var vmSpec vmware_types.VirtualMachineConfigSpec
+	sps := vmware_types.StoragePlacementSpec{
+		Type:         string(vmware_types.StoragePlacementSpecPlacementTypeCreate),
+		ResourcePool: vmware_types.NewReference(o.ResourcePool.Reference()),
+		PodSelectionSpec: vmware_types.StorageDrsPodSelectionSpec{
+			StoragePod: vmware_types.NewReference(pod.Reference()),
 		},
-		Folder:     types.NewReference(o.Folder.Reference()),
+		Folder:     vmware_types.NewReference(o.Folder.Reference()),
 		ConfigSpec: &vmSpec,
 	}
 
@@ -122,7 +218,7 @@ func (o *Deployment) chooseDatastoreWithCluster(ctx context.Context, names []str
 		return errors.New("no storage DRS recommendations were found for the requested action")
 	}
 
-	spa, ok := recs[0].Action[0].(*types.StoragePlacementAction)
+	spa, ok := recs[0].Action[0].(*vmware_types.StoragePlacementAction)
 	if !ok {
 		return errors.New("could not get datastore from DRS recomendation")
 	}
@@ -245,7 +341,7 @@ func (o *Deployment) computerResourceWithResourcePool(ctx context.Context, rpNam
 	return nil
 }
 
-func (o *Deployment) networkMap(ctx context.Context, e *ovf.Envelope) (p []types.OvfNetworkMapping) {
+func (o *Deployment) networkMap(ctx context.Context, e *ovf.Envelope) (p []vmware_types.OvfNetworkMapping) {
 	networks := map[string]string{}
 
 	if e.Network != nil {
@@ -262,7 +358,7 @@ func (o *Deployment) networkMap(ctx context.Context, e *ovf.Envelope) (p []types
 
 	for src, dst := range networks {
 		if net, err := o.Finder.Network(ctx, dst); err == nil {
-			p = append(p, types.OvfNetworkMapping{
+			p = append(p, vmware_types.OvfNetworkMapping{
 				Name:    src,
 				Network: net.Reference(),
 			})
@@ -300,7 +396,7 @@ func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 	return lease.Upload(ctx, item, f, opts)
 }
 
-func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*types.ManagedObjectReference, error) {
+func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*vmware_types.ManagedObjectReference, error) {
 	url, err := url.Parse(OVAURL)
 	if err != nil {
 		return nil, err
@@ -359,7 +455,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 		name = o.Name
 	}
 
-	cisp := types.OvfCreateImportSpecParams{
+	cisp := vmware_types.OvfCreateImportSpecParams{
 		// See https://github.com/vmware/govmomi/blob/v0.16.0/vim25/types/enum.go#L3381-L3395
 		// VMWare can not support some of those disk format types
 		// "preallocated", "thin", "seSparse", "rdm", "rdmp",
@@ -386,9 +482,9 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 
 	if anno != "" {
 		switch s := spec.ImportSpec.(type) {
-		case *types.VirtualMachineImportSpec:
+		case *vmware_types.VirtualMachineImportSpec:
 			s.ConfigSpec.Annotation = anno
-		case *types.VirtualAppImportSpec:
+		case *vmware_types.VirtualAppImportSpec:
 			s.VAppConfigSpec.Annotation = anno
 		}
 	}
@@ -420,7 +516,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*t
 	return &info.Entity, lease.Complete(ctx)
 }
 
-func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) (bool, error) {
+func isVMExist(ctx context.Context, c *vim25.Client, params *types.VMDeployParams) (bool, error) {
 	f := find.NewFinder(c, false)
 	dc, err := f.DatacenterOrDefault(ctx, params.Datacenter)
 	if err != nil {
@@ -437,9 +533,9 @@ func IsVMExist(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams) 
 	}
 }
 
-// NewDeployment create a new deployment object.
+// newDeployment create a new deployment object.
 // It choose needed resources
-func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployParams, l log.Logger, cfg *config.Config) (*Deployment, error) { //nolint: unparam
+func newDeployment(ctx context.Context, c *vim25.Client, params *types.VMDeployParams, l log.Logger) (*Deployment, error) { //nolint: unparam
 	d := newSimpleDeployment(c, params, l)
 
 	// step 1. choose Datacenter and folder
@@ -476,7 +572,7 @@ func NewDeployment(ctx context.Context, c *vim25.Client, params *jt.VMDeployPara
 	return d, nil
 }
 
-func newSimpleDeployment(c *vim25.Client, deployParams *jt.VMDeployParams, logger log.Logger) *Deployment {
+func newSimpleDeployment(c *vim25.Client, deployParams *types.VMDeployParams, logger log.Logger) *Deployment {
 	finder := find.NewFinder(c, true)
 	var nms []Network
 

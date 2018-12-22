@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+
 	"github.com/vterdunov/janna-api/internal/service"
 	"github.com/vterdunov/janna-api/internal/types"
 )
@@ -21,7 +22,6 @@ func MakeVMDeployEndpoint(s service.Service, logger log.Logger) endpoint.Endpoin
 
 		logger.Log("msg", "incoming request params", "params", req.String())
 
-		// TODO: Try to write middleware that will validate parameters
 		// Minimal validating incoming params
 		if req.Name == "" || req.OVAURL == "" {
 			return VMDeployResponse{JID: "", Err: errors.New("invalid arguments. Pass reqired arguments")}, nil

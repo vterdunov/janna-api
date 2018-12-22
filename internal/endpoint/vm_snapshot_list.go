@@ -6,6 +6,8 @@ import (
 	"errors"
 
 	"github.com/go-kit/kit/endpoint"
+
+	"github.com/vterdunov/janna-api/internal/domain"
 	"github.com/vterdunov/janna-api/internal/service"
 	"github.com/vterdunov/janna-api/internal/types"
 )
@@ -37,8 +39,8 @@ type VMSnapshotsListRequest struct {
 
 // VMSnapshotsListResponse collects the response values for the VMSnapshotsList method
 type VMSnapshotsListResponse struct {
-	VMSnapshotsList []types.Snapshot `json:"snapshots"`
-	Err             error            `json:"error,omitempty"`
+	VMSnapshotsList []domain.Snapshot `json:"snapshots"`
+	Err             error             `json:"error,omitempty"`
 }
 
 // Failed implements Failer

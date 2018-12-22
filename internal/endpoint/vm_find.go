@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-kit/kit/endpoint"
+
 	"github.com/vterdunov/janna-api/internal/service"
 	"github.com/vterdunov/janna-api/internal/types"
 )
@@ -28,12 +29,14 @@ func MakeVMFindEndpoint(s service.Service) endpoint.Endpoint {
 			return VMFindResponse{Err: err}, nil
 		}
 
+		vmUUID := VMUuid{
+			Name: vm.Name,
+			UUID: vm.UUID,
+		}
+
 		return VMFindResponse{
-			VMFound: &types.VMFound{
-				Name: vm.Name,
-				UUID: vm.UUID,
-			},
-			Err: err,
+			VMUuid: vmUUID,
+			Err:    err,
 		}, nil
 	}
 }
@@ -46,8 +49,13 @@ type VMFindRequest struct {
 
 // VMFindResponse collects the response values for the VMFind method
 type VMFindResponse struct {
-	*types.VMFound
+	VMUuid
 	Err error `json:"error,omitempty"`
+}
+
+type VMUuid struct {
+	Name string `json:"name"`
+	UUID string `json:"uuid"`
 }
 
 // Failed implements Failer

@@ -1,48 +1,47 @@
-package vm
+package service
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
-	"github.com/vmware/govmomi/vim25/types"
+	vmware_types "github.com/vmware/govmomi/vim25/types"
 
-	jt "github.com/vterdunov/janna-api/internal/types"
+	"github.com/vterdunov/janna-api/internal/types"
 )
 
 const (
-	off       = types.VirtualMachinePowerStatePoweredOff
-	on        = types.VirtualMachinePowerStatePoweredOn
-	suspended = types.VirtualMachinePowerStateSuspended
+	off       = vmware_types.VirtualMachinePowerStatePoweredOff
+	on        = vmware_types.VirtualMachinePowerStatePoweredOn
+	suspended = vmware_types.VirtualMachinePowerStateSuspended
 )
 
 // Power changes VM power state
-func Power(ctx context.Context, client *vim25.Client, params *jt.VMPowerParams) error {
-	vm, err := FindByUUID(ctx, client, params.Datacenter, params.UUID)
+func (s *service) VMPower(ctx context.Context, params *types.VMPowerParams) error {
+	vm, err := findByUUID(ctx, s.Client, params.Datacenter, params.UUID)
 	if err != nil {
 		return err
 	}
 
 	switch params.State {
 	case "on":
-		err = PowerOn(ctx, vm)
+		err = powerOn(ctx, vm)
 	case "off":
-		err = PowerOff(ctx, vm)
+		err = powerOff(ctx, vm)
 	case "suspend":
-		err = Suspend(ctx, vm)
+		err = suspend(ctx, vm)
 	case "reboot":
-		err = Reboot(ctx, vm)
+		err = reboot(ctx, vm)
 	case "reset":
-		err = Reset(ctx, vm)
+		err = reset(ctx, vm)
 	}
 
 	return err
 }
 
-// PowerOn power on Virtual Machine
-func PowerOn(ctx context.Context, vm *object.VirtualMachine) error {
+// powerOn power on Virtual Machine
+func powerOn(ctx context.Context, vm *object.VirtualMachine) error {
 	state, err := getVMPowerState(ctx, vm)
 	if err != nil {
 		return err
@@ -66,8 +65,8 @@ func PowerOn(ctx context.Context, vm *object.VirtualMachine) error {
 	}
 }
 
-// PowerOff power off Virtual Machine
-func PowerOff(ctx context.Context, vm *object.VirtualMachine) error {
+// powerOff power off Virtual Machine
+func powerOff(ctx context.Context, vm *object.VirtualMachine) error {
 	state, err := getVMPowerState(ctx, vm)
 	if err != nil {
 		return err
@@ -102,9 +101,9 @@ func PowerOff(ctx context.Context, vm *object.VirtualMachine) error {
 	}
 }
 
-// Reboot Virtual Machine. It tries to use VMWareTools to call guest agent to reboot the VM.
+// reboot Virtual Machine. It tries to use VMWareTools to call guest agent to reboot the VM.
 // And as the last way, the method tries to reset VM.
-func Reboot(ctx context.Context, vm *object.VirtualMachine) error {
+func reboot(ctx context.Context, vm *object.VirtualMachine) error {
 	state, err := getVMPowerState(ctx, vm)
 	if err != nil {
 		return err
@@ -127,8 +126,8 @@ func Reboot(ctx context.Context, vm *object.VirtualMachine) error {
 	return err
 }
 
-// Reset Virtual Machine
-func Reset(ctx context.Context, vm *object.VirtualMachine) error {
+// reset Virtual Machine
+func reset(ctx context.Context, vm *object.VirtualMachine) error {
 	state, err := getVMPowerState(ctx, vm)
 	if err != nil {
 		return err
@@ -146,8 +145,8 @@ func Reset(ctx context.Context, vm *object.VirtualMachine) error {
 	return task.Wait(ctx)
 }
 
-// Suspend Virtual Machine
-func Suspend(ctx context.Context, vm *object.VirtualMachine) error {
+// suspend Virtual Machine
+func suspend(ctx context.Context, vm *object.VirtualMachine) error {
 	state, err := getVMPowerState(ctx, vm)
 	if err != nil {
 		return err
@@ -170,7 +169,7 @@ func Suspend(ctx context.Context, vm *object.VirtualMachine) error {
 	}
 }
 
-func getVMPowerState(ctx context.Context, vm *object.VirtualMachine) (types.VirtualMachinePowerState, error) {
+func getVMPowerState(ctx context.Context, vm *object.VirtualMachine) (vmware_types.VirtualMachinePowerState, error) {
 	state, err := vm.PowerState(ctx)
 	if err != nil {
 		return "", err
@@ -182,7 +181,7 @@ func getVMPowerState(ctx context.Context, vm *object.VirtualMachine) (types.Virt
 func isToolsUnavailable(err error) bool {
 	if soap.IsSoapFault(err) {
 		soapFault := soap.ToSoapFault(err)
-		if _, ok := soapFault.VimFault().(types.ToolsUnavailable); ok {
+		if _, ok := soapFault.VimFault().(vmware_types.ToolsUnavailable); ok {
 			return ok
 		}
 	}
