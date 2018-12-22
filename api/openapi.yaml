@@ -461,6 +461,37 @@ paths:
         '500':
           description: Error
 
+  /vms/{vm_uuid}/rename:
+    patch:
+      summary: "Rename Virtual Machine"
+      tags:
+      - Virtual Machines
+      parameters:
+      - name: X-Request-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
+      - name: vm_uuid
+        in: path
+        required: true
+        description: VM UUID
+        schema:
+          type: string
+          minimum: 1
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/vm_rename_body'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Error
+
   /permissions/roles:
     get:
       summary: "List roles"
@@ -676,6 +707,19 @@ components:
           type: string
           enum: ["on", "off", "reboot", "reset", "suspend"]
           example: "on"
+        datacenter:
+          type: string
+          example: "DC1"
+
+    vm_rename_body:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: "New Virtual Machine name"
+          example: "My New VM name"
         datacenter:
           type: string
           example: "DC1"

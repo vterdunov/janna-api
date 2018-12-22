@@ -1,6 +1,36 @@
+// domain contains the entities of the domain model
 package domain
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"github.com/vmware/govmomi/object"
+)
+
+// Finder provides access a to VirtualMachine inventory.
+type Finder interface {
+	FindVMByUUID(uuid string) (*VirtualMachine, error)
+}
+
+type VirtualMachine struct {
+	vmareVM *object.VirtualMachine
+}
+
+func NewWithObjectVM(vmareVM *object.VirtualMachine) *VirtualMachine {
+	return &VirtualMachine{
+		vmareVM: vmareVM,
+	}
+}
+
+func (vm *VirtualMachine) Rename(ctx context.Context, name string) error {
+	task, err := vm.vmareVM.Rename(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	return task.Wait(ctx)
+}
 
 // VMSummary stores some information about Virtual Machines
 type VMSummary struct {

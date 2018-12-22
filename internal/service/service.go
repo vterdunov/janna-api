@@ -1,3 +1,4 @@
+// service provides use-cases for the Service
 package service
 
 import (
@@ -86,6 +87,9 @@ type Service interface {
 
 	// Reads Open API spec file
 	OpenAPI(context.Context) ([]byte, error)
+
+	// VMRename renames Virtual Machine
+	VMRename(context.Context, *types.VMRenameParams) error
 }
 
 // service implements our Service
@@ -409,6 +413,41 @@ func (s *service) OpenAPI(_ context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return spec, err
+}
+
+func (s *service) VMRename(ctx context.Context, params *types.VMRenameParams) error {
+	vm, err := dFindByUUID(ctx, s.Client, params.Datacenter, params.UUID)
+	if err != nil {
+		return err
+	}
+
+	return vm.Rename(ctx, params.Name)
+}
+
+// findByUUID find and returns VM by its UUID
+func dFindByUUID(ctx context.Context, client *vim25.Client, DCName, uuid string) (*domain.VirtualMachine, error) {
+	f := find.NewFinder(client, true)
+
+	dc, err := f.DatacenterOrDefault(ctx, DCName)
+	if err != nil {
+		return nil, err
+	}
+
+	f.SetDatacenter(dc)
+
+	si := object.NewSearchIndex(client)
+
+	ref, err := si.FindByUuid(ctx, dc, uuid, true, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	vm, ok := ref.(*object.VirtualMachine)
+	if !ok {
+		return nil, errors.New("could not find Virtual Machine by UUID. Could not assert reference to Virtual Machine")
+	}
+
+	return domain.NewWithObjectVM(vm), nil
 }
 
 // findByUUID find and returns VM by its UUID
