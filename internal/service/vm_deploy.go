@@ -415,6 +415,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*v
 		return nil, err
 	}
 	defer os.RemoveAll(td)
+	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
 	if untarErr := untar(td, ova); untarErr != nil {
 		o.logger.Log("err", untarErr)
