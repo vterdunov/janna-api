@@ -415,6 +415,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*v
 		return nil, err
 	}
 	defer os.RemoveAll(td)
+	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
 	if untarErr := untar(td, ova); untarErr != nil {
 		o.logger.Log("err", untarErr)
@@ -506,8 +507,11 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*v
 	u := lease.StartUpdater(ctx, info)
 	defer u.Done()
 
-	os.Chdir(td)
 	for _, item := range info.Items {
+		// override disk path to use in cocnurent mode
+		// os.Chdir doesn't work preperly
+		item.Path = path.Join(td, item.Path)
+
 		if err = o.Upload(ctx, lease, item); err != nil {
 			return nil, errors.Wrap(err, "Could not upload disks to VMWare")
 		}
