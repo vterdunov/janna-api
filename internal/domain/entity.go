@@ -8,23 +8,12 @@ import (
 	"github.com/vmware/govmomi/object"
 )
 
-// Finder provides access a to VirtualMachine inventory.
-type Finder interface {
-	FindVMByUUID(uuid string) (*VirtualMachine, error)
-}
-
 type VirtualMachine struct {
-	vmareVM *object.VirtualMachine
-}
-
-func NewWithObjectVM(vmareVM *object.VirtualMachine) *VirtualMachine {
-	return &VirtualMachine{
-		vmareVM: vmareVM,
-	}
+	VMWareVM *object.VirtualMachine
 }
 
 func (vm *VirtualMachine) Rename(ctx context.Context, name string) error {
-	task, err := vm.vmareVM.Rename(ctx, name)
+	task, err := vm.VMWareVM.Rename(ctx, name)
 	if err != nil {
 		return err
 	}

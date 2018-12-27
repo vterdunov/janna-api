@@ -416,7 +416,9 @@ func (s *service) OpenAPI(_ context.Context) ([]byte, error) {
 }
 
 func (s *service) VMRename(ctx context.Context, params *types.VMRenameParams) error {
-	vm, err := dFindByUUID(ctx, s.Client, params.Datacenter, params.UUID)
+	f := NewFinder(params.Datacenter, s.Client)
+
+	vm, err := f.FindVMByUUID(params.UUID)
 	if err != nil {
 		return err
 	}
@@ -424,18 +426,36 @@ func (s *service) VMRename(ctx context.Context, params *types.VMRenameParams) er
 	return vm.Rename(ctx, params.Name)
 }
 
-// findByUUID find and returns VM by its UUID
-func dFindByUUID(ctx context.Context, client *vim25.Client, DCName, uuid string) (*domain.VirtualMachine, error) {
-	f := find.NewFinder(client, true)
+func newWithObjectVM(vmwareVM *object.VirtualMachine) *domain.VirtualMachine {
+	return &domain.VirtualMachine{
+		VMWareVM: vmwareVM,
+	}
+}
 
-	dc, err := f.DatacenterOrDefault(ctx, DCName)
+type Finder struct {
+	dc     string
+	client *vim25.Client
+}
+
+func NewFinder(dc string, c *vim25.Client) Finder {
+	return Finder{
+		dc:     dc,
+		client: c,
+	}
+}
+
+func (f *Finder) FindVMByUUID(uuid string) (*domain.VirtualMachine, error) {
+	vmwareFinder := find.NewFinder(f.client, true)
+
+	ctx := context.TODO()
+	dc, err := vmwareFinder.DatacenterOrDefault(ctx, f.dc)
 	if err != nil {
 		return nil, err
 	}
 
-	f.SetDatacenter(dc)
+	vmwareFinder.SetDatacenter(dc)
 
-	si := object.NewSearchIndex(client)
+	si := object.NewSearchIndex(f.client)
 
 	ref, err := si.FindByUuid(ctx, dc, uuid, true, nil)
 	if err != nil {
@@ -447,7 +467,7 @@ func dFindByUUID(ctx context.Context, client *vim25.Client, DCName, uuid string)
 		return nil, errors.New("could not find Virtual Machine by UUID. Could not assert reference to Virtual Machine")
 	}
 
-	return domain.NewWithObjectVM(vm), nil
+	return newWithObjectVM(vm), nil
 }
 
 // findByUUID find and returns VM by its UUID
