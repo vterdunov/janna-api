@@ -150,6 +150,13 @@ func NewHTTPHandler(endpoints endpoint.Endpoints, logger log.Logger, debug bool)
 		options...,
 	))
 
+	r.Path("/vms/{vm}/rename").Methods("PATCH").Handler(httptransport.NewServer(
+		endpoints.VMRenameEndpoint,
+		decodeVMRenameRequest,
+		encodeResponse,
+		options...,
+	))
+
 	// Find VM
 	r.Path("/find/vm").Methods("GET").Handler(httptransport.NewServer(
 		endpoints.VMFindEndpoint,
@@ -299,6 +306,18 @@ func decodeVMRestoreFromSnapshotRequest(_ context.Context, r *http.Request) (int
 
 func decodeVMPowerRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req endpoint.VMPowerRequest
+
+	vars := mux.Vars(r)
+	req.UUID = vars["vm"]
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(err, "Could not decode request: "+r.Method+" "+r.RequestURI)
+	}
+
+	return req, nil
+}
+
+func decodeVMRenameRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req endpoint.VMRenameRequest
 
 	vars := mux.Vars(r)
 	req.UUID = vars["vm"]

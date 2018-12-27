@@ -1,3 +1,4 @@
+// service provides use-cases for the Service
 package service
 
 import (
@@ -86,6 +87,9 @@ type Service interface {
 
 	// Reads Open API spec file
 	OpenAPI(context.Context) ([]byte, error)
+
+	// VMRename renames Virtual Machine
+	VMRename(context.Context, *types.VMRenameParams) error
 }
 
 // service implements our Service
@@ -409,6 +413,61 @@ func (s *service) OpenAPI(_ context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return spec, err
+}
+
+func (s *service) VMRename(ctx context.Context, params *types.VMRenameParams) error {
+	f := NewFinder(params.Datacenter, s.Client)
+
+	vm, err := f.FindVMByUUID(params.UUID)
+	if err != nil {
+		return err
+	}
+
+	return vm.Rename(ctx, params.Name)
+}
+
+func newWithObjectVM(vmwareVM *object.VirtualMachine) *domain.VirtualMachine {
+	return &domain.VirtualMachine{
+		VMWareVM: vmwareVM,
+	}
+}
+
+type Finder struct {
+	dc     string
+	client *vim25.Client
+}
+
+func NewFinder(dc string, c *vim25.Client) Finder {
+	return Finder{
+		dc:     dc,
+		client: c,
+	}
+}
+
+func (f *Finder) FindVMByUUID(uuid string) (*domain.VirtualMachine, error) {
+	vmwareFinder := find.NewFinder(f.client, true)
+
+	ctx := context.TODO()
+	dc, err := vmwareFinder.DatacenterOrDefault(ctx, f.dc)
+	if err != nil {
+		return nil, err
+	}
+
+	vmwareFinder.SetDatacenter(dc)
+
+	si := object.NewSearchIndex(f.client)
+
+	ref, err := si.FindByUuid(ctx, dc, uuid, true, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	vm, ok := ref.(*object.VirtualMachine)
+	if !ok {
+		return nil, errors.New("could not find Virtual Machine by UUID. Could not assert reference to Virtual Machine")
+	}
+
+	return newWithObjectVM(vm), nil
 }
 
 // findByUUID find and returns VM by its UUID

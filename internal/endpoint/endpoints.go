@@ -33,6 +33,8 @@ type Endpoints struct {
 
 	VMScreenshotEndpoint endpoint.Endpoint
 
+	VMRenameEndpoint endpoint.Endpoint
+
 	RoleListEndpoint endpoint.Endpoint
 
 	TaskInfoEndpoint endpoint.Endpoint
@@ -89,6 +91,9 @@ func New(s service.Service, logger log.Logger) Endpoints {
 	vmScreenshotEndpoint := MakeVMScreenshotEndpoint(s)
 	vmScreenshotEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMScreenshotEndpoint"))(vmScreenshotEndpoint)
 
+	vmRenameEndpoint := MakeVMRenameEndpoint(s)
+	vmRenameEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "VMRenameEndpoint"))(vmRenameEndpoint)
+
 	roleListEndpoint := MakeRolesListEndpoint(s)
 	roleListEndpoint = LoggingMiddleware(log.With(logger, "endpoint", "RoleListEndpoint"))(roleListEndpoint)
 
@@ -122,6 +127,8 @@ func New(s service.Service, logger log.Logger) Endpoints {
 		VMAddRoleEndpoint:   vmAddROleEndpoint,
 
 		VMScreenshotEndpoint: vmScreenshotEndpoint,
+
+		VMRenameEndpoint: vmRenameEndpoint,
 
 		RoleListEndpoint: roleListEndpoint,
 
