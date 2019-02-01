@@ -418,6 +418,7 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*v
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
 	if untarErr := untar(td, ova); untarErr != nil {
+		untarErr = errors.Wrap(untarErr, "Could not unpack OVA")
 		o.logger.Log("err", untarErr)
 		return nil, untarErr
 	}
