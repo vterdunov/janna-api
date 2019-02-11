@@ -1,7 +1,6 @@
 package service
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"fmt"
@@ -12,10 +11,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/mholt/archiver"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/nfc"
@@ -402,12 +403,13 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*v
 		return nil, err
 	}
 
-	ova, _, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
+	ova, readSize, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
 	if err != nil {
 		o.logger.Log("err", err)
 		return nil, err
 	}
 	defer ova.Close()
+	o.logger.Log("msg", "Read OVA bytes", "size", readSize)
 
 	td, err := ioutil.TempDir("", "janna-")
 	if err != nil {
@@ -417,11 +419,37 @@ func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*v
 	defer os.RemoveAll(td)
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
-	if untarErr := untar(td, ova); untarErr != nil {
-		untarErr = errors.Wrap(untarErr, "Could not unpack OVA")
-		o.logger.Log("err", untarErr)
-		return nil, untarErr
+	// if untarErr := untar(td, ova); untarErr != nil {
+	// 	untarErr = errors.Wrap(untarErr, "Could not unpack OVA")
+	// 	o.logger.Log("err", untarErr)
+	// 	return nil, untarErr
+	// }
+
+	ovaName := path.Base(OVAURL)
+	ovaName = strings.TrimSuffix(ovaName, filepath.Ext(ovaName))
+	ovaName += ".tar"
+	ovaFile, err := os.Create(td + ovaName)
+	if err != nil {
+		return nil, err
 	}
+	defer ovaFile.Close()
+
+	_, err = io.Copy(ovaFile, ova)
+	if err != nil {
+		return nil, err
+	}
+
+	ovaStat, err := ovaFile.Stat()
+	if err != nil {
+		o.logger.Log("msg", "Could not get OVA file stats")
+	}
+	o.logger.Log("msg", "Read OVA file", "size", ovaStat.Size())
+
+	err = archiver.Unarchive(ovaFile.Name(), td)
+	if err != nil {
+		return nil, err
+	}
+	os.Remove(td + ovaName)
 
 	ovfPath, err := findOVF(td)
 	if err != nil {
@@ -734,60 +762,60 @@ func newProgressLogger(prefix string, logger log.Logger) *progressLogger {
 	return p
 }
 
-func untar(dst string, r io.Reader) error {
-	tr := tar.NewReader(r)
+// func untar(dst string, r io.Reader) error {
+// 	tr := tar.NewReader(r)
 
-	for {
-		header, err := tr.Next()
+// 	for {
+// 		header, err := tr.Next()
 
-		switch {
+// 		switch {
 
-		// if no more files are found return
-		case err == io.EOF:
-			return nil
+// 		// if no more files are found return
+// 		case err == io.EOF:
+// 			return nil
 
-		// return any other error
-		case err != nil:
-			return err
+// 		// return any other error
+// 		case err != nil:
+// 			return err
 
-		// if the header is nil, just skip it (not sure how this happens)
-		case header == nil:
-			continue
-		}
+// 		// if the header is nil, just skip it (not sure how this happens)
+// 		case header == nil:
+// 			continue
+// 		}
 
-		// the target location where the dir/file should be created
-		target := filepath.Join(dst, header.Name)
+// 		// the target location where the dir/file should be created
+// 		target := filepath.Join(dst, header.Name)
 
-		// the following switch could also be done using fi.Mode(), not sure if there
-		// a benefit of using one vs. the other.
-		// fi := header.FileInfo()
+// 		// the following switch could also be done using fi.Mode(), not sure if there
+// 		// a benefit of using one vs. the other.
+// 		// fi := header.FileInfo()
 
-		// check the file type
-		switch header.Typeflag {
+// 		// check the file type
+// 		switch header.Typeflag {
 
-		// if its a dir and it doesn't exist create it
-		case tar.TypeDir:
-			if _, err := os.Stat(target); err != nil {
-				if err := os.MkdirAll(target, 0755); err != nil {
-					return err
-				}
-			}
+// 		// if its a dir and it doesn't exist create it
+// 		case tar.TypeDir:
+// 			if _, err := os.Stat(target); err != nil {
+// 				if err := os.MkdirAll(target, 0755); err != nil {
+// 					return err
+// 				}
+// 			}
 
-		// if it's a file create it
-		case tar.TypeReg:
-			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-			if err != nil {
-				return err
-			}
-			defer f.Close()
+// 		// if it's a file create it
+// 		case tar.TypeReg:
+// 			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+// 			if err != nil {
+// 				return err
+// 			}
+// 			defer f.Close()
 
-			// copy over contents
-			if _, err := io.Copy(f, tr); err != nil {
-				return err
-			}
-		}
-	}
-}
+// 			// copy over contents
+// 			if _, err := io.Copy(f, tr); err != nil {
+// 				return err
+// 			}
+// 		}
+// 	}
+// }
 
 func findOVF(dir string) (string, error) {
 	var ovfPath string
