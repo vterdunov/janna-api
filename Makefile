@@ -20,6 +20,10 @@ OPENAPI_GENERATOR_CLI_VERSION = v3.2.2
 
 all: lint docker
 
+.PHONY: help
+help: ## Display this help message
+	@cat $(MAKEFILE_LIST) | grep -e "^[-a-zA-Z_\.]*: *.*## *" | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
 .PHONY: docker
 docker: ## Build Docker container
 	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --build-arg=GITHUB_TOKEN=${GITHUB_TOKEN} --file build/Dockerfile .
@@ -90,6 +94,6 @@ api-doc-convert: ## Convert OpenAPI spec from yaml to json format
 					--generator-name openapi --output /tmp/api/ && \
 				cp /tmp/api/openapi.json /local/api'
 
-.PHONY: help
-help: ## Display this help message
-	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-\.]*: *.*## *" | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+.PHONY: proto
+proto: ## Generate protocol buffers code
+	@ocker run -it --rm -v ${PWD}:/work uber/prototool prototool generate

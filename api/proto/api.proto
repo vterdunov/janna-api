@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "v1pb";
+
+import "google/api/annotations.proto";
+
+service APIv1 {
+  // Get the application build information
+  rpc AppInfo(EmptyRequest) returns (AppInfoResponse){
+    option (google.api.http) = {
+      get: "v1/info"
+    };
+  }
+}
+
+message EmptyRequest {}
+
+message AppInfoResponse {
+  string version = 1;
+  string date = 2;
+}

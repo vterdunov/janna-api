@@ -7,7 +7,7 @@ require (
 	github.com/go-kit/kit v0.7.0
 	github.com/go-logfmt/logfmt v0.3.0 // indirect
 	github.com/go-stack/stack v1.7.0 // indirect
-	github.com/golang/protobuf v1.1.0 // indirect
+	github.com/golang/protobuf v1.2.0
 	github.com/google/pprof v0.0.0-20181206194817-3ea8567a2e57 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
@@ -23,6 +23,9 @@ require (
 	github.com/vmware/govmomi v0.19.0
 	golang.org/x/arch v0.0.0-20181203225421-5a4828bb7045 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 // indirect
+	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f // indirect
 	golang.org/x/sys v0.0.0-20181221143128-b4a75ba826a6 // indirect
+	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
+	google.golang.org/grpc v1.18.0
 )

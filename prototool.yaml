@@ -1,0 +1,19 @@
+protoc:
+  version: 3.6.1
+  includes:
+    - api/proto_ext/googleapis
+
+generate:
+  go_options:
+    import_path: vterdunov/janna-api/api/proto
+    # extra_modifiers:
+    #   google/api/annotations.proto: google.golang.org/genproto/googleapis/api/annotations
+    #   google/api/http.proto: google.golang.org/genproto/googleapis/api/annotations
+  plugins:
+    - name: go
+      type: go
+      flags: plugins=grpc
+      output: internal/gen
+    # - name: grpc-gateway
+    #   type: go
+    #   output: ../../internal/transport
