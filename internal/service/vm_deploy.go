@@ -409,6 +409,7 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	}
 	defer ova.Close()
 
+	o.logger.Log("msg", "Create temp dir")
 	td, err := ioutil.TempDir("", "janna-")
 	if err != nil {
 		o.logger.Log("err", err)
@@ -417,27 +418,32 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	defer os.RemoveAll(td)
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
+	o.logger.Log("msg", "Unpack OVA")
 	if untarErr := untar(td, ova); untarErr != nil {
 		o.logger.Log("err", untarErr)
 		return nil, untarErr
 	}
 
+	o.logger.Log("msg", "Get OVF path")
 	ovfPath, err := findOVF(td)
 	if err != nil {
 		o.logger.Log("err", err)
 		return nil, err
 	}
 
+	o.logger.Log("msg", "Open OVF")
 	rawOvf, err := os.Open(ovfPath)
 	if err != nil {
 		return nil, err
 	}
 
+	o.logger.Log("msg", "Read bytes from OVF")
 	b, err := ioutil.ReadAll(rawOvf)
 	if err != nil {
 		return nil, err
 	}
 
+	o.logger.Log("msg", "Envelope OVF")
 	e, err := readEnvelope(b)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not read Envelope")
@@ -456,6 +462,7 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		name = o.Name
 	}
 
+	o.logger.Log("msg", "Create Import Spec params")
 	cisp := vmware_types.OvfCreateImportSpecParams{
 		// See https://github.com/vmware/govmomi/blob/v0.16.0/vim25/types/enum.go#L3381-L3395
 		// VMWare can not support some of those disk format types
@@ -468,10 +475,13 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		NetworkMapping:   o.networkMap(ctx, e),
 	}
 
+	o.logger.Log("msg", "Get OVF manager")
 	m := ovf.NewManager(o.Client)
 	ovfContent := string(b)
 	rp := o.ResourcePool
 	ds := o.Datastore
+
+	o.logger.Log("msg", "Create Import Spec")
 	spec, err := m.CreateImportSpec(ctx, ovfContent, rp, ds, cisp)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create VM spec")
@@ -490,6 +500,7 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		}
 	}
 
+	o.logger.Log("msg", "Get lease")
 	lease, err := rp.ImportVApp(ctx, spec.ImportSpec, o.Folder, o.Host)
 	if err != nil {
 		err = errors.Wrap(err, "Could not import Virtual Appliance")
@@ -497,6 +508,7 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		return nil, err
 	}
 
+	o.logger.Log("msg", "Get lease information")
 	info, err := lease.Wait(ctx, spec.FileItem)
 	if err != nil {
 		err = errors.Wrap(err, "error while waiting lease")
@@ -504,18 +516,22 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		return nil, err
 	}
 
+	o.logger.Log("msg", "Get lease updater")
 	u := lease.StartUpdater(ctx, info)
 	defer u.Done()
 
+	o.logger.Log("msg", "Loop over lease info items")
 	for _, item := range info.Items {
 		// override disk path to use in cocnurent mode
 		// os.Chdir doesn't work preperly
 		item.Path = path.Join(td, item.Path)
 
+		o.logger.Log("msg", "Upload disks")
 		if err = o.Upload(ctx, lease, item); err != nil {
 			return nil, errors.Wrap(err, "Could not upload disks to VMWare")
 		}
 	}
+	o.logger.Log("msg", "End looping over info items")
 
 	return &info.Entity, lease.Complete(ctx)
 }
