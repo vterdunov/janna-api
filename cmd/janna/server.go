@@ -116,8 +116,8 @@ func main() {
 	logger.Log("msg", "Stopped")
 }
 
-func newGovmomiClient(ctx context.Context, URL string, insecure bool) (*govmomi.Client, error) {
-	u, err := soap.ParseURL(URL)
+func newGovmomiClient(ctx context.Context, url string, insecure bool) (*govmomi.Client, error) {
+	u, err := soap.ParseURL(url)
 	if err != nil {
 		return nil, err
 	}

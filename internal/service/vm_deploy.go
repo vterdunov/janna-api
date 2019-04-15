@@ -69,7 +69,7 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 	}
 
 	if exist {
-		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) //nolint: golint
+		return "", fmt.Errorf("Virtual Machine '%s' already exist", params.Name) //nolint: stylecheck,golint
 	}
 
 	reqID, ok := ctx.Value(ContextKeyRequestXRequestID).(string)
@@ -396,8 +396,8 @@ func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 	return lease.Upload(ctx, item, f, opts)
 }
 
-func (o *Deployment) Import(ctx context.Context, OVAURL string, anno string) (*vmware_types.ManagedObjectReference, error) {
-	url, err := url.Parse(OVAURL)
+func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*vmware_types.ManagedObjectReference, error) {
+	url, err := url.Parse(ovaURL)
 	if err != nil {
 		return nil, err
 	}

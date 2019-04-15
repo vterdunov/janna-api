@@ -15,7 +15,7 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-GOLANGCI_LINTER_VERSION = v1.12.3
+GOLANGCI_LINTER_IMAGE = golangci/golangci-lint:v1.16.0
 OPENAPI_GENERATOR_CLI_VERSION = v3.2.2
 
 all: lint docker
@@ -58,7 +58,7 @@ test: ## Run tests
 .PHONY: lint
 lint: ## Run linters
 	@echo Linting...
-	@docker run --tty --rm -v $(CURDIR):/lint -w /lint golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run
+	@docker run --tty --rm -v $(CURDIR):/lint -w /lint $(GOLANGCI_LINTER_IMAGE) golangci-lint run
 
 .PHONY: clean
 clean: ## Removes binary file

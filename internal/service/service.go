@@ -471,10 +471,10 @@ func (f *Finder) FindVMByUUID(uuid string) (*domain.VirtualMachine, error) {
 }
 
 // findByUUID find and returns VM by its UUID
-func findByUUID(ctx context.Context, client *vim25.Client, DCName, uuid string) (*object.VirtualMachine, error) {
+func findByUUID(ctx context.Context, client *vim25.Client, dcName, uuid string) (*object.VirtualMachine, error) {
 	f := find.NewFinder(client, true)
 
-	dc, err := f.DatacenterOrDefault(ctx, DCName)
+	dc, err := f.DatacenterOrDefault(ctx, dcName)
 	if err != nil {
 		return nil, err
 	}
@@ -525,10 +525,10 @@ func chooseRoot(ctx context.Context, c *vim25.Client, params *types.VMListParams
 }
 
 // findByPath find and returns VM by Inventory Path
-func findByPath(ctx context.Context, client *vim25.Client, DCname, path string) (*object.VirtualMachine, error) {
+func findByPath(ctx context.Context, client *vim25.Client, dcName, path string) (*object.VirtualMachine, error) {
 	f := find.NewFinder(client, true)
 
-	dc, err := f.DatacenterOrDefault(ctx, DCname)
+	dc, err := f.DatacenterOrDefault(ctx, dcName)
 	if err != nil {
 		return nil, err
 	}
