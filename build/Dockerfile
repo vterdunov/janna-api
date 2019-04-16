@@ -1,4 +1,4 @@
-ARG GOLANG_VERSION=1.11.5
+ARG GOLANG_VERSION=1.12.4
 ARG OPENAPI_GENERATOR_CLI_VERSION=v3.2.2
 # ---------------
 FROM golang:${GOLANG_VERSION} AS env
@@ -49,7 +49,7 @@ RUN java -jar /opt/openapi-generator-cli/openapi-generator-cli.jar \
 					--generator-name openapi --output .
 
 # ---------------
-FROM alpine:3.8 AS final
+FROM alpine:3.9.3 AS final
 
 ENV PORT=8080
 
