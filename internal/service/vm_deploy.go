@@ -58,6 +58,10 @@ type Network struct {
 	Network string
 }
 
+type stackTracer interface {
+	StackTrace() errors.StackTrace
+}
+
 func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (string, error) {
 	// TODO: validate incoming params according business rules (https://github.com/asaskevich/govalidator)
 	// use Endpoint middleware
@@ -110,6 +114,13 @@ func (s *service) VMDeploy(ctx context.Context, params *types.VMDeployParams) (s
 				"stage", "error",
 				"error", err.Error(),
 			)
+
+			if err, ok := err.(stackTracer); ok {
+				for _, f := range err.StackTrace() {
+					fmt.Printf("%+s:%d\n", f, f)
+				}
+			}
+
 			cancel()
 			return
 		}
