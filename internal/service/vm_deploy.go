@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cavaliercoder/grab"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
@@ -413,19 +415,6 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		return nil, err
 	}
 
-	ova, _, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
-	if err != nil {
-		o.logger.Log("err", err)
-		return nil, err
-	}
-	defer ova.Close()
-
-	// h := sha256.New()
-	// if _, copyErr := io.Copy(h, ova); copyErr != nil {
-	// 	o.logger.Log("msg", "Could not calculate SHA256 summ", "warn", copyErr)
-	// }
-	// o.logger.Log("msg", "downloaded OVA checksumm", "sha256", fmt.Sprintf("%x", h.Sum(nil)))
-
 	o.logger.Log("msg", "Create temp dir")
 	td, err := ioutil.TempDir("", "janna-")
 	if err != nil {
@@ -433,20 +422,34 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		return nil, err
 	}
 	o.logger.Log("msg", "temp dir", "dir", td)
-	time.Sleep(10 * time.Second)
 	defer os.RemoveAll(td)
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
-	o.logger.Log("msg", "Unpack OVA")
-	// retryErr := retry(o.logger, 10, 20*time.Second, func() (err error) {
-	// 	return untar(td, ova)
-	// })
-	// if retryErr != nil {
-	// 	o.logger.Log("err", retryErr)
-	// 	return nil, retryErr
-	// }
+	o.logger.Log("msg", "downloading OVA file", "url", url.String())
+	resp, err := grab.Get(td, url.String())
+	if err != nil {
+		o.logger.Log("err", err)
+		return nil, err
+	}
+	o.logger.Log("OVA file", resp.Filename)
 
-	if untarErr := untar(td, ova); untarErr != nil {
+	ova, openErr := os.Open(resp.Filename)
+	if openErr != nil {
+		return nil, openErr
+	}
+	defer ova.Close()
+
+	var buferedOVA bytes.Buffer
+	tee := io.TeeReader(ova, &buferedOVA)
+
+	hash, hashErr := calculateHash(tee)
+	if err != nil {
+		o.logger.Log("warn", hashErr)
+	}
+	o.logger.Log("msg", "downloaded OVA checksumm", "sha256", hash)
+
+	o.logger.Log("msg", "Unpack OVA")
+	if untarErr := untar(td, &buferedOVA); untarErr != nil {
 		o.logger.Log("err", untarErr)
 		return nil, untarErr
 	}
@@ -853,21 +856,11 @@ func findOVF(dir string) (string, error) {
 	return ovfPath, nil
 }
 
-// func retry(l log.Logger, attempts int, sleep time.Duration, f func() error) (err error) {
-// 	for i := 0; ; i++ {
-// 		err = f()
-// 		if err == nil {
-// 			return nil
-// 		}
+func calculateHash(r io.Reader) (string, error) {
+	hash := sha256.New()
+	if _, err := io.Copy(hash, r); err != nil {
+		return "", err
+	}
 
-// 		if i >= (attempts - 1) {
-// 			break
-// 		}
-
-// 		time.Sleep(sleep)
-
-// 		l.Log("retrying after error", err)
-// 	}
-
-// 	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
-// }
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
