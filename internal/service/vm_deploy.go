@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cavaliercoder/grab"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
@@ -426,31 +425,37 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
 	o.logger.Log("msg", "Downloading OVA file", "url", url.String())
-	resp, err := grab.Get(td, url.String())
+	// resp, err := grab.Get(td, url.String())
+	// if err != nil {
+	// 	o.logger.Log("err", err)
+	// 	return nil, err
+	// }
+	// o.logger.Log("OVA file", resp.Filename)
+
+	// ova, openErr := os.Open(resp.Filename)
+	// if openErr != nil {
+	// 	return nil, openErr
+	// }
+	// defer ova.Close()
+
+	ova, _, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
 	if err != nil {
 		o.logger.Log("err", err)
 		return nil, err
 	}
-	o.logger.Log("OVA file", resp.Filename)
-
-	ova, openErr := os.Open(resp.Filename)
-	if openErr != nil {
-		return nil, openErr
-	}
 	defer ova.Close()
+	var buferedOVA bytes.Buffer
+	tee := io.TeeReader(ova, &buferedOVA)
 
-	// var buferedOVA bytes.Buffer
-	// tee := io.TeeReader(ova, &buferedOVA)
-
-	hash, hashErr := calculateHash(ova)
+	hash, hashErr := calculateHash(tee)
 	if hashErr != nil {
 		o.logger.Log("warn", hashErr)
 	}
 	o.logger.Log("msg", "Downloaded OVA checksumm", "sha256", hash)
 
 	o.logger.Log("msg", "Unpack OVA")
-	ova.Seek(0, 0)
-	if untarErr := untar(td, ova); untarErr != nil {
+	// ova.Seek(0, 0)
+	if untarErr := untar(td, &buferedOVA); untarErr != nil {
 		o.logger.Log("err", untarErr)
 		return nil, untarErr
 	}
