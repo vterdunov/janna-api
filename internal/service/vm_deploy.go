@@ -443,7 +443,7 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	tee := io.TeeReader(ova, &buferedOVA)
 
 	hash, hashErr := calculateHash(tee)
-	if err != nil {
+	if hashErr != nil {
 		o.logger.Log("warn", hashErr)
 	}
 	o.logger.Log("msg", "Downloaded OVA checksumm", "sha256", hash)
