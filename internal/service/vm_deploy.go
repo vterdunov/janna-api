@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -419,6 +420,12 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		return nil, err
 	}
 	defer ova.Close()
+
+	h := sha256.New()
+	if _, copyErr := io.Copy(h, ova); copyErr != nil {
+		o.logger.Log("msg", "Could not calculate SHA256 summ", "warn", copyErr)
+	}
+	o.logger.Log("msg", "downloaded OVA checksumm", "sha256", fmt.Sprintf("%x", h.Sum(nil)))
 
 	o.logger.Log("msg", "Create temp dir")
 	td, err := ioutil.TempDir("", "janna-")
