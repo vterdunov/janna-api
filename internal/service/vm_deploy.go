@@ -421,11 +421,11 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		o.logger.Log("err", err)
 		return nil, err
 	}
-	o.logger.Log("msg", "temp dir", "dir", td)
+	o.logger.Log("msg", "Temp dir", "dir", td)
 	defer os.RemoveAll(td)
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
-	o.logger.Log("msg", "downloading OVA file", "url", url.String())
+	o.logger.Log("msg", "Downloading OVA file", "url", url.String())
 	resp, err := grab.Get(td, url.String())
 	if err != nil {
 		o.logger.Log("err", err)
@@ -446,7 +446,7 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	if err != nil {
 		o.logger.Log("warn", hashErr)
 	}
-	o.logger.Log("msg", "downloaded OVA checksumm", "sha256", hash)
+	o.logger.Log("msg", "Downloaded OVA checksumm", "sha256", hash)
 
 	o.logger.Log("msg", "Unpack OVA")
 	if untarErr := untar(td, &buferedOVA); untarErr != nil {
