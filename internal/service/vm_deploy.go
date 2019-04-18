@@ -433,6 +433,8 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 		o.logger.Log("err", err)
 		return nil, err
 	}
+	o.logger.Log("msg", "temp dir", "dir", td)
+	time.Sleep(10 * time.Second)
 	defer os.RemoveAll(td)
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
