@@ -854,21 +854,21 @@ func findOVF(dir string) (string, error) {
 	return ovfPath, nil
 }
 
-func retry(l log.Logger, attempts int, sleep time.Duration, f func() error) (err error) {
-	for i := 0; ; i++ {
-		err = f()
-		if err == nil {
-			return nil
-		}
+// func retry(l log.Logger, attempts int, sleep time.Duration, f func() error) (err error) {
+// 	for i := 0; ; i++ {
+// 		err = f()
+// 		if err == nil {
+// 			return nil
+// 		}
 
-		if i >= (attempts - 1) {
-			break
-		}
+// 		if i >= (attempts - 1) {
+// 			break
+// 		}
 
-		time.Sleep(sleep)
+// 		time.Sleep(sleep)
 
-		l.Log("retrying after error", err)
-	}
+// 		l.Log("retrying after error", err)
+// 	}
 
-	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
-}
+// 	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
+// }
