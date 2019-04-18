@@ -439,17 +439,18 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	}
 	defer ova.Close()
 
-	var buferedOVA bytes.Buffer
-	tee := io.TeeReader(ova, &buferedOVA)
+	// var buferedOVA bytes.Buffer
+	// tee := io.TeeReader(ova, &buferedOVA)
 
-	hash, hashErr := calculateHash(tee)
+	hash, hashErr := calculateHash(ova)
 	if hashErr != nil {
 		o.logger.Log("warn", hashErr)
 	}
 	o.logger.Log("msg", "Downloaded OVA checksumm", "sha256", hash)
 
 	o.logger.Log("msg", "Unpack OVA")
-	if untarErr := untar(td, &buferedOVA); untarErr != nil {
+	ova.Seek(0, 0)
+	if untarErr := untar(td, ova); untarErr != nil {
 		o.logger.Log("err", untarErr)
 		return nil, untarErr
 	}
