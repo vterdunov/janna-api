@@ -430,9 +430,13 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
 
 	o.logger.Log("msg", "Unpack OVA")
-	if untarErr := untar(td, ova); untarErr != nil {
-		o.logger.Log("err", untarErr)
-		return nil, untarErr
+	retryErr := retry(o.logger, 10, 20*time.Second, func() (err error) {
+		return untar(td, ova)
+	})
+
+	if retryErr != nil {
+		o.logger.Log("err", retryErr)
+		return nil, retryErr
 	}
 
 	o.logger.Log("msg", "Get OVF path")
@@ -834,4 +838,23 @@ func findOVF(dir string) (string, error) {
 	}
 
 	return ovfPath, nil
+}
+
+func retry(l log.Logger, attempts int, sleep time.Duration, f func() error) (err error) {
+	for i := 0; ; i++ {
+		err = f()
+		if err == nil {
+			return nil
+		}
+
+		if i >= (attempts - 1) {
+			break
+		}
+
+		time.Sleep(sleep)
+
+		l.Log("retrying after error", err)
+	}
+
+	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 }
