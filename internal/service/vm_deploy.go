@@ -7,9 +7,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,6 +17,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/govc/importx"
 	"github.com/vmware/govmomi/nfc"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
@@ -381,19 +380,13 @@ func (o *Deployment) networkMap(ctx context.Context, e *ovf.Envelope) (p []vmwar
 	return p
 }
 
-func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.FileItem) error {
+func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.FileItem, archive importx.ArchiveFlag) error {
 	file := item.Path
 
-	f, err := os.Open(file)
+	f, size, err := archive.Open(file)
 	if err != nil {
 		return err
 	}
-
-	stat, err := f.Stat()
-	if err != nil {
-		return err
-	}
-
 	defer f.Close()
 
 	outputStr := path.Base(file)
@@ -401,89 +394,81 @@ func (o *Deployment) Upload(ctx context.Context, lease *nfc.Lease, item nfc.File
 	defer pl.Wait()
 
 	opts := soap.Upload{
-		ContentLength: stat.Size(),
+		ContentLength: size,
 		Progress:      pl,
 	}
 
 	return lease.Upload(ctx, item, f, opts)
 }
 
+type TapeArchive struct {
+	path string
+	importx.Opener
+}
+
+func (t TapeArchive) Open(name string) (io.ReadCloser, int64, error) {
+	f, _, err := t.OpenFile(t.path)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	r := tar.NewReader(f)
+
+	for {
+		h, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, 0, err
+		}
+
+		matched, err := path.Match(name, path.Base(h.Name))
+		if err != nil {
+			return nil, 0, err
+		}
+
+		if matched {
+			return &TapeArchiveEntry{r, f}, h.Size, nil
+		}
+	}
+
+	_ = f.Close()
+
+	return nil, 0, os.ErrNotExist
+}
+
+type TapeArchiveEntry struct {
+	io.Reader
+	f io.Closer
+}
+
+func (t *TapeArchiveEntry) Close() error {
+	return t.f.Close()
+}
+
 func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*vmware_types.ManagedObjectReference, error) {
-	url, err := url.Parse(ovaURL)
+	opener := importx.Opener{
+		Client: o.Client,
+	}
+
+	ta := TapeArchive{
+		path:   ovaURL,
+		Opener: opener,
+	}
+
+	archive := importx.ArchiveFlag{
+		Archive: ta,
+	}
+
+	ovfData, err := archive.ReadOvf("*.ovf")
 	if err != nil {
 		return nil, err
 	}
 
-	o.logger.Log("msg", "Create temp dir")
-	td, err := ioutil.TempDir("", "janna-")
+	e, err := archive.ReadEnvelope(ovfData)
 	if err != nil {
-		o.logger.Log("err", err)
-		return nil, err
-	}
-	o.logger.Log("msg", "Temp dir", "dir", td)
-	defer os.RemoveAll(td)
-	defer o.logger.Log("msg", "Removed temp dir", "dir", td)
-
-	o.logger.Log("msg", "Downloading OVA file", "url", url.String())
-	// resp, err := grab.Get(td, url.String())
-	// if err != nil {
-	// 	o.logger.Log("err", err)
-	// 	return nil, err
-	// }
-	// o.logger.Log("OVA file", resp.Filename)
-
-	// ova, openErr := os.Open(resp.Filename)
-	// if openErr != nil {
-	// 	return nil, openErr
-	// }
-	// defer ova.Close()
-
-	ova, _, err := o.Client.Download(ctx, url, &soap.DefaultDownload)
-	if err != nil {
-		o.logger.Log("err", err)
-		return nil, err
-	}
-	defer ova.Close()
-	var buferedOVA bytes.Buffer
-	tee := io.TeeReader(ova, &buferedOVA)
-
-	hash, hashErr := calculateHash(tee)
-	if hashErr != nil {
-		o.logger.Log("warn", hashErr)
-	}
-	o.logger.Log("msg", "Downloaded OVA checksumm", "sha256", hash)
-
-	o.logger.Log("msg", "Unpack OVA")
-	// ova.Seek(0, 0)
-	if untarErr := untar(td, &buferedOVA); untarErr != nil {
-		o.logger.Log("err", untarErr)
-		return nil, untarErr
-	}
-
-	o.logger.Log("msg", "Get OVF path")
-	ovfPath, err := findOVF(td)
-	if err != nil {
-		o.logger.Log("err", err)
-		return nil, err
-	}
-	o.logger.Log("msg", "OVF path", "path", ovfPath)
-
-	o.logger.Log("msg", "Open OVF")
-	rawOvf, err := os.Open(ovfPath)
-	if err != nil {
-		return nil, err
-	}
-
-	o.logger.Log("msg", "Read bytes from OVF")
-	b, err := ioutil.ReadAll(rawOvf)
-	if err != nil {
-		return nil, err
-	}
-
-	o.logger.Log("msg", "Envelope OVF")
-	e, err := readEnvelope(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not read Envelope")
+		return nil, fmt.Errorf("failed to parse ovf: %s", err)
 	}
 
 	name := "Virtual Appliance"
@@ -514,7 +499,7 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 
 	o.logger.Log("msg", "Get OVF manager")
 	m := ovf.NewManager(o.Client)
-	ovfContent := string(b)
+	ovfContent := string(ovfData)
 	rp := o.ResourcePool
 	ds := o.Datastore
 
@@ -561,11 +546,12 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 	for _, item := range info.Items {
 		// override disk path to use in cocnurent mode
 		// os.Chdir doesn't work preperly
-		item.Path = path.Join(td, item.Path)
+		// item.Path = path.Join(td, item.Path)
 
-		o.logger.Log("msg", "Upload disks")
-		if err = o.Upload(ctx, lease, item); err != nil {
-			return nil, errors.Wrap(err, "Could not upload disks to VMWare")
+		o.logger.Log("msg", "Upload disk", "disk", item.Path)
+		if err = o.Upload(ctx, lease, item, archive); err != nil {
+			o.logger.Log("msg", "Could not upload disk to VMWare", "disk", item.Path)
+			return nil, errors.Wrapf(err, "Could not upload disk to VMWare, disk: %v", item.Path)
 		}
 	}
 	o.logger.Log("msg", "End looping over info items")

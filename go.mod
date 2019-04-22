@@ -10,6 +10,7 @@ require (
 	github.com/go-stack/stack v1.7.0 // indirect
 	github.com/golang/protobuf v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20181206194817-3ea8567a2e57 // indirect
+	github.com/google/uuid v1.1.1 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
