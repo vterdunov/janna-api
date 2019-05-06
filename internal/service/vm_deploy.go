@@ -541,10 +541,6 @@ func (o *Deployment) Import(ctx context.Context, ovaURL string, anno string) (*v
 
 	o.logger.Log("msg", "Loop over lease info items")
 	for _, item := range info.Items {
-		// override disk path to use in cocnurent mode
-		// os.Chdir doesn't work preperly
-		// item.Path = path.Join(td, item.Path)
-
 		o.logger.Log("msg", "Upload disk", "disk", item.Path)
 		if err = o.Upload(ctx, lease, item, archive); err != nil {
 			o.logger.Log("msg", "Could not upload disk to VMWare", "disk", item.Path)
@@ -667,17 +663,6 @@ func WaitForIP(ctx context.Context, vm *object.VirtualMachine) ([]string, error)
 	return ipAdresses, nil
 }
 
-// func readEnvelope(data []byte) (*ovf.Envelope, error) {
-// 	r := bytes.NewReader(data)
-
-// 	e, err := ovf.Unmarshal(r)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "Failed to parse ovf")
-// 	}
-
-// 	return e, nil
-// }
-
 type progressLogger struct {
 	prefix string
 
@@ -768,88 +753,3 @@ func newProgressLogger(prefix string, logger log.Logger) *progressLogger {
 
 	return p
 }
-
-// func untar(dst string, r io.Reader) error {
-// 	tr := tar.NewReader(r)
-
-// 	for {
-// 		header, err := tr.Next()
-
-// 		switch {
-
-// 		// if no more files are found return
-// 		case err == io.EOF:
-// 			return nil
-
-// 		// return any other error
-// 		case err != nil:
-// 			return err
-
-// 		// if the header is nil, just skip it (not sure how this happens)
-// 		case header == nil:
-// 			continue
-// 		}
-
-// 		// the target location where the dir/file should be created
-// 		target := filepath.Join(dst, header.Name)
-
-// 		// the following switch could also be done using fi.Mode(), not sure if there
-// 		// a benefit of using one vs. the other.
-// 		// fi := header.FileInfo()
-
-// 		// check the file type
-// 		switch header.Typeflag {
-
-// 		// if its a dir and it doesn't exist create it
-// 		case tar.TypeDir:
-// 			if _, err := os.Stat(target); err != nil {
-// 				if err := os.MkdirAll(target, 0755); err != nil {
-// 					return err
-// 				}
-// 			}
-
-// 		// if it's a file create it
-// 		case tar.TypeReg:
-// 			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-// 			if err != nil {
-// 				return err
-// 			}
-// 			defer f.Close()
-
-// 			// copy over contents
-// 			if _, err := io.Copy(f, tr); err != nil {
-// 				return err
-// 			}
-// 		}
-// 	}
-// }
-
-// func findOVF(dir string) (string, error) {
-// 	var ovfPath string
-// 	walcFunc := func(path string, fi os.FileInfo, err error) error {
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		if filepath.Ext(path) == ".ovf" {
-// 			ovfPath = path
-// 		}
-
-// 		return nil
-// 	}
-
-// 	if err := filepath.Walk(dir, walcFunc); err != nil {
-// 		return "", err
-// 	}
-
-// 	return ovfPath, nil
-// }
-
-// func calculateHash(r io.Reader) (string, error) {
-// 	hash := sha256.New()
-// 	if _, err := io.Copy(hash, r); err != nil {
-// 		return "", err
-// 	}
-
-// 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
-// }
